@@ -19,6 +19,7 @@ fi
 
 
 function ls_ls {
+  local f
   for f in ls_bigold ls_mouldy ls_size_any ls_size_suffix; do
     echo "--- $f"
     $f -h
@@ -124,7 +125,7 @@ cat <<DOC
 DOC
 return 1
 fi
-   thefile=$(find  -maxdepth 1 -type f -print0 | xargs -0 \ls -rt1 | grep "$1"'$' | tail -n 1)
+   local thefile=$(find  -maxdepth 1 -type f -print0 | xargs -0 \ls -rt1 | grep "$1"'$' | tail -n 1)
    if [[ -z $thefile ]]; then
       echo "not found: $1"
    elif [[ ! -f $thefile ]]; then
