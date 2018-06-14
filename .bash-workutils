@@ -1,0 +1,149 @@
+
+
+
+function nf_check {
+if [[ -z $1 || $1 == '-h' ]]; then
+cat <<DOC
+  cd to a nextflow work directory specified by ticket name and tag.
+  first argument: ticket name (directory in $LUSTRECELLGENI).
+  second argument: work directory tag produced by Nextflow.
+  Example:
+  ${FUNCNAME[0]} tic-31 f2/e5ec31
+DOC
+return 1
+fi
+  local ticket=$1
+  local tag=$2
+  cd $LUSTRECELLGENI/$ticket/work/$tag*
+}
+
+
+function ls_ls {
+  for f in ls_bigold ls_mouldy ls_size_any ls_size_suffix; do
+    echo "--- $f"
+    $f -h
+  done
+}
+
+
+function ls_bigold {
+if [[ -z $1 || $1 == '-h' ]]; then
+cat <<DOC
+  List directories up to a certain depth, ordered by disk usage,
+  with the number of days since last modified.
+  Argument: directory depth.
+  Example:
+  ${FUNCNAME[0]} 2
+  NOTE: in a project/team root directory this may take some time and
+  tax the file system. Perhaps best to save the output in a file.
+  CAVEAT subdirectories of a directory may have changed. Use as guide!
+  USEFUL order the output by the third column to group directories together,
+    e.g. ls_bigold 2 > out.bigold; sort -k 3 out.bigold
+DOC
+return 1
+fi
+  local depth=$1
+  (   # do not export in user shell.
+  export now=$(date +%s)
+  du -h -d $depth --time --time-style=+%s |\
+  perl -ane '$F[1]=int(($ENV{now}-$F[1])/86400); local $"="\t"; print "@F\n";' |\
+  sort -h | column -t
+  )
+}
+
+
+function ls_mouldy {
+if [[ -z $1 || $1 == '-h' ]]; then
+cat <<DOC
+  Find directories left untouched for longer than first argument (in days)
+  up to a depth of second argument.
+  Example:
+  ${FUNCNAME[0]} 183 3
+  CAVEAT subdirectories of a directory may have changed. Use as guide!
+DOC
+return 1
+fi
+  (  # do not export in user shell.
+  local staleness=${1?Need staleness as first parameter}
+  local depth=${2?Need depth as second parameter}
+  export now=$(date +%s)
+
+  find -maxdepth "$depth" -type d -mtime +"$staleness" -printf "%Cs\t%p\n" |\
+  perl -ane '$F[0]=int(($ENV{now}-$F[0])/86400); local $"="\t"; print "@F\n";' |\
+  sort -nk 1 | column -t
+  )
+}
+
+
+function ls_size_suffix {
+if [[ -z $1 || $1 == '-h' ]]; then
+cat <<DOC
+  Find files ending with suffix recursively, sort by human-readable size.
+  First argument: suffix, e.g. .cram or .fastq.gz
+  Second (optional) argument: a lower bound for size, e.g. 10M or 64k.
+  Example:
+  ${FUNCNAME[0]} .fastq.gz
+  ${FUNCNAME[0]} .cram 500M
+  ${FUNCNAME[0]} .cram 1G
+DOC
+return 1
+fi
+  local pat=${1?Please supply a file suffix to search for, e.g. .cram or .fastq.gz}
+  local low=${2:-0}
+  find -name "*$pat" -size +$low -print0 | du -hc --files0-from=- | sort -h
+}
+
+
+
+function ls_size_any {
+if [[ $1 == '-h' ]]; then
+cat <<DOC
+  List all regular files recursively and sort by human-readable size.
+  First optional argument:   lower bound e.g. 10M or 16k, or 0k
+  Second optional argument:  upper bound e.g. 4k (useful for small files)
+  Example:
+  ls_size_any 10M     # find files larger than 10M
+  ls_size_any 0k 4k   # find small files
+DOC
+return 1
+fi
+  local low=${1:-0}
+  local high=${2:+-size -$2}      # if $2 exists (:+) use the expression -size -$2.
+  find -type f -size +$low $high -print0 | du -hc --files0-from=- | sort -h
+}
+
+
+
+function ls_lastfile() {
+if [[ $1 == '-h' ]]; then
+cat <<DOC
+  Set variable lf to the last regular file that was modified.
+  Optional first argument: a suffix
+  Example:
+  ls_lastfile .gz
+DOC
+return 1
+fi
+   thefile=$(find  -maxdepth 1 -type f -print0 | xargs -0 \ls -rt1 | grep "$1"'$' | tail -n 1)
+   if [[ -z $thefile ]]; then
+      echo "not found: $1"
+   elif [[ ! -f $thefile ]]; then
+      echo "not a regular file: $thefile"
+   else
+      lf=$PWD/${thefile:2}
+      echo set lf to $lf
+      return 0
+   fi
+   lf=last-lf-request-failed
+   return 1
+}
+
+
+  # I wonder if there are better ways of doing this. Filesystem locality probably means
+  # there is nothing substantially better than using find.
+  #
+function ls_count_files {
+  find .//. ! -name . -print | grep -c //
+}
+
+

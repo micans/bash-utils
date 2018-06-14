@@ -1,0 +1,241 @@
+#
+#                          BASH and ZSH functions
+#
+#  This file should work for modern bourne-style shells, not including the
+#  bourne shell.  Name this file for example .bourne_apparix in your $HOME
+#  directory, and put the line 'source $HOME/.bourne_apparix' (without quotes)
+#  in the file $HOME/.bashrc or $HOME/.bash_login if you use bash, in the file
+#  $HOME/.zshrc if you use zsh.  If you use zsh, you may need to additionally
+#  put the lines
+#
+#     autoload -Uz compinit
+#     compinit
+#
+#  (without outcommenting them as above) *BEFORE* the line where you source
+#  $HOME/.bourne_apparix. This is not the case for example if you use
+#  oh-my-zsh.
+#
+#  If you use the relevant functions, make sure $EDITOR is set to the name of
+#  an available editor.
+#
+#  I find it useful to have this alias:
+#  alias a=apparix
+#  as I use it in command substitution, e.g.
+#  cp myfile $(a bm)
+#  However, I do not want to spring this on you unsuspectingly, as any
+#  single-character alias is hugely valuable from a Huffman point of view.
+#  If you like it, you'll have to add this line yourself.
+
+ #
+#  Thanks to Sitaram Chamarty for all the important parts of the bash completion
+#  code, and thanks to Izaak van Dongen for figuring out the zsh completion code,
+#  and subsequently improving and standardising the bash completion code.
+ #
+
+
+
+function toot () {
+   if test "$3"; then
+      file="$(apparix -favour rOl "$1" "$2")/$3"
+   elif test "$2"; then
+      file="$(apparix -favour rOl "$1")/$2"
+   else
+      echo "toot tag dir file OR toot tag file"
+      return
+   fi
+   if [[ $? == 0 ]]; then
+      $EDITOR $file
+   fi
+}
+
+function annot () {
+   toot $@ ANNOT
+}
+
+function todo () {
+   toot $@ TODO
+}
+
+function clog () {
+   toot $@ ChangeLog
+}
+
+function note () {
+   toot $@ NOTES
+}
+
+function ald () {
+  if test "$2"; then
+    loc=$(apparix -favour rOl "$1" "$2")
+  elif test "$1"; then
+    loc=$(apparix --try-current-first -favour rOl "$1")
+  fi
+  if [[ $? == 0 ]]; then
+    ls -d "$loc"
+  fi
+}
+
+function als () {
+  loc=$(apparix -favour rOl "$1")
+  if test "$1"; then
+    loc=$(apparix -favour rOl "$1")
+  fi
+  if [[ $? == 0 ]]; then
+     if test "$2"; then
+       ls -d "$loc"/$2
+    else
+       ls -d "$loc"
+    fi
+  fi
+}
+
+function als1 () {
+  if test "$2"; then
+    loc=$(apparix -favour rOl "$1" "$2")
+  elif test "$1"; then
+    loc=$(apparix --try-current-first -favour rOl "$1")
+  fi
+  if [[ $? == 0 ]]; then
+    ls -d "$loc"
+  fi
+}
+
+
+function ae () {
+  if test "$2"; then
+    loc=$(apparix -favour rOl "$1" "$2")
+  elif test "$1"; then
+    loc=$(apparix --try-current-first -favour rOl "$1")
+  fi
+  if [[ $? == 0 ]]; then
+    files=$(ls $loc)
+    if [[ $? == 0 ]]; then
+       $EDITOR $files
+    else
+      echo "no listing for $loc"
+    fi
+  fi
+}
+
+function whence () {
+  if test "$2"; then
+    loc=$(apparix -pick $2 "$1")
+  elif test "$1"; then
+   loc=$(apparix "$1")
+  else
+    loc=$HOME
+  fi
+  if [[ $? == 0 ]]; then
+    cd "$loc"
+  fi
+}
+
+
+function to () {
+  true
+  if test "$2"; then
+    loc=$(apparix --try-current-last -favour rOl "$1" "$2")
+  elif test "$1"; then
+    if test "$1" == '-'; then
+      loc="-"
+    else
+      loc=$(apparix --try-current-last -favour rOl "$1")
+    fi
+  else
+    loc=$HOME
+  fi
+  if [[ $? == 0 ]]; then
+    cd "$loc"
+  fi
+}
+
+function bm () {
+  if test "$2"; then
+    apparix --add-mark "$1" "$2";
+  elif test "$1"; then
+    apparix --add-mark "$1";
+  else
+    apparix --add-mark;
+  fi
+}
+
+function portal () {
+  if test "$1"; then
+    apparix --add-portal "$1";
+  else
+    apparix --add-portal;
+  fi
+}
+
+if [[ -n $BASH_VERSION ]]; then
+    # function to complete sensibly on filenames and directories
+    # https://stackoverflow.com/questions/12933362/getting-compgen-to-include-slashes-on-directories-when-looking-for-files
+    function _my_compgen {
+        local cur="$1"
+
+        # Files, excluding directories:
+        grep -v -F -f <(compgen -d -P ^ -S '$' -- "$cur") <(compgen -f -P ^ -S '$' -- "$cur") | sed -e 's/^\^//' -e 's/\$$/ /'
+
+        # Directories:
+        compgen -d -S / -- "$cur"
+    }
+
+    # function completing a file, used by _apparix_comp
+    function _apparix_comp_file {
+      local caller="$1"
+      local cur_file="$2"
+      case $caller in
+        to|als) # complete on directories. this is easy with compgen
+          compgen -d -S / -- "$cur_file"
+          ;;
+        ae|apparix|a) # complete on filenames. this is a little harder to do nicely
+          _my_compgen "$cur_file"
+          ;;
+        *)
+          echo "please register this function in ~/.bash_apparix:_apparix_dirs" 1>&2
+          ;;
+      esac
+    }
+
+    # function to complete an apparix tag followed by a file inside that tag's
+    # directory
+    function _apparix_comp {
+      local tag="${COMP_WORDS[1]}"
+      COMPREPLY=()
+      if [[ $COMP_CWORD == 1 ]]; then
+        local tags=( $(cut -f2 -d, $HOME/.apparix{rc,expand}) )
+        COMPREPLY=( $(compgen -W "${tags[*]}" -- "$tag") )
+      else
+        local cur_file="${COMP_WORDS[2]}"
+        local app_dir=$(apparix --try-current-last -favour rOl $tag 2>/dev/null)
+        if [[ -d $app_dir ]]; then
+            # run in subshell so cd isn't permanent
+            COMPREPLY=( $(cd $app_dir && _apparix_comp_file $1 $cur_file) )
+        else
+            COMPREPLY=()
+        fi
+      fi
+      return 0
+    }
+  # register completions
+  complete -o nospace -F _apparix_comp to als ae apparix
+elif [[ -n $ZSH_VERSION ]]; then
+    function _apparix_file {
+        _arguments '1:mark:_values "\n" $(cut -d, -f2 $HOME/.apparix{rc,expand})' \
+                   '2:file:_path_files -W $(apparix --try-current-last -favour rOl $words[2] 2>/dev/null)'
+    }
+
+    function _apparix_directory {
+        _arguments '1:mark:_values "\n" $(cut -d, -f2 $HOME/.apparix{rc,expand})' \
+                   '2:file:_path_files -/W $(apparix --try-current-last -favour rOl $words[2] 2>/dev/null)'
+    }
+
+    compdef _apparix_file ae apparix a
+    compdef _apparix_directory to als
+fi
+
+export APPARIXLOG=$HOME/.apparixlog
+
+alias via='vi $HOME/.apparixrc'
+
+alias now='cd $(a now)'
