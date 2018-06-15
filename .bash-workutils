@@ -14,7 +14,7 @@ function ls_ls {
   local help=false
   list_long="ls_bigold ls_mouldy ls_size_any ls_size_suffix ls_file_spread"
   list_short="ls_count_files"
-  if [[ $1 == '-h' ]]; then
+  if [[ $1 == '-l' ]]; then
     help=true
     for f in $list_long; do
       echo -e "\n--- $f"
@@ -32,7 +32,7 @@ function ls_ls {
   echo "All these functions traverse directories. Use with care."
   echo "Use type -a funcname to see the function definition."
   if ! $help; then
-    echo "Use ls_ls -h to see longer descriptions."
+    echo "Use ls_ls -l to see longer descriptions."
   fi
 }
 
@@ -132,8 +132,8 @@ cat <<DOC
   First optional argument:   lower bound e.g. 10M or 16k, or 0k
   Second optional argument:  upper bound e.g. 4k (useful for small files)
   Example:
-  ls_size_any 10M     # find files larger than 10M
-  ls_size_any 0k 4k   # find small files
+  ${FUNCNAME[0]} 10M     # find files larger than 10M
+  ${FUNCNAME[0]} 0k 4k   # find small files
 DOC
 return 1
 fi
