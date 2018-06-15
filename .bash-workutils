@@ -158,7 +158,7 @@ cat <<DOC
   The output is sorted by count, with a total tally added.
   Useful to check if applications are well-behaved and do not
   crush the file system with large numbers of files in a single directory.
-  Modified from code by Glenn Jackmann on stackoverflow.
+  Modified from code by Glenn Jackman on stackoverflow.
 DOC
 return 1
 fi
