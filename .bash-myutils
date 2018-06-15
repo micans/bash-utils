@@ -81,7 +81,7 @@ function themin {
   perl -ne 'chomp; $m = $_ if $_ < $m; END { print "$m\n"; } BEGIN { $m = <>; chomp $m; }'
 }
 function theminmax {
-  perl -ne 'chomp;$h=$_ if$_>$h;$l=$_ if$l<$l; END { print "$l $h\n"; } BEGIN { $h=<>; chomp $h; $l=$h; }'
+  perl -ne 'chomp;$h=$_ if$_>$h;$l=$_ if$_<$l; END { print "$l $h\n"; } BEGIN { $h=<>; chomp $h; $l=$h; }'
 }
 
 
