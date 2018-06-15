@@ -1,15 +1,44 @@
 
 
+declare -A ls_shorthelp
+     ls_shorthelp[ls_bigold]="<depth>"
+     ls_shorthelp[ls_mouldy]="<days-old> <depth>"
+   ls_shorthelp[ls_size_any]="[low] [high]        # 4k 10M 2G etc"
+ls_shorthelp[ls_size_suffix]="<suffix> [low]      # 4k 10M 2G etc"
+ls_shorthelp[ls_file_spread]="# no argument"
+ls_shorthelp[ls_count_files]="# no argument" 
+
 
 function ls_ls {
   local f
-  for f in ls_bigold ls_mouldy ls_size_any ls_size_suffix ls_file_spread; do
-    echo -e "\n--- $f"
-    $f -h
+  local help=false
+  list_long="ls_bigold ls_mouldy ls_size_any ls_size_suffix ls_file_spread"
+  list_short="ls_count_files"
+  if [[ $1 == '-h' ]]; then
+    help=true
+    for f in $list_long; do
+      echo -e "\n--- $f"
+      $f -h
+    done
+    echo
+  fi
+  for f in $list_long; do
+    printf "%-20s %s\n" "$f" "${ls_shorthelp[$f]}"
   done
+  for f in $list_short; do
+    printf "%-20s %s\n" "$f" "${ls_shorthelp[$f]}"
+  done
+  echo "---"
+  echo "All these functions traverse directories. Use with care."
+  echo "Use type -a funcname to see the function definition."
+  if ! $help; then
+    echo "Use ls_ls -h to see longer descriptions."
+  fi
 }
 
 
+  # Nextflow specific, and even then a matter of taste.
+  #
 function nf_check {
 if [[ -z $1 || $1 == '-h' ]]; then
 cat <<DOC
@@ -165,6 +194,8 @@ fi
   local dir
   local count=0
   (
+  shopt -s nullglob
+  shopt -s dotglob
   while read -d '' -r dir; do
       files=("$dir"/*)
       delta=${#files[@]}
