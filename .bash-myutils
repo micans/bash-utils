@@ -1,0 +1,87 @@
+
+
+function bj {
+  bjobs -o 'jobid stat exec_host run_time job_name delimiter="	"' | perl -pe 's/second(\(s\))?//' | column -t
+}
+
+alias bwork="bjobs | tail -n +2 | perl -ane '"'print "$F[2]\n";'"' | sort | uniq -c"
+alias duck1='du -ch -d 1  | sort -h'
+alias duck2='du -ch -d 2  | sort -h'
+
+  # This one not used/tested yet. Had issues with shell quoting.
+  #
+function set_farm_mem {
+   echo $1
+   MEM1="-M $1 -R ,select[mem>$1] rusage[mem=$1],"
+   export MEM=${MEM1//,/'"'}
+}
+
+  # Give full file name for arguments.
+  #
+function ffn()
+{  for f in $*; do
+      echo "$PWD/$f" | tee -a $HOME/.ffn.mycache
+   done
+}
+
+  # Last full file name, or batch of N last file names
+  #
+function ffnl()
+{  local num=1
+   if [[ ! -z "$1" ]]; then
+      num=$1
+   fi
+   tail -n $num $HOME/.ffn.mycache
+}
+
+function ffncp
+{ local dest=${1:?Need destination to copy last file to} 
+  cp $(tail -n 1 $HOME/.ffn.mycache) $dest
+}
+
+function groupify()
+{  find $1 -print0  -user $USER | xargs -0 chmod g+w
+}
+
+function ungroupify()
+{  find $1 -print0 -user $USER | xargs -0 chmod g-w
+}
+
+function len()
+{  echo -n "$1" | wc -c
+}
+
+  # not great. Use themax
+function bash_max {
+  local max_value
+  read max_value
+  while read value; do
+    if [[ $value =~ ^[0-9]+$ ]] && [[ $value -gt $max_value ]]; then
+        max_value=$value
+    fi
+  done
+  echo $max_value
+}
+  # not great. Use themin
+function bash_min {
+  local min_value
+  read min_value
+  while read value; do
+    if [[ $value =~ ^[0-9]+$ ]] && [[ $value -lt $min_value ]]; then
+        min_value=$value
+    fi
+  done
+  echo $min_value
+}
+
+function themax {
+  perl -ne 'chomp; $m = $_ if $_ > $m; END { print "$m\n"; } BEGIN { $m = <>; chomp $m; }'
+}
+function themin {
+  perl -ne 'chomp; $m = $_ if $_ < $m; END { print "$m\n"; } BEGIN { $m = <>; chomp $m; }'
+}
+function theminmax {
+  perl -ne 'chomp;$h=$_ if$_>$h;$l=$_ if$l<$l; END { print "$l $h\n"; } BEGIN { $h=<>; chomp $h; $l=$h; }'
+}
+
+
