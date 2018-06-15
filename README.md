@@ -1,5 +1,19 @@
 # bash-utils
 
+## Apparix
+
+Completion functions for bash and zsh in `.bourne-apparix`.
+
+## bash-myutils
+
+Small functions that I use in `.bash-myutils`.
+
+## bash-workutils
+
+Space/time bash functions in `.bourne-apparix`. Most of these will lead to a lot
+of disk access, use with care.
+
+
 ```
 --- ls_bigold
   List directories up to a certain depth, ordered by disk usage,
