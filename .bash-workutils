@@ -1,6 +1,15 @@
 
 
 
+function ls_ls {
+  local f
+  for f in ls_bigold ls_mouldy ls_size_any ls_size_suffix ls_file_spread; do
+    echo -e "\n--- $f"
+    $f -h
+  done
+}
+
+
 function nf_check {
 if [[ -z $1 || $1 == '-h' ]]; then
 cat <<DOC
@@ -15,15 +24,6 @@ fi
   local ticket=$1
   local tag=$2
   cd $LUSTRECELLGENI/$ticket/work/$tag*
-}
-
-
-function ls_ls {
-  local f
-  for f in ls_bigold ls_mouldy ls_size_any ls_size_suffix; do
-    echo "--- $f"
-    $f -h
-  done
 }
 
 
@@ -142,9 +142,37 @@ fi
 
   # I wonder if there are better ways of doing this. Filesystem locality probably means
   # there is nothing substantially better than using find.
+  # Don't use this in a root directory or high-level directory (as it will
+  # take a long time and taxes the file system); I use it
+  # to check the number of files a particular piece of software creates.
   #
 function ls_count_files {
   find .//. ! -name . -print | grep -c //
+}
+
+
+function ls_file_spread {
+if [[ $1 == '-h' ]]; then
+cat <<DOC
+  For each directory count the number of files in it, recursively.
+  The output is sorted by count, with a total tally added.
+  Useful to check if applications are well-behaved and do not
+  crush the file system with large numbers of files in a single directory.
+  Modified from code by Glenn Jackmann on stackoverflow.
+DOC
+return 1
+fi
+  local dir
+  local count=0
+  (
+  while read -d '' -r dir; do
+      files=("$dir"/*)
+      delta=${#files[@]}
+      count=$(($count+$delta))
+      printf "%8d %s\n" "$delta" "$dir"
+  done < <(find -type d -print0)
+  printf "%8d Total sum of subcounts\n" "$count"
+  ) | sort -n
 }
 
 
