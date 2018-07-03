@@ -1,5 +1,6 @@
 
 
+
 function bj {
   bjobs -o 'jobid stat exec_host run_time job_name delimiter="	"' | perl -pe 's/second(\(s\))?//' | column -t
 }
@@ -46,6 +47,7 @@ function groupify()
 function ungroupify()
 {  find $1 -print0 -user $USER | xargs -0 chmod g-w
 }
+
 
 function len()
 {  echo -n "$1" | wc -c

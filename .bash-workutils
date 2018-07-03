@@ -1,5 +1,8 @@
 
 
+function errcho { >&2 echo $@; }
+
+
 declare -A ls_shorthelp
      ls_shorthelp[ls_bigold]="<depth>"
      ls_shorthelp[ls_mouldy]="<days-old> <depth>"
@@ -206,4 +209,36 @@ fi
   ) | sort -n
 }
 
+
+  # TODO: check and all do not mix currently. add -h.
+  #
+function colcount()
+{ local check=false
+  local all=false
+  local ret=0
+  if [[ ! -z "$1" ]] && [[ $1 == -c ]]; then
+    check=true
+    shift
+  elif [[ ! -z "$1" ]] && [[ $1 == -a ]]; then
+    all=true
+    shift
+  fi
+  if [[ -z "$1" ]]; then
+    errcho "Need file name argument"
+    return 1
+  fi
+
+  if $all; then
+    perl -ne '$n=tr/\t/\t/+1;print"$n\n"' $1 | sort | uniq -c | sort -n | perl -pe 's/^\s+(\d+)\s+(\d+)/$2\t$1/'
+  else
+    c1=$(head -n 1 $1 | tr '\t' '\n' | wc -l)
+    c2=$(head -n 2 $1 | tail -n 1 | tr '\t' '\n' | wc -l)
+    c3=$(head -n 3 $1 | tail -n 1 | tr '\t' '\n' | wc -l)
+    if $check && ! (( $c2 == $c3 && ($c1+1 == $c2 || $c1 == $c2) )); then
+      ret=1
+    fi
+    echo -e "$c1\t$c2\t$c3"
+  fi
+  return $ret
+}
 
