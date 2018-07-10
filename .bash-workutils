@@ -1,6 +1,6 @@
 
 
-function errcho { >&2 echo $@; }
+function achoo { >&2 echo $@; }
 
 
 declare -A ls_shorthelp
@@ -224,7 +224,7 @@ function colcount()
     shift
   fi
   if [[ -z "$1" ]]; then
-    errcho "Need file name argument"
+    achoo "Need file name argument"
     return 1
   fi
 
@@ -241,4 +241,14 @@ function colcount()
   fi
   return $ret
 }
+
+
+function colnames()
+{ if [[ -z "$1" ]]; then
+    achoo "Need file name argument"
+    return 1
+  fi
+  head -n 1 $1 | tr '\t' '\n'
+}
+
 

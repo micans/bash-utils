@@ -35,9 +35,9 @@
 
 
 function toot () {
-   if test "$3"; then
+   if [[ ! -z "$3" ]]; then
       file="$(apparix -favour rOl "$1" "$2")/$3"
-   elif test "$2"; then
+   elif [[ ! -z "$2" ]]; then
       file="$(apparix -favour rOl "$1")/$2"
    else
       echo "toot tag dir file OR toot tag file"
@@ -65,9 +65,9 @@ function note () {
 }
 
 function ald () {
-  if test "$2"; then
+  if [[ ! -z "$2" ]]; then
     loc=$(apparix -favour rOl "$1" "$2")
-  elif test "$1"; then
+  elif [[ ! -z "$1" ]]; then
     loc=$(apparix --try-current-first -favour rOl "$1")
   fi
   if [[ $? == 0 ]]; then
@@ -77,22 +77,22 @@ function ald () {
 
 function als () {
   loc=$(apparix -favour rOl "$1")
-  if test "$1"; then
+  if [[ ! -z "$1" ]]; then
     loc=$(apparix -favour rOl "$1")
   fi
   if [[ $? == 0 ]]; then
-     if test "$2"; then
-       ls -d "$loc"/$2
+     if [[ ! -z "$2" ]]; then
+       ls  "$loc"/$2
     else
-       ls -d "$loc"
+       ls  "$loc"
     fi
   fi
 }
 
 function als1 () {
-  if test "$2"; then
+  if [[ ! -z "$2" ]]; then
     loc=$(apparix -favour rOl "$1" "$2")
-  elif test "$1"; then
+  elif [[ ! -z "$1" ]]; then
     loc=$(apparix --try-current-first -favour rOl "$1")
   fi
   if [[ $? == 0 ]]; then
@@ -102,15 +102,15 @@ function als1 () {
 
 
 function ae () {
-  if test "$2"; then
+  if [[ ! -z "$2" ]]; then
     loc=$(apparix -favour rOl "$1" "$2")
-  elif test "$1"; then
+  elif [[ ! -z "$1" ]]; then
     loc=$(apparix --try-current-first -favour rOl "$1")
   fi
   if [[ $? == 0 ]]; then
-    files=$(ls $loc)
+    files=$(ls "$loc")
     if [[ $? == 0 ]]; then
-       $EDITOR $files
+       $EDITOR "$files"
     else
       echo "no listing for $loc"
     fi
@@ -118,9 +118,9 @@ function ae () {
 }
 
 function whence () {
-  if test "$2"; then
+  if [[ ! -z "$2" ]]; then
     loc=$(apparix -pick $2 "$1")
-  elif test "$1"; then
+  elif [[ ! -z "$1" ]]; then
    loc=$(apparix "$1")
   else
     loc=$HOME
@@ -133,10 +133,10 @@ function whence () {
 
 function to () {
   true
-  if test "$2"; then
+  if [[ ! -z "$2" ]]; then
     loc=$(apparix --try-current-last -favour rOl "$1" "$2")
-  elif test "$1"; then
-    if test "$1" == '-'; then
+  elif [[ ! -z "$1" ]]; then
+    if [[ "$1" == '-' ]]; then
       loc="-"
     else
       loc=$(apparix --try-current-last -favour rOl "$1")
@@ -150,9 +150,9 @@ function to () {
 }
 
 function bm () {
-  if test "$2"; then
+  if [[ ! -z "$2" ]]; then
     apparix --add-mark "$1" "$2";
-  elif test "$1"; then
+  elif [[ ! -z "$1" ]]; then
     apparix --add-mark "$1";
   else
     apparix --add-mark;
@@ -160,7 +160,7 @@ function bm () {
 }
 
 function portal () {
-  if test "$1"; then
+  if [[ ! -z "$1" ]]; then
     apparix --add-portal "$1";
   else
     apparix --add-portal;
@@ -172,6 +172,7 @@ if [[ -n $BASH_VERSION ]]; then
     # https://stackoverflow.com/questions/12933362/getting-compgen-to-include-slashes-on-directories-when-looking-for-files
     function _my_compgen {
         local cur="$1"
+        local IFS=$'\n'
 
         # Files, excluding directories:
         grep -v -F -f <(compgen -d -P ^ -S '$' -- "$cur") <(compgen -f -P ^ -S '$' -- "$cur") | sed -e 's/^\^//' -e 's/\$$/ /'
@@ -201,6 +202,7 @@ if [[ -n $BASH_VERSION ]]; then
     # directory
     function _apparix_comp {
       local tag="${COMP_WORDS[1]}"
+      local IFS=$'\n'
       COMPREPLY=()
       if [[ $COMP_CWORD == 1 ]]; then
         local tags=( $(cut -f2 -d, $HOME/.apparix{rc,expand}) )
@@ -221,11 +223,13 @@ if [[ -n $BASH_VERSION ]]; then
   complete -o nospace -F _apparix_comp to als ae apparix
 elif [[ -n $ZSH_VERSION ]]; then
     function _apparix_file {
+        local IFS=$'\n'
         _arguments '1:mark:_values "\n" $(cut -d, -f2 $HOME/.apparix{rc,expand})' \
                    '2:file:_path_files -W $(apparix --try-current-last -favour rOl $words[2] 2>/dev/null)'
     }
 
     function _apparix_directory {
+        local IFS=$'\n'
         _arguments '1:mark:_values "\n" $(cut -d, -f2 $HOME/.apparix{rc,expand})' \
                    '2:file:_path_files -/W $(apparix --try-current-last -favour rOl $words[2] 2>/dev/null)'
     }
