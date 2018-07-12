@@ -1,9 +1,10 @@
+#  Apparix - bookmarks for the command line with comprehensive tab completion.
 #
 #                          BASH and ZSH functions
 #
 #  This file should work for modern bourne-style shells, not including the
-#  bourne shell.  Name this file for example .bourne_apparix in your $HOME
-#  directory, and put the line 'source $HOME/.bourne_apparix' (without quotes)
+#  bourne shell.  Name this file for example .bourne-apparix in your $HOME
+#  directory, and put the line 'source $HOME/.bourne-apparix' (without quotes)
 #  in the file $HOME/.bashrc or $HOME/.bash_login if you use bash, in the file
 #  $HOME/.zshrc if you use zsh.  If you use zsh, you may need to additionally
 #  put the lines
@@ -12,19 +13,21 @@
 #     compinit
 #
 #  (without outcommenting them as above) *BEFORE* the line where you source
-#  $HOME/.bourne_apparix. This is not the case for example if you use
+#  $HOME/.bourne-apparix. This is not the case for example if you use
 #  oh-my-zsh.
 #
 #  If you use the relevant functions, make sure $EDITOR is set to the name of
 #  an available editor.
 #
 #  I find it useful to have this alias:
-#  alias a=apparix
+#     alias a=apparix
 #  as I use it in command substitution, e.g.
-#  cp myfile $(a bm)
-#  However, I do not want to spring this on you unsuspectingly, as any
-#  single-character alias is hugely valuable from a Huffman point of view.
-#  If you like it, you'll have to add this line yourself.
+#     echo cp myfile $(a bm)
+#     cp myfile $(a bm)
+#
+#  This is a big decision from a Huffman point of view.
+#  If you want to remove it, go to all the places in the lines below
+#  where the name Huffman is mentioned and remove the relevant part.
 
  #
 #  Thanks to Sitaram Chamarty for all the important parts of the bash completion
@@ -35,9 +38,9 @@
 
 
 function toot () {
-   if [[ ! -z "$3" ]]; then
+   if [[ 3 == $# ]]; then
       file="$(apparix -favour rOl "$1" "$2")/$3"
-   elif [[ ! -z "$2" ]]; then
+   elif [[ 2 == $# ]]; then
       file="$(apparix -favour rOl "$1")/$2"
    else
       echo "toot tag dir file OR toot tag file"
@@ -48,26 +51,14 @@ function toot () {
    fi
 }
 
-function annot () {
-   toot $@ ANNOT
-}
-
 function todo () {
    toot $@ TODO
 }
 
-function clog () {
-   toot $@ ChangeLog
-}
-
-function note () {
-   toot $@ NOTES
-}
-
 function ald () {
-  if [[ ! -z "$2" ]]; then
+  if [[ 2 == $# ]]; then
     loc=$(apparix -favour rOl "$1" "$2")
-  elif [[ ! -z "$1" ]]; then
+  elif [[ 1 == $# ]]; then
     loc=$(apparix --try-current-first -favour rOl "$1")
   fi
   if [[ $? == 0 ]]; then
@@ -76,9 +67,9 @@ function ald () {
 }
 
 function als () {
-  if [[ ! -z "$2" ]]; then
+  if [[ 2 == $# ]]; then
     loc=$(apparix -favour rOl "$1" "$2")
-  elif [[ ! -z "$1" ]]; then
+  elif [[ 1 == $# ]]; then
     loc=$(apparix --try-current-first -favour rOl "$1")
   fi
   if [[ $? == 0 ]]; then
@@ -87,25 +78,20 @@ function als () {
 }
 
 function ae () {
-  if [[ ! -z "$2" ]]; then
+  if [[ 2 == $# ]]; then
     loc=$(apparix -favour rOl "$1" "$2")
-  elif [[ ! -z "$1" ]]; then
+  elif [[ 1 == $# ]]; then
     loc=$(apparix --try-current-first -favour rOl "$1")
   fi
   if [[ $? == 0 ]]; then
-    files=$(ls "$loc")
-    if [[ $? == 0 ]]; then
-       $EDITOR "$files"
-    else
-      echo "no listing for $loc"
-    fi
+     $EDITOR "$loc"
   fi
 }
 
 function whence () {
-  if [[ ! -z "$2" ]]; then
+  if [[ 2 == $# ]]; then
     loc=$(apparix -pick $2 "$1")
-  elif [[ ! -z "$1" ]]; then
+  elif [[ 1 == $# ]]; then
    loc=$(apparix "$1")
   else
     loc=$HOME
@@ -116,9 +102,9 @@ function whence () {
 }
 
 function bm () {
-  if [[ ! -z "$2" ]]; then
+  if [[ 2 == $# ]]; then
     apparix --add-mark "$1" "$2";
-  elif [[ ! -z "$1" ]]; then
+  elif [[ 1 == $# ]]; then
     apparix --add-mark "$1";
   else
     apparix --add-mark;
@@ -126,7 +112,7 @@ function bm () {
 }
 
 function portal () {
-  if [[ ! -z "$1" ]]; then
+  if [[ 1 == $# ]]; then
     apparix --add-portal "$1";
   else
     apparix --add-portal;
@@ -134,10 +120,10 @@ function portal () {
 }
 
 function to () {
-  local IFS=$'\n'
-  if [[ ! -z "$2" ]]; then
+  # local IFS=$'\n'
+  if [[ 2 == $# ]]; then
     loc=$(apparix --try-current-last -favour rOl "$1" "$2")
-  elif [[ ! -z "$1" ]]; then
+  elif [[ 1 == $# ]]; then
     if [[ "$1" == '-' ]]; then
       loc="-"
     else
@@ -156,25 +142,25 @@ if [[ -n $BASH_VERSION ]]; then
     # https://stackoverflow.com/questions/12933362/getting-compgen-to-include-slashes-on-directories-when-looking-for-files
     function _my_compgen {
         local cur="$1"
-        local IFS=$'\n'
 
         # Files, excluding directories:
-        grep -v -F -f <(compgen -d -P ^ -S '$' -- "$cur") <(compgen -f -P ^ -S '$' -- "$cur") | sed -e 's/^\^//' -e 's/\$$/ /'
-
-        # Directories:
-        compgen -d -S / -- "$cur"
+        comm -3 <(compgen -f -- "$cur" | sort) <(compgen -d -- "$cur" | sort) # | sed -e 's/$/ /'
+        # Directories (add -S / for slash separator):
+        compgen -d -- "$cur"
     }
 
     # function completing a file, used by _apparix_comp
     function _apparix_comp_file {
       local caller="$1"
       local cur_file="$2"
-      local IFS=$'\n'
+      # local IFS=$'\n'
       case $caller in
-        to|als) # complete on directories. this is easy with compgen
+        # complete on directories. this is easy with compgen.
+        to|als|ald)
           compgen -d -S / -- "$cur_file"
           ;;
-        ae|apparix|a) # complete on filenames. this is a little harder to do nicely
+        # complete on filenames. this is a little harder to do nicely.
+        a|ae|apparix) # Huffman (remove a|)
           _my_compgen "$cur_file"
           ;;
         *)
@@ -202,33 +188,31 @@ if [[ -n $BASH_VERSION ]]; then
             COMPREPLY=()
         fi
       fi
-      # Make it suitable for shell use again. With EVIL SPACES IN NAMES there
-      # are probably corner cases that may fail, seeing also that apparix has 'to'
-      # and 'ae' with slightly different completion semantics.
+      # The line below makes all know cases with spaces in directory names work.
       COMPREPLY=($(printf "%q\n" "${COMPREPLY[@]}"))
       return 0
     }
   # register completions
-  complete -o nospace -F _apparix_comp to als ae apparix
+  complete -o nospace -F _apparix_comp a to als ald ae apparix    # Huffman (remove a)
 elif [[ -n $ZSH_VERSION ]]; then
     function _apparix_file {
-        local IFS=$'\n'
+        # local IFS=$'\n'
         _arguments '1:mark:_values "\n" $(cut -d, -f2 $HOME/.apparix{rc,expand})' \
                    '2:file:_path_files -W "$(apparix --try-current-last -favour rOl $words[2] 2>/dev/null)"'
     }
 
     function _apparix_directory {
-        local IFS=$'\n'
+        # local IFS=$'\n'
         _arguments '1:mark:_values "\n" $(cut -d, -f2 $HOME/.apparix{rc,expand})' \
                    '2:file:_path_files -/W "$(apparix --try-current-last -favour rOl $words[2] 2>/dev/null)"'
     }
 
-    compdef _apparix_file ae apparix a
-    compdef _apparix_directory to als
+    compdef _apparix_file ae apparix a          # Huffman (remove a)
+    compdef _apparix_directory to ald als
 fi
 
 export APPARIXLOG=$HOME/.apparixlog
 
+alias a=apparix                                 # Huffman (remove entire line)
 alias via='vi $HOME/.apparixrc'
 
-alias now='cd $(a now)'
