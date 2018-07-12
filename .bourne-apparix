@@ -188,8 +188,10 @@ if [[ -n $BASH_VERSION ]]; then
             COMPREPLY=()
         fi
       fi
-      # The line below makes all know cases with spaces in directory names work.
-      COMPREPLY=($(printf "%q\n" "${COMPREPLY[@]}"))
+      if (( ${#COMPREPLY[@]} > 0 )); then
+        # The line below makes all know cases with spaces in directory names work.
+        COMPREPLY=($(printf "%q\n" "${COMPREPLY[@]}"))
+      fi
       return 0
     }
   # register completions
