@@ -210,7 +210,10 @@ fi
 }
 
 
-  # TODO: check and all do not mix currently. add -h.
+  # TODO
+  #   - Check (-c) and all (-a) do not mix currently. add -h.
+  #   - Add option(s) to allow/deny/request first row delta
+  #   - Be graceful on files with fewer than three lines.
   #
 function colcount()
 { local check=false
@@ -251,4 +254,43 @@ function colnames()
   head -n 1 $1 | tr '\t' '\n'
 }
 
+
+function bj {
+  bjobs -o 'jobid stat exec_host run_time job_name memlimit delimiter="	"' | perl -pe 's/second(\(s\))?//' | column -t
+}
+
+
+function procli() {
+if [[ -z $1 || $1 == '-h' ]]; then
+cat <<DOC
+  Given PID argument, I print /proc/PID/cmdline
+DOC
+return 1
+fi
+  (set -euo pipefail; cat /proc/$1/cmdline  | tr '\0' ' ') && echo
+}
+
+
+  # Give full file name for arguments.
+  #
+function ffn()
+{  for f in $*; do
+      echo "$PWD/$f" | tee -a $HOME/.ffn.mycache
+   done
+}
+
+
+function ls_misc() {
+cat <<DOC
+F: a file name. F+ one or more file names.
+  colcount F    output field counts for first three lines (tab separator)
+  colcount -a F output field counts for all lines -c and -a do not mix yet
+  colcount -c F check field count consistency for first three lines.
+                NOTE. first line discrepancy is allowed.
+  colnames F    output the first row of a tab-separated file, one field per line
+  procli PID    print command line for a PID according to /proc/PID/cmdline
+  bj            bjobs information -- outputs useful bjobs status fields
+  ffn F+        print full(y qualified) file name for arguments
+DOC
+}
 

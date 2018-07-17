@@ -157,7 +157,8 @@ if [[ -n $BASH_VERSION ]]; then
       case $caller in
         # complete on directories. this is easy with compgen.
         to|als|ald)
-          compgen -d -S / -- "$cur_file"
+          # Directories (add -S / for slash separator):
+          compgen -d -- "$cur_file"
           ;;
         # complete on filenames. this is a little harder to do nicely.
         a|ae|apparix) # Huffman (remove a|)
@@ -215,6 +216,6 @@ fi
 
 export APPARIXLOG=$HOME/.apparixlog
 
-alias a=apparix                                 # Huffman (remove entire line)
+alias a='apparix -favour O'                     # Huffman (remove entire line)
 alias via='vi $HOME/.apparixrc'
 

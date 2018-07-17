@@ -1,10 +1,6 @@
 
 
 
-function bj {
-  bjobs -o 'jobid stat exec_host run_time job_name delimiter="	"' | perl -pe 's/second(\(s\))?//' | column -t
-}
-
 alias bwork="bjobs | tail -n +2 | perl -ane '"'print "$F[2]\n";'"' | sort | uniq -c"
 alias duck1='du -ch -d 1  | sort -h'
 alias duck2='du -ch -d 2  | sort -h'
@@ -15,14 +11,6 @@ function set_farm_mem {
    echo $1
    MEM1="-M $1 -R ,select[mem>$1] rusage[mem=$1],"
    export MEM=${MEM1//,/'"'}
-}
-
-  # Give full file name for arguments.
-  #
-function ffn()
-{  for f in $*; do
-      echo "$PWD/$f" | tee -a $HOME/.ffn.mycache
-   done
 }
 
   # Last full file name, or batch of N last file names
