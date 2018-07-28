@@ -1,0 +1,329 @@
+#
+#                             A  P  P  A  R  I  S  H
+#
+#           bookmarks for the command line with comprehensive tab completion.
+#                             works for bash and zsh
+#
+#  Quick Guide:
+#  -  save this file in $HOME/.bourne-apparish
+#  -  issue 'source $HOME/.bourne-apparish'
+#  -  issue 'apparix-init'
+#  -  go to a directory and issue 'bm foo'
+#  -  you can now go to that directory by issuing 'to foo'
+#  -  try tab completion and command substitution, see the examples below.
+#
+#  Apparish is a pure shell implementation of an older system, apparix, written
+#  partly in C.  For both systems the bookmarking commands are implemented as
+#  shell functions.  The names of these functions are the same between the two
+#  implementations and the function definitions are very similar.  The apparix
+#  shell functions invoke a C executable. Apparish uses another shell funtion
+#  to mimic this C program and apparish provides two additional funcctions,
+#  apparix-init and apparix-list. The pivotal commands however are 'bm'
+#  (bookmark) and 'to' (go to mark). You can change from apparix to apparish
+#  and vice versa, as they use the same resource files.
+#
+#     apparix-init            initialise apparix (needed only once)
+#  ---
+#     bm <tag>                create bookmark <tag> for current directory
+#  ---
+#     to <tag>                jump to the directory marked <tag>
+#     to <tag> <TAB>          tab-complete on subdirectories of <tag>
+#     to <tag> s<TAB>         tab-complete on subdirectories of <tag> starting with s
+#     to <tag> foo/<TAB>      tab-complete in subdirectory foo of <tag>
+#     to <tag> foo/bar<TAB>   et cetera et cetera
+#
+#  --- the commands below allow tab-completion identical to 'to' above.
+#     als <tag>               list contents of <tag> directory
+#     ald <tag>               list subdirectories of <tag> directory
+#     ae <tag> FILE           edit FILE in <tag> directory
+#     ae <tag> FI<TAB>        complete on FI in <tag> directory
+#     a <tag> s<TAB>          echo the location of the <tag> directory or content.
+#                             This is useful in command substitution, e.g.
+#                             'cp somefile ($a tag src)'
+#
+#  --- apparix uses by default the most recent <tag> if identical tags exist.
+#                It can e.g. be useful to use 'now' as an often-changing tag.
+#     apparix-list <tag>      list all destinations marked <tag>
+#     whence <tag>            Enter menu to select destination
+#
+#  --- the functionality below mimics bash CDPATH.
+#     portal                  add all subdirectory names as mark
+#     portal-expand           refresh the portal subdirectory cache
+#
+#  If you use 'ae', make sure $EDITOR is set to the name of an available editor.
+#  I find it useful to have this alias:
+#
+#     alias a=apparish
+#
+#  as I use it in command substitution, e.g.
+#
+#     echo cp myfile $(a bm)
+#     cp myfile $(a bm)
+#
+#  This is a big decision from a Huffman point of view.  If you want to remove
+#  it, go to all the places in the lines below where the name Huffman is
+#  mentioned and remove the relevant part.
+#
+#  Apparish (this file) implements apparix functionality in shell code, compatible
+#  with apparix resource files. You can either use old apparix (compiling and
+#  installing the application apparix) in conjunction with sourcing
+#  .bourne-apparix, or you can simply source this file without needing to
+#  install apparix.  This files implements nearly all apparix functionality in
+#  shell code. It uses a function called apparish in place of apparix.
+#
+#                       BASH and ZSH functions
+#
+#  Apparish should work for modern bourne-style shells, not including the
+#  bourne shell.  Name this file for example .bourne-apparish in your $HOME
+#  directory, and put the line 'source $HOME/.bourne-apparish' (without quotes)
+#  in the file $HOME/.bashrc or $HOME/.bash_login if you use bash, in the file
+#  $HOME/.zshrc if you use zsh.  If you use zsh, you may need to additionally
+#  put the lines
+#
+#     autoload -Uz compinit
+#     compinit
+#
+#  (without outcommenting them as above) *BEFORE* the line where you source
+#  $HOME/.bourne-apparish. This is not the case for example if you use
+#  oh-my-zsh.
+
+ #
+#  Thanks to Sitaram Chamarty for all the important parts of the bash completion
+#  code, and thanks to Izaak van Dongen for figuring out the zsh completion code,
+#  subsequently improving and standardising the bash completion code, and suggesting
+#  the name apparish.
+ #
+
+
+APPARIXRC=$HOME/.apparixrc
+APPARIXEXPAND=$HOME/.apparixexpand
+APPARIXLOG=$HOME/.apparixlog
+
+
+function apparix-init {
+   already=""
+   if [[ -e $APPARIXRC && -e $APPARIXEXPAND ]]; then
+      already=" already"
+   fi
+   >> $APPARIXRC
+   >> $APPARIXEXPAND
+   echo "Apparish is up and running$already"
+}
+
+function apparish() {
+   if [[ 0 == $# ]]; then
+      cat $APPARIXRC $APPARIXEXPAND | tr ', ' '\t_' | column -t
+      return
+   fi
+   local mark=$1
+   local list=$(grep -F ",$mark," $APPARIXRC $APPARIXEXPAND)
+   if [[ -z $list ]]; then
+      echo "Mark not found"
+      return
+   fi
+   local target=$((tail -n 1 | cut -f 3 -d ',') <<< "$list")
+   if [[ 2 == $# ]]; then
+      echo $target/$2
+   else
+      echo $target
+   fi
+}
+
+function apparix-list () {
+   if [[ 0 == $# ]]; then
+      echo Need mark
+      return
+   fi
+   local mark=$1
+   grep -F ",$mark," $APPARIXRC $APPARIXEXPAND | cut -f 3 -d ','
+}
+
+function bm {
+   if [[ 0 == $# ]]; then
+      echo Need mark
+      return
+   fi
+   local mark=$1
+   echo "j,$mark,$PWD" | tee -a $APPARIXLOG >> $APPARIXRC
+}
+
+function to () {
+  # local IFS=$'\n'
+  if [[ 2 == $# ]]; then
+    loc=$(apparish "$1" "$2")
+  elif [[ 1 == $# ]]; then
+    if [[ "$1" == '-' ]]; then
+      loc="-"
+    else
+      loc=$(apparish "$1")
+    fi
+  else
+    loc=$HOME
+  fi
+  if [[ $? == 0 ]]; then
+    cd "$loc"
+  fi
+}
+
+function portal {
+   echo "e,$PWD" >> $APPARIXRC
+   portal-expand
+}
+
+function portal-expand {
+   local parentdir subdir
+   > $APPARIXEXPAND
+   grep '^e,' $APPARIXRC | cut -f 2 -d , | while read parentdir; do
+      cd $parentdir
+      find . -maxdepth 1 -type d | cut -b 3- | tail -n +2 | while read subdir; do
+         echo "j,$subdir,$parentdir/$subdir" >> $APPARIXEXPAND
+      done
+   done
+}
+
+function whence() {
+   if [[ 0 == $# ]]; then
+      echo Need mark
+      return
+   fi
+   local mark=$1
+   select target in $(apparix-list $mark); do cd $target; break; done
+}
+
+function toot () {
+   if [[ 3 == $# ]]; then
+      file="$(apparish "$1" "$2")/$3"
+   elif [[ 2 == $# ]]; then
+      file="$(apparish "$1")/$2"
+   else
+      echo "toot tag dir file OR toot tag file"
+      return
+   fi
+   if [[ $? == 0 ]]; then
+      $EDITOR $file
+   fi
+}
+
+function todo () {
+   toot $@ TODO
+}
+
+   # apparix listing of directories of mark
+function ald () {
+  if [[ 2 == $# ]]; then
+    loc=$(apparish "$1" "$2")
+  elif [[ 1 == $# ]]; then
+    loc=$(apparish "$1")
+  fi
+  if [[ $? == 0 ]]; then
+    ls -d "$loc"
+  fi
+}
+
+   # apparix ls of mark
+function als () {
+  if [[ 2 == $# ]]; then
+    loc=$(apparish "$1" "$2")
+  elif [[ 1 == $# ]]; then
+    loc=$(apparish "$1")
+  fi
+  if [[ $? == 0 ]]; then
+    ls "$loc"
+  fi
+}
+
+   # apparix edit of file in mark or subdirectory of mark
+function ae () {
+  if [[ 2 == $# ]]; then
+    loc=$(apparish "$1" "$2")
+  elif [[ 1 == $# ]]; then
+    loc=$(apparish "$1")
+  fi
+  if [[ $? == 0 ]]; then
+     $EDITOR "$loc"
+  fi
+}
+
+
+if [[ -n $BASH_VERSION ]]; then
+    # function to complete sensibly on filenames and directories
+    # https://stackoverflow.com/questions/12933362/getting-compgen-to-include-slashes-on-directories-when-looking-for-files
+    function _my_compgen {
+        local cur="$1"
+
+        # Files, excluding directories:
+        comm -3 <(compgen -f -- "$cur" | sort) <(compgen -d -- "$cur" | sort) # | sed -e 's/$/ /'
+        # Directories (add -S / for slash separator):
+        compgen -d -- "$cur"
+    }
+
+    # function completing a file, used by _apparix_comp
+    function _apparix_comp_file {
+      local caller="$1"
+      local cur_file="$2"
+      # local IFS=$'\n'
+      case $caller in
+        # complete on directories. this is easy with compgen.
+        to|als|ald)
+          # Directories (add -S / for slash separator):
+          compgen -d -- "$cur_file"
+          ;;
+        # complete on filenames. this is a little harder to do nicely.
+        a|ae|apparish) # Huffman (remove a|)
+          _my_compgen "$cur_file"
+          ;;
+        *)
+          echo "please register this function in ~/.bash_apparix:_apparix_dirs" 1>&2
+          ;;
+      esac
+    }
+
+    # function to complete an apparix tag followed by a file inside that tag's
+    # directory
+    function _apparix_comp {
+      local tag="${COMP_WORDS[1]}"
+      local IFS=$'\n'
+      COMPREPLY=()
+      if [[ $COMP_CWORD == 1 ]]; then
+        local tags=( $(cut -f2 -d, $HOME/.apparix{rc,expand}) )
+        COMPREPLY=( $(compgen -W "${tags[*]}" -- "$tag") )
+      else
+        local cur_file="${COMP_WORDS[2]}"
+        local app_dir=$(apparish $tag 2>/dev/null)
+        if [[ -d $app_dir ]]; then
+            # run in subshell so cd isn't permanent
+            COMPREPLY=( $(cd $app_dir && _apparix_comp_file $1 $cur_file) )
+        else
+            COMPREPLY=()
+        fi
+      fi
+      if (( ${#COMPREPLY[@]} > 0 )); then
+        # The line below makes all know cases with spaces in directory names work.
+        COMPREPLY=($(printf "%q\n" "${COMPREPLY[@]}"))
+      fi
+      return 0
+    }
+  # register completions
+  complete -o nospace -F _apparix_comp a to als ald ae apparish   # Huffman (remove a)
+elif [[ -n $ZSH_VERSION ]]; then
+    function _apparix_file {
+        # local IFS=$'\n'
+        _arguments '1:mark:_values "\n" $(cut -d, -f2 $HOME/.apparix{rc,expand})' \
+                   '2:file:_path_files -W "$(apparish $words[2] 2>/dev/null)"'
+    }
+
+    function _apparix_directory {
+        # local IFS=$'\n'
+        _arguments '1:mark:_values "\n" $(cut -d, -f2 $HOME/.apparix{rc,expand})' \
+                   '2:file:_path_files -/W "$(apparish $words[2] 2>/dev/null)"'
+    }
+
+    compdef _apparix_file ae apparish a          # Huffman (remove a)
+    compdef _apparix_directory to ald als
+fi
+
+export APPARIXLOG=$HOME/.apparixlog
+
+alias a='apparish'                              # Huffman (remove entire line)
+alias via='vi $HOME/.apparixrc'
+
