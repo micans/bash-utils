@@ -144,7 +144,12 @@ function bm {
       return
    fi
    local mark=$1
+   local list=$(apparix-list $mark)
    echo "j,$mark,$PWD" | tee -a $APPARIXLOG >> $APPARIXRC
+   if [[ ! -z $list ]]; then
+      echo -e "Bookmark $mark exists:\n$list" 
+      echo "$PWD (added)"
+   fi
 }
 
 function to () {
