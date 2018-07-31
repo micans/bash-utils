@@ -1,0 +1,5 @@
+
+bind "\C-g":forward-search-history
+bind "\C-f":reverse-search-history
+bind "\C-j":menu-complete-backward
+
