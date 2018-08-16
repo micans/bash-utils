@@ -1,5 +1,15 @@
 
 
+function howoldami {
+   age=$(ps -o etime= -p "$$")
+   if [[ ! -z $LSB_JOBID ]]; then
+     q=$(bjobs -o queue | tail -n 1)
+    echo "$age ($q)"
+   else
+    echo "$age"
+  fi
+}
+
 
 alias bwork="bjobs | tail -n +2 | perl -ane '"'print "$F[2]\n";'"' | sort | uniq -c"
 alias duck1='du -ch -d 1  | sort -h'
@@ -37,7 +47,7 @@ function ungroupify()
 }
 
 
-function len()
+function nchar()
 {  echo -n "$1" | wc -c
 }
 

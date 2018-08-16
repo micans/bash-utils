@@ -256,7 +256,11 @@ function colnames()
 
 
 function bj {
-  bjobs -o 'jobid stat exec_host run_time job_name memlimit delimiter="	"' | perl -pe 's/second(\(s\))?//' | column -t
+  bjobs -o 'jobid queue stat exec_host run_time job_name memlimit delimiter="	"' | perl -pe 's/second(\(s\))?//' | column -t
+}
+
+function bj {
+  bjobs -o 'jobid queue stat exec_host run_time job_name memlimit delimiter="	"' | perl -pe 's/second(\(s\))?//' | column -t
 }
 
 

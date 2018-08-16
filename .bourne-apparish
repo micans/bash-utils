@@ -35,6 +35,8 @@
 #  --- the commands below allow tab-completion identical to 'to' above.
 #     als <tag>               list contents of <tag> directory
 #     ald <tag>               list subdirectories of <tag> directory
+#     amd <tag> NAME          issue mkdir in <tag> directory
+#     amd <tag> PATH/<TAB>    amd allows tab completion
 #     ae <tag> FILE           edit FILE in <tag> directory
 #     ae <tag> FI<TAB>        complete on FI in <tag> directory
 #     a <tag> s<TAB>          echo the location of the <tag> directory or content.
@@ -237,6 +239,18 @@ function als () {
   fi
 }
 
+   # apparix mkdir in mark
+function amd () {
+  if [[ 2 == $# ]]; then
+    loc=$(apparish "$1" "$2")
+  elif [[ 1 == $# ]]; then
+    loc=$(apparish "$1")
+  fi
+  if [[ $? == 0 ]]; then
+    mkdir "$loc"
+  fi
+}
+
    # apparix edit of file in mark or subdirectory of mark
 function ae () {
   if [[ 2 == $# ]]; then
@@ -269,7 +283,7 @@ if [[ -n $BASH_VERSION ]]; then
       # local IFS=$'\n'
       case $caller in
         # complete on directories. this is easy with compgen.
-        to|als|ald)
+        to|als|ald|amd)
           # Directories (add -S / for slash separator):
           compgen -d -- "$cur_file"
           ;;
@@ -309,7 +323,7 @@ if [[ -n $BASH_VERSION ]]; then
       return 0
     }
   # register completions
-  complete -o nospace -F _apparix_comp a to als ald ae apparish   # Huffman (remove a)
+  complete -o nospace -F _apparix_comp a to als ald amd ae apparish   # Huffman (remove a)
 elif [[ -n $ZSH_VERSION ]]; then
     function _apparix_file {
         # local IFS=$'\n'
@@ -324,7 +338,7 @@ elif [[ -n $ZSH_VERSION ]]; then
     }
 
     compdef _apparix_file ae apparish a          # Huffman (remove a)
-    compdef _apparix_directory to ald als
+    compdef _apparix_directory to ald als amd
 fi
 
 export APPARIXLOG=$HOME/.apparixlog
