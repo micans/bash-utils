@@ -120,8 +120,8 @@ function apparish() {
    local mark=$1
    local list=$(grep -F ",$mark," $APPARIXRC $APPARIXEXPAND)
    if [[ -z $list ]]; then
-      echo "Mark not found"
-      return
+      >&2 echo "Mark '$mark' not found"
+      return 1
    fi
    local target=$((tail -n 1 | cut -f 3 -d ',') <<< "$list")
    if [[ 2 == $# ]]; then
