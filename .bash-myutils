@@ -43,7 +43,7 @@ function groupify()
 }
 
 function ungroupify()
-{  find $1 -print0 -user $USER | xargs -0 chmod g-w
+{  find $1 -user $USER -print0 | xargs -0 chmod g-w
 }
 
 
