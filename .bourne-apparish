@@ -239,6 +239,11 @@ function als () {
   fi
 }
 
+  # apparix search bookmark
+function amibm () {
+  grep ",$(pwd)$" $HOME/.apparixrc | cut -f 2 -d ','
+}
+
    # apparix mkdir in mark
 function amd () {
   if [[ 2 == $# ]]; then
