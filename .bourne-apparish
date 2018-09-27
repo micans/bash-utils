@@ -165,7 +165,8 @@ function to () {
       loc=$(apparish "$1")
     fi
   else
-    loc=$HOME
+    echo "Usage: to MARK [SUBDIR1/[SUBDIR2/[etc]]]"
+    false
   fi
   if [[ $? == 0 ]]; then
     cd "$loc"
@@ -223,7 +224,7 @@ function ald () {
     loc=$(apparish "$1")
   fi
   if [[ $? == 0 ]]; then
-    ls -d "$loc"
+    ls -d "$loc"/*
   fi
 }
 
@@ -242,6 +243,12 @@ function als () {
   # apparix search bookmark
 function amibm () {
   grep ",$(pwd)$" $HOME/.apparixrc | cut -f 2 -d ','
+}
+
+  # apparix search bookmark
+function bmgrep () {
+  pat=${1?Need a pattern to seasrch}
+  grep "$pat" $HOME/.apparixrc | cut -f 2,3 -d ',' | tr ',' '\t' | column -t
 }
 
    # apparix mkdir in mark
@@ -268,6 +275,24 @@ function ae () {
   fi
 }
 
+function apparish_ls () {
+cat <<EOH
+  bm MARK                 Bookmark current directory as mark
+  to MARK [SUBDIR]        Jump to mark or a subdirectory of mark
+  ald MARK [SUBDIR]       List subdirectories of mark directory or subdir
+  als MARK [SUBDIR]       List mark directory or subdir
+  amd MARK [SUBDIR]       Make directory in mark
+  ae MARK [SUBDIR/]FILE   Edit file in mark
+  amibm                   See if the current directory is a bookmark
+  bmgrep PATTERN          List all marks and targets where target matches PATTERN
+  todo MARK [SUBDIR]      Edit TODO file in mark directory
+  whence MARK             Menu-based selection for mark with multiple targets
+  portal                  Add current directory as portal (subdirectories are mark names)
+  portal-expand           Re-expand all portals
+  apparix-list MARK       List all targets for bookmark mark
+  apparix-init            Use one time after installing apparix
+EOH
+}
 
 if [[ -n $BASH_VERSION ]]; then
     # function to complete sensibly on filenames and directories
