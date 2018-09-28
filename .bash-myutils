@@ -85,7 +85,7 @@ function theminmax {
 }
 
 function debug_bash {
-  foobar=${1?Gimme something to run}
+  foobar=${1:?Gimme something to run}
   ( bash --debugger <<EOC
   PS4='+ ${BASH_SOURCE[0]} '
   set -x
