@@ -84,4 +84,16 @@ function theminmax {
   perl -ne 'chomp;$h=$_ if$_>$h;$l=$_ if$_<$l; END { print "$l $h\n"; } BEGIN { $h=<>; chomp $h; $l=$h; }'
 }
 
+function debug_bash {
+  foobar=${1?Gimme something to run}
+  ( bash --debugger <<EOC
+  PS4='+ ${BASH_SOURCE[0]} '
+  set -x
+  $*
+  set +x
+  exit
+EOC
+)
+}
+
 
