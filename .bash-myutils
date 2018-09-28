@@ -3,7 +3,7 @@
 function howoldami {
    age=$(ps -o etime= -p "$$")
    if [[ ! -z $LSB_JOBID ]]; then
-     q=$(bjobs -o queue | tail -n 1)
+     q=$(bjobs -o queue $LSB_JOBID | tail -n 1)
     echo "$age ($q)"
    else
     echo "$age"
