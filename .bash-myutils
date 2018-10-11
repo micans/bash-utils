@@ -3,8 +3,8 @@
 function howoldami {
    age=$(ps -o etime= -p "$$")
    if [[ ! -z $LSB_JOBID ]]; then
-     q=$(bjobs -o queue $LSB_JOBID | tail -n 1)
-    echo "$age ($q)"
+     info=($(bjobs -o "queue slots" $LSB_JOBID | tail -n 1))
+    echo "$age (queue ${info[0]}, cpus ${info[1]})"
    else
     echo "$age"
   fi
@@ -94,6 +94,22 @@ function debug_bash {
   exit
 EOC
 )
+}
+
+
+function list-functions-in-file {
+   file=${1:?I need a file name argument}
+   bash --norc --noprofile  -c "source $file && declare -F" | cut -f 3 -d ' '
+}
+
+function tailafter {
+    pattern=${1:?I need a pattern (used in perl regex)}
+    if [[ $# < 2 ]]; then
+      file=/dev/stdin
+    else
+      file=$2
+    fi
+    perl -ne "print unless 1 .. /$pattern/" $file
 }
 
 
