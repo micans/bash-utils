@@ -77,8 +77,16 @@ function bash_min {
 function themax {
   perl -ne 'chomp; $m = $_ if $_ > $m; END { print "$m\n"; } BEGIN { $m = <>; chomp $m; }'
 }
+function themax2 {
+  export _tmp_idx_=${1:?Need index (0-based) for column containing number}
+  perl -ane 'chomp; ($m, $line) = ($F[$I], $_) if $F[$I] > $m; END { print "$line\n"; } BEGIN { $m = 0-"inf"; $line = ""; $I=$ENV{_tmp_idx_}}'
+}
 function themin {
   perl -ne 'chomp; $m = $_ if $_ < $m; END { print "$m\n"; } BEGIN { $m = <>; chomp $m; }'
+}
+function themin2 {
+  export _tmp_idx_=${1:?Need index (0-based) for column containing number}
+  perl -ane 'chomp; ($m, $line) = ($F[$I], $_) if $F[$I] < $m; END { print "$line\n"; } BEGIN { $m = 0+"inf"; $line = ""; $I=$ENV{_tmp_idx_}}'
 }
 function theminmax {
   perl -ne 'chomp;$h=$_ if$_>$h;$l=$_ if$_<$l; END { print "$l $h\n"; } BEGIN { $h=<>; chomp $h; $l=$h; }'
@@ -95,21 +103,4 @@ function debug_bash {
 EOC
 )
 }
-
-
-function list-functions-in-file {
-   file=${1:?I need a file name argument}
-   bash --norc --noprofile  -c "source $file && declare -F" | cut -f 3 -d ' '
-}
-
-function tailafter {
-    pattern=${1:?I need a pattern (used in perl regex)}
-    if [[ $# < 2 ]]; then
-      file=/dev/stdin
-    else
-      file=$2
-    fi
-    perl -ne "print unless 1 .. /$pattern/" $file
-}
-
 
