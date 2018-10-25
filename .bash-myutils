@@ -1,16 +1,5 @@
 
 
-function howoldami {
-   age=$(ps -o etime= -p "$$")
-   if [[ ! -z $LSB_JOBID ]]; then
-     info=($(bjobs -o "queue slots" $LSB_JOBID | tail -n 1))
-    echo "$age (queue ${info[0]}, cpus ${info[1]})"
-   else
-    echo "$age"
-  fi
-}
-
-
 alias bwork="bjobs | tail -n +2 | perl -ane '"'print "$F[2]\n";'"' | sort | uniq -c"
 alias duck1='du -ch -d 1  | sort -h'
 alias duck2='du -ch -d 2  | sort -h'
