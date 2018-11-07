@@ -97,9 +97,10 @@
  #
 
 
-APPARIXRC=$HOME/.apparixrc
-APPARIXEXPAND=$HOME/.apparixexpand
-APPARIXLOG=$HOME/.apparixlog
+APPARIXHOME=${APPARIXHOME:=$HOME}
+APPARIXRC=$APPARIXHOME/.apparixrc
+APPARIXEXPAND=$APPARIXHOME/.apparixexpand
+APPARIXLOG=$APPARIXHOME/.apparixlog
 
 
 function apparix-init {
@@ -149,7 +150,13 @@ function bm {
    local list=$(apparix-list $mark)
    echo "j,$mark,$PWD" | tee -a $APPARIXLOG >> $APPARIXRC
    if [[ ! -z $list ]]; then
-      echo -e "Bookmark $mark exists:\n$list" 
+      listsize=$(wc -l <<< "$list")
+      listtail=$(tail -n 2 <<< "$list")
+      ellipsis=""
+      if (( $listsize > 2 )); then
+        ellipsis="\n(...)"
+        echo -e "Bookmark $mark exists ($listsize total):$ellipsis\n$listtail" 
+      fi
       echo "$PWD (added)"
    fi
 }
@@ -242,13 +249,25 @@ function als () {
 
   # apparix search bookmark
 function amibm () {
-  grep ",$(pwd)$" $HOME/.apparixrc | cut -f 2 -d ','
+  grep ",$(pwd)$" $APPARIXRC | cut -f 2 -d ','
 }
 
   # apparix search bookmark
 function bmgrep () {
   pat=${1?Need a pattern to seasrch}
-  grep "$pat" $HOME/.apparixrc | cut -f 2,3 -d ',' | tr ',' '\t' | column -t
+  grep "$pat" $APPARIXRC | cut -f 2,3 -d ',' | tr ',' '\t' | column -t
+}
+
+   # apparix get; get something from a mark
+function aget () {
+  if [[ 2 == $# ]]; then
+    loc=$(apparish "$1" "$2")
+  elif [[ 1 == $# ]]; then
+    loc=$(apparish "$1")
+  fi
+  if [[ $? == 0 ]]; then
+    cp "$loc" .
+  fi
 }
 
    # apparix mkdir in mark
@@ -318,7 +337,7 @@ if [[ -n $BASH_VERSION ]]; then
           compgen -d -- "$cur_file"
           ;;
         # complete on filenames. this is a little harder to do nicely.
-        a|ae|apparish) # Huffman (remove a|)
+        a|ae|aget|apparish) # Huffman (remove a|)
           _my_compgen "$cur_file"
           ;;
         *)
@@ -334,7 +353,7 @@ if [[ -n $BASH_VERSION ]]; then
       local IFS=$'\n'
       COMPREPLY=()
       if [[ $COMP_CWORD == 1 ]]; then
-        local tags=( $(cut -f2 -d, $HOME/.apparix{rc,expand}) )
+        local tags=( $(cut -f2 -d, $APPARIXRC $APPARIXEXPAND) )
         COMPREPLY=( $(compgen -W "${tags[*]}" -- "$tag") )
       else
         local cur_file="${COMP_WORDS[2]}"
@@ -353,26 +372,24 @@ if [[ -n $BASH_VERSION ]]; then
       return 0
     }
   # register completions
-  complete -o nospace -F _apparix_comp a to als ald amd ae apparish   # Huffman (remove a)
+  complete -o nospace -F _apparix_comp a to als ald amd ae aget apparish   # Huffman (remove a)
 elif [[ -n $ZSH_VERSION ]]; then
     function _apparix_file {
         # local IFS=$'\n'
-        _arguments '1:mark:_values "\n" $(cut -d, -f2 $HOME/.apparix{rc,expand})' \
+        _arguments '1:mark:_values "\n" $(cut -d, -f2 $APPARIXRC $APPARIXEXPAND)' \
                    '2:file:_path_files -W "$(apparish $words[2] 2>/dev/null)"'
     }
 
     function _apparix_directory {
         # local IFS=$'\n'
-        _arguments '1:mark:_values "\n" $(cut -d, -f2 $HOME/.apparix{rc,expand})' \
+        _arguments '1:mark:_values "\n" $(cut -d, -f2 $APPARIXRC $APPARIXEXPAND)' \
                    '2:file:_path_files -/W "$(apparish $words[2] 2>/dev/null)"'
     }
 
-    compdef _apparix_file ae apparish a          # Huffman (remove a)
+    compdef _apparix_file ae apparish aget a       # Huffman (remove a)
     compdef _apparix_directory to ald als amd
 fi
 
-export APPARIXLOG=$HOME/.apparixlog
-
 alias a='apparish'                              # Huffman (remove entire line)
-alias via='vi $HOME/.apparixrc'
+alias via='vi $APPARIXRC'
 
