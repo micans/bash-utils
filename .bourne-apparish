@@ -316,13 +316,19 @@ EOH
 if [[ -n $BASH_VERSION ]]; then
     # function to complete sensibly on filenames and directories
     # https://stackoverflow.com/questions/12933362/getting-compgen-to-include-slashes-on-directories-when-looking-for-files
-    function _my_compgen {
+    function _all_files_compgen {
         local cur="$1"
 
-        # Files, excluding directories:
-        comm -3 <(compgen -f -- "$cur" | sort) <(compgen -d -- "$cur" | sort) # | sed -e 's/$/ /'
-        # Directories (add -S / for slash separator):
-        compgen -d -- "$cur"
+        # # The outcommented code splits directories and files but then treats them the same.
+        # # Previously, it used to add a slash for directories, but this makes completing actually harder;
+        # # Manually adding a slash is a good way of instigating the next level of completion.
+        # # Anyway, I've kept this around in case people want to change this behaviour.
+        # # I use comm because old greps have an issue where -v does not treat an empty file with -f correctly.
+        # comm -3 <(compgen -f -- "$cur" | sort) <(compgen -d -- "$cur" | sort) # | sed -e 's/$/ /'
+        # # Directories (add -S / for slash separator):
+        # compgen -d -- "$cur"
+
+        compgen -f -- "$cur"
     }
 
     # function completing a file, used by _apparix_comp
@@ -338,7 +344,7 @@ if [[ -n $BASH_VERSION ]]; then
           ;;
         # complete on filenames. this is a little harder to do nicely.
         a|ae|aget|apparish) # Huffman (remove a|)
-          _my_compgen "$cur_file"
+          _all_files_compgen "$cur_file"
           ;;
         *)
           echo "please register this function in ~/.bash_apparix:_apparix_dirs" 1>&2

@@ -282,26 +282,6 @@ function ffn()
 }
 
 
-function ls_misc() {
-cat <<DOC
-F: a file name. F+ one or more file names.
-  colcount F    output field counts for first three lines (tab separator)
-  colcount -a F output field counts for all lines -c and -a do not mix yet
-  colcount -c F check field count consistency for first three lines.
-                NOTE. first line discrepancy is allowed.
-  colnames F    output the first row of a tab-separated file, one field per line
-  procli PID    print command line for a PID according to /proc/PID/cmdline
-  bj            bjobs information -- outputs useful bjobs status fields
-  ls_func F     list the names of bash functions defined in a file
-  ls_misc       This (list miscellaneous functions)
-  ffn F+        print full(y qualified) file name for arguments
-  howoldami     how old is the current shell
-  tailafter P [F]     print lines in file after first pattern P match
-  grab P1 P2 [F]  print chunks inbetween patterns P1 and P2, inclusive
-DOC
-}
-
-
 function ls_func {
    file=${1:?I need a file name argument}
    bash --norc --noprofile  -c "source $file && declare -F" | cut -f 3 -d ' '
@@ -338,5 +318,34 @@ function howoldami {
    else
     echo "$age"
   fi
+}
+
+function funcfile {
+  funcname=${1:?I need a function name}
+  local extdebug=$(shopt -p extdebug)
+  shopt -s extdebug
+  declare -F $funcname
+  $extdebug
+}
+
+function ls_misc() {
+cat <<DOC
+F: a file name. F+ one or more file names.
+fu: a function name
+  colcount F    output field counts for first three lines (tab separator)
+  colcount -a F output field counts for all lines -c and -a do not mix yet
+  colcount -c F check field count consistency for first three lines.
+                NOTE. first line discrepancy is allowed.
+  colnames F    output the first row of a tab-separated file, one field per line
+  procli PID    print command line for a PID according to /proc/PID/cmdline
+  bj            bjobs information -- outputs useful bjobs status fields
+  ls_func F     list the names of bash functions defined in a file
+  ls_misc       This (list miscellaneous functions)
+  ffn F+        print full(y qualified) file name for arguments
+  funcfile fu   print name of file where function fu is defined
+  howoldami     how old is the current shell
+  tailafter P [F]     print lines in file after first pattern P match
+  grab P1 P2 [F]  print chunks inbetween patterns P1 and P2, inclusive
+DOC
 }
 
