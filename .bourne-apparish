@@ -126,9 +126,9 @@ function apparish() {
    fi
    local target=$((tail -n 1 | cut -f 3 -d ',') <<< "$list")
    if [[ 2 == $# ]]; then
-      echo $target/$2
+      echo "$target/$2"
    else
-      echo $target
+      echo "$target"
    fi
 }
 
