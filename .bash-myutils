@@ -99,3 +99,13 @@ EOC
 )
 }
 
+function countcram {
+  samtools view --input-fmt-option required_fields=2 -c ${1:?Need cram/bam argument}
+}
+
+function cpuhours {
+  cpuh=${1:?Need cpu hours}
+  numr=${2:?Need number of reads}
+  sc "$cpuh / (150 * ($numr / 2**30))"
+}
+
