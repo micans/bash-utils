@@ -153,8 +153,8 @@ function bm {
       listsize=$(wc -l <<< "$list")
       listtail=$(tail -n 2 <<< "$list")
       ellipsis=""
-      if (( $listsize > 2 )); then
-        ellipsis="\n(...)"
+      if (( $listsize > 2 )); then ellipsis="\n(...)"; fi
+      if (( $listsize > 0 )); then
         echo -e "Bookmark $mark exists ($listsize total):$ellipsis\n$listtail" 
       fi
       echo "$PWD (added)"
@@ -278,7 +278,7 @@ function amd () {
     loc=$(apparish "$1")
   fi
   if [[ $? == 0 ]]; then
-    mkdir "$loc"
+    mkdir -p "$loc"
   fi
 }
 

@@ -9,6 +9,7 @@ alias m='cd -'
 alias bwork="bjobs | tail -n +2 | perl -ane '"'print "$F[2]\n";'"' | sort | uniq -c"
 alias duck1='du -ch -d 1  | sort -h'
 alias duck2='du -ch -d 2  | sort -h'
+alias cD='cd $(pwd -P)'
 
   # This one not used/tested yet. Had issues with shell quoting.
   #
@@ -106,6 +107,11 @@ function countcram {
 function cpuhours {
   cpuh=${1:?Need cpu hours}
   numr=${2:?Need number of reads}
-  sc "$cpuh / (150 * ($numr / 2**30))"
+  sc=$(sc "$cpuh / (150 * ($numr / 2**30))")
+  printf "%.2f CPUh per Gbase\n" $sc
 }
 
+function nflogcmd {
+  name=${1:?Need nextflow run name (nextflow log)}
+  nextflow log $name -f script > nf.$name.cmd.txt
+}
