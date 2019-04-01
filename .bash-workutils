@@ -349,3 +349,15 @@ fu: a function name
 DOC
 }
 
+
+function groupify()
+{  find $1 -user $USER -print0 | xargs -0 chmod g+w
+}
+
+function ungroupify()
+{  find $1 -user $USER -print0 | xargs -0 chmod g-w
+}
+
+function nchar()
+{  echo -n "$1" | wc -c
+}

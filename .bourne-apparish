@@ -223,6 +223,10 @@ function todo () {
    toot $@ TODO
 }
 
+function rme () {
+   toot $@ README
+}
+
    # apparix listing of directories of mark
 function ald () {
   if [[ 2 == $# ]]; then
@@ -283,6 +287,18 @@ function amd () {
 }
 
    # apparix edit of file in mark or subdirectory of mark
+function av () {
+  if [[ 2 == $# ]]; then
+    loc=$(apparish "$1" "$2")
+  elif [[ 1 == $# ]]; then
+    loc=$(apparish "$1")
+  fi
+  if [[ $? == 0 ]]; then
+     view "$loc"
+  fi
+}
+
+   # apparix edit of file in mark or subdirectory of mark
 function ae () {
   if [[ 2 == $# ]]; then
     loc=$(apparish "$1" "$2")
@@ -302,9 +318,11 @@ cat <<EOH
   als MARK [SUBDIR]       List mark directory or subdir
   amd MARK [SUBDIR]       Make directory in mark
   ae MARK [SUBDIR/]FILE   Edit file in mark
+  av MARK [SUBDIR/]FILE   View file in mark
   amibm                   See if the current directory is a bookmark
   bmgrep PATTERN          List all marks and targets where target matches PATTERN
   todo MARK [SUBDIR]      Edit TODO file in mark directory
+  rme MARK [SUBDIR]       Edit README file
   whence MARK             Menu-based selection for mark with multiple targets
   portal                  Add current directory as portal (subdirectories are mark names)
   portal-expand           Re-expand all portals
@@ -343,7 +361,7 @@ if [[ -n $BASH_VERSION ]]; then
           compgen -d -- "$cur_file"
           ;;
         # complete on filenames. this is a little harder to do nicely.
-        a|ae|aget|apparish) # Huffman (remove a|)
+        a|ae|av|aget|apparish) # Huffman (remove a|)
           _all_files_compgen "$cur_file"
           ;;
         *)
@@ -378,7 +396,7 @@ if [[ -n $BASH_VERSION ]]; then
       return 0
     }
   # register completions
-  complete -o nospace -F _apparix_comp a to als ald amd ae aget apparish   # Huffman (remove a)
+  complete -o nospace -F _apparix_comp a to als ald amd ae av aget apparish   # Huffman (remove a)
 elif [[ -n $ZSH_VERSION ]]; then
     function _apparix_file {
         # local IFS=$'\n'
@@ -392,7 +410,7 @@ elif [[ -n $ZSH_VERSION ]]; then
                    '2:file:_path_files -/W "$(apparish $words[2] 2>/dev/null)"'
     }
 
-    compdef _apparix_file ae apparish aget a       # Huffman (remove a)
+    compdef _apparix_file ae av apparish aget a       # Huffman (remove a)
     compdef _apparix_directory to ald als amd
 fi
 

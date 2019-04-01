@@ -34,19 +34,6 @@ function ffncp
   cp $(tail -n 1 $HOME/.ffn.mycache) $dest
 }
 
-function groupify()
-{  find $1 -user $USER -print0 | xargs -0 chmod g+w
-}
-
-function ungroupify()
-{  find $1 -user $USER -print0 | xargs -0 chmod g-w
-}
-
-
-function nchar()
-{  echo -n "$1" | wc -c
-}
-
   # not great. Use themax
 function bash_max {
   local max_value
