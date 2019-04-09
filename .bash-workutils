@@ -312,11 +312,13 @@ function grab {
 
 function howoldami {
    age=$(ps -o etime= -p "$$")
+   name=$(whoami)
+   host=$HOSTNAME
    if [[ ! -z $LSB_JOBID ]]; then
      info=($(bjobs -o "queue slots" $LSB_JOBID | tail -n 1))
-    echo "$age (queue ${info[0]}, cpus ${info[1]})"
+    echo "$name $age $host (queue ${info[0]}, cpus ${info[1]})"
    else
-    echo "$age"
+    echo "$name $age $host"
   fi
 }
 
