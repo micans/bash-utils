@@ -253,7 +253,7 @@ function als () {
 
   # apparix search bookmark
 function amibm () {
-  grep ",$(pwd)$" $APPARIXRC | cut -f 2 -d ','
+  grep ",$(pwd)$" $APPARIXRC | cut -f 2 -d ',' | paste -s -d ' ' -
 }
 
   # apparix search bookmark

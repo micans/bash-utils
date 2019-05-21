@@ -1,6 +1,8 @@
 
 
-function achoo { >&2 echo $@; }
+function achoo  { >&2 echo $@; }
+
+function silent { "$@" > /dev/null 2> /dev/null; }
 
 
 declare -A ls_shorthelp
