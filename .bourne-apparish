@@ -1,7 +1,24 @@
-#
-#                             A  P  P  A  R  I  S  H
-#
-#  bookmarks for the command line with comprehensive tab completion on target content
+# shellcheck disable=SC2155,SC2181,SC2016 shell=bash
+# vim: ft=sh ts=4 sw=0 sts=-1 et
+
+# ignore errors about:
+# - testing $?, becuase that's useful when you have branches
+# - declaring and assigning at the same time because I know what I'm doing
+#   (fingers crossed)
+# - unexpanded substitutions in single quotes for similar reasons
+
+# Vim modeline to try and keep the indentation in check.
+
+# FIGMENTIZE: apparish
+#                                       .__         .__
+# _____   ______  ______ _____  _______ |__|  ______|  |__
+# \__  \  \____ \ \____ \\__  \ \_  __ \|  | /  ___/|  |  \
+#  / __ \_|  |_> >|  |_> >/ __ \_|  | \/|  | \___ \ |   Y  \
+# (____  /|   __/ |   __/(____  /|__|   |__|/____  >|___|  /
+#      \/ |__|    |__|        \/                 \/      \/
+
+#  bookmarks for the command line with comprehensive tab completion on target
+#                                   content
 #                             works for bash and zsh
 #
 #  Quick Guide:
@@ -28,7 +45,8 @@
 #  ---
 #     to <tag>                jump to the directory marked <tag>
 #     to <tag> <TAB>          tab-complete on subdirectories of <tag>
-#     to <tag> s<TAB>         tab-complete on subdirectories of <tag> starting with s
+#     to <tag> s<TAB>         tab-complete on subdirectories of <tag> starting
+#                             with s
 #     to <tag> foo/<TAB>      tab-complete in subdirectory foo of <tag>
 #     to <tag> foo/bar<TAB>   et cetera et cetera
 #
@@ -39,7 +57,8 @@
 #     amd <tag> PATH/<TAB>    amd allows tab completion
 #     ae <tag> FILE           edit FILE in <tag> directory
 #     ae <tag> FI<TAB>        complete on FI in <tag> directory
-#     a <tag> s<TAB>          echo the location of the <tag> directory or content.
+#     a <tag> s<TAB>          echo the location of the <tag> directory or
+#                             content.
 #                             This is useful in command substitution, e.g.
 #                             'cp somefile ($a tag src)'
 #
@@ -66,12 +85,12 @@
 #  it, go to all the places in the lines below where the name Huffman is
 #  mentioned and remove the relevant part.
 #
-#  Apparish (this file) implements apparix functionality in shell code, compatible
-#  with apparix resource files. You can either use old apparix (compiling and
-#  installing the application apparix) in conjunction with sourcing
-#  .bourne-apparix, or you can simply source this file without needing to
-#  install apparix.  This files implements nearly all apparix functionality in
-#  shell code. It uses a function called apparish in place of apparix.
+#  Apparish (this file) implements apparix functionality in shell code,
+#  compatible with apparix resource files. You can either use old apparix
+#  (compiling and installing the application apparix) in conjunction with
+#  sourcing .bourne-apparix, or you can simply source this file without needing
+#  to install apparix.  This file implements nearly all apparix functionality
+#  in shell code. It uses a apparish in place of apparix.
 #
 #                       BASH and ZSH functions
 #
@@ -91,227 +110,303 @@
 
  #
 #  Thanks to Sitaram Chamarty for all the important parts of the bash completion
-#  code, and thanks to Izaak van Dongen for figuring out the zsh completion code,
-#  subsequently improving and standardising the bash completion code, and suggesting
-#  the name apparish.
+#  code, and thanks to Izaak van Dongen for figuring out the zsh completion
+#  code, subsequently improving and standardising the bash completion code, and
+#  suggesting the name apparish.
  #
 
+# TODO: allow commas in directory names
 
-APPARIXHOME=${APPARIXHOME:=$HOME}
-APPARIXRC=$APPARIXHOME/.apparixrc
-APPARIXEXPAND=$APPARIXHOME/.apparixexpand
-APPARIXLOG=$APPARIXHOME/.apparixlog
+APPARIXHOME="${APPARIXHOME:=$HOME}"
+APPARIXRC="$APPARIXHOME/.apparixrc"
+APPARIXEXPAND="$APPARIXHOME/.apparixexpand"
+APPARIXLOG="$APPARIXHOME/.apparixlog"
+
+APPARIX_FILE_FUNCTIONS=( a ae av aget toot apparish ) # Huffman (remove a)
+APPARIX_DIR_FUNCTIONS=( to als ald amd todo rme )
+
+# these are some helper functions. With my system they are mostly redundant
+# copies of functions I already have defined, but I aim to make this file
+# stand-alone.
+
+# sanitise $1 so that it becomes suitable for use with your basic grep
+function grepsanitise() {
+    sed 's/[].*^$]\|\[/\\&/g' <<< "$1"
+}
+
+# vim-like: totally silence the given command, with less of the tedium. doesn't
+# affect return status, so can be used inside if statements.
+# black magic: "$@" expands to each argument as a separate word.
+# gotcha: this won't expand any aliases you have. This is probably preferred
+# functionality anyway, though (at least for me)
+silent() {
+    "$@" > /dev/null 2> /dev/null
+}
+
+# assert that bash version is at least $1.$2.$3
+version_assert() {
+    for i in {1..3}; do
+        if ((BASH_VERSINFO[$((i - 1))] > ${!i})); then
+            return 0
+        elif ((BASH_VERSINFO[$((i - 1))] < ${!i})); then
+            echo "Your bash is older than $1.$2.$3" >&2
+            return 1
+        fi
+    done
+    return 0
+}
+
+# define a function to read lines from a file into an array
+# https://github.com/koalaman/shellcheck/wiki/SC2207
+if [[ -n "$BASH_VERSION" ]] && silent version_assert 4 0 0; then
+    function read_array() {
+        mapfile -t izaak_array < "$1"
+    }
+elif [[ -n "$ZSH_VERSION" ]] || silent version_assert 3 0 0; then
+    function read_array() {
+        izaak_array=()
+        while IFS='' read -r line; do
+            izaak_array+=("$line");
+        done < "$1"
+    }
+else
+    >&2 echo "really, bash 2 isn't cool enough to run apparix"
+    function read_array() {
+        izaak_array=( $(cat "$1") )
+    }
+fi
 
 
-function apparix-init {
-   already=""
-   if [[ -e $APPARIXRC && -e $APPARIXEXPAND ]]; then
-      already=" already"
-   fi
-   >> $APPARIXRC
-   >> $APPARIXEXPAND
-   echo "Apparish is up and running$already"
+if ! silent command -v a; then
+    alias a='apparish' # Huffman (remove entire line)
+else
+    >&2 echo "Apparish: not aliasing a"
+fi
+
+if ! silent command -v via; then
+    alias via='vi "$APPARIXRC"'
+else
+    >&2 echo "Apparish: not aliasing via"
+fi
+
+function apparix-init() {
+    already=""
+    if [[ -e "$APPARIXRC" && -e "$APPARIXEXPAND" ]]; then
+        already=" already"
+    fi
+    true >> "$APPARIXRC"
+    true >> "$APPARIXEXPAND"
+    echo "Apparish is up and running$already"
 }
 
 function apparish() {
-   if [[ 0 == $# ]]; then
-      cat $APPARIXRC $APPARIXEXPAND | tr ', ' '\t_' | column -t
-      return
-   fi
-   local mark=$1
-   local list=$(grep -F ",$mark," $APPARIXRC $APPARIXEXPAND)
-   if [[ -z $list ]]; then
-      >&2 echo "Mark '$mark' not found"
-      return 1
-   fi
-   local target=$((tail -n 1 | cut -f 3 -d ',') <<< "$list")
-   if [[ 2 == $# ]]; then
-      echo "$target/$2"
-   else
-      echo "$target"
-   fi
-}
-
-function apparix-list () {
-   if [[ 0 == $# ]]; then
-      echo Need mark
-      return
-   fi
-   local mark=$1
-   grep -F ",$mark," $APPARIXRC $APPARIXEXPAND | cut -f 3 -d ','
-}
-
-function bm {
-   if [[ 0 == $# ]]; then
-      echo Need mark
-      return
-   fi
-   local mark=$1
-   local list=$(apparix-list $mark)
-   echo "j,$mark,$PWD" | tee -a $APPARIXLOG >> $APPARIXRC
-   if [[ ! -z $list ]]; then
-      listsize=$(wc -l <<< "$list")
-      listtail=$(tail -n 2 <<< "$list")
-      ellipsis=""
-      if (( $listsize > 2 )); then ellipsis="\n(...)"; fi
-      if (( $listsize > 0 )); then
-        echo -e "Bookmark $mark exists ($listsize total):$ellipsis\n$listtail" 
-      fi
-      echo "$PWD (added)"
-   fi
-}
-
-function to () {
-  # local IFS=$'\n'
-  if [[ 2 == $# ]]; then
-    loc=$(apparish "$1" "$2")
-  elif [[ 1 == $# ]]; then
-    if [[ "$1" == '-' ]]; then
-      loc="-"
-    else
-      loc=$(apparish "$1")
+    if [[ 0 == "$#" ]]; then
+        cat "$APPARIXRC" "$APPARIXEXPAND" | tr ', ' '\t_' | column -t
+        return
     fi
-  else
-    echo "Usage: to MARK [SUBDIR1/[SUBDIR2/[etc]]]"
-    false
-  fi
-  if [[ $? == 0 ]]; then
-    cd "$loc"
-  fi
+    local mark="$1"
+    local list="$(grep -F ",$mark," "$APPARIXRC" "$APPARIXEXPAND")"
+    if [[ -z "$list" ]]; then
+        >&2 echo "Mark '$mark' not found"
+        return 1
+    fi
+    local target="$( (tail -n 1 | cut -f 3 -d ',') <<< "$list")"
+    if [[ 2 == "$#" ]]; then
+        echo "$target/$2"
+    else
+        echo "$target"
+    fi
 }
 
-function portal {
-   echo "e,$PWD" >> $APPARIXRC
+function apparix-list() {
+    if [[ 0 == "$#" ]]; then
+        >&2 echo "Need mark"
+        return 1
+    fi
+    local mark="$1"
+    grep -F ",$mark," "$APPARIXRC" "$APPARIXEXPAND" | cut -f 3 -d ','
+}
+
+function bm() {
+    if [[ 0 == "$#" ]]; then
+        >&2 echo Need mark
+        return 1
+    fi
+    local mark="$1"
+    local list="$(apparix-list "$mark")"
+    echo "j,$mark,$PWD" | tee -a "$APPARIXLOG" >> "$APPARIXRC"
+    if [[ -n "$list" ]]; then
+        listsize="$(wc -l <<< "$list")"
+        listtail="$(tail -n 2 <<< "$list")"
+        ellipsis=""
+        if (( listsize > 2 )); then ellipsis="\n(...)"; fi
+        if (( listsize > 0 )); then
+            echo -e "Bookmark $mark exists" \
+                    "($listsize total):$ellipsis\n$listtail"
+        fi
+        echo "$PWD (added)"
+    fi
+}
+
+function to() {
+    if [[ 2 == "$#" ]]; then
+        loc="$(apparish "$1" "$2")"
+    elif [[ 1 == "$#" ]]; then
+        if [[ "$1" == '-' ]]; then
+            loc="-"
+        else
+            loc="$(apparish "$1")"
+        fi
+    else
+        >&2 echo "Usage: to MARK [SUBDIR1/[SUBDIR2/[etc]]]"
+        return 1
+    fi
+    if [[ "$?" == 0 ]]; then
+        cd "$loc" || return 1
+    fi
+}
+
+function portal() {
+   echo "e,$PWD" >> "$APPARIXRC"
    portal-expand
 }
 
-function portal-expand {
-   local parentdir subdir
-   > $APPARIXEXPAND
-   grep '^e,' $APPARIXRC | cut -f 2 -d , | while read parentdir; do
-      cd $parentdir
-      find . -maxdepth 1 -type d | cut -b 3- | tail -n +2 | while read subdir; do
-         echo "j,$subdir,$parentdir/$subdir" >> $APPARIXEXPAND
-      done
-   done
+function portal-expand() {
+    local parentdir subdir
+    true > "$APPARIXEXPAND"
+    grep '^e,' "$APPARIXRC" | cut -f 2 -d , | \
+        while read -r parentdir; do
+            cd "$parentdir" || return 1
+            # find . -maxdepth 1 -mindepth 1 -type d -printf "%f\n" | \
+            # while IFS='' read -r -d '' subdir; do ...; done
+            for _subdir in */ .*/; do
+                local subdir="${_subdir%/}"
+                echo "j,$subdir,$parentdir/$subdir" >> "$APPARIXEXPAND"
+            done
+    done
 }
 
 function whence() {
-   if [[ 0 == $# ]]; then
-      echo Need mark
-      return
-   fi
-   local mark=$1
-   select target in $(apparix-list $mark); do cd $target; break; done
+    if [[ 0 == "$#" ]]; then
+        >&2 echo "Need mark"
+        return 1
+    fi
+    local mark="$1"
+    # blissfully ignorant of what this does
+    select target in $(apparix-list "$mark"); do
+        cd "$target" || return 1
+        break
+    done
 }
 
-function toot () {
-   if [[ 3 == $# ]]; then
-      file="$(apparish "$1" "$2")/$3"
-   elif [[ 2 == $# ]]; then
-      file="$(apparish "$1")/$2"
-   else
-      echo "toot tag dir file OR toot tag file"
-      return
-   fi
-   if [[ $? == 0 ]]; then
-      $EDITOR $file
-   fi
+function toot() {
+    if [[ 3 == "$#" ]]; then
+        file="$(apparish "$1" "$2")/$3"
+    elif [[ 2 == "$#" ]]; then
+        file="$(apparish "$1")/$2"
+    else
+        echo "toot tag dir file OR toot tag file"
+        return
+    fi
+    if [[ "$?" == 0 ]]; then
+        "${EDITOR:-vi}" "$file"
+    fi
 }
 
-function todo () {
-   toot $@ TODO
+function todo() {
+    toot "$@" TODO
 }
 
-function rme () {
-   toot $@ README
+function rme() {
+    toot "$@" README
 }
 
-   # apparix listing of directories of mark
-function ald () {
-  if [[ 2 == $# ]]; then
-    loc=$(apparish "$1" "$2")
-  elif [[ 1 == $# ]]; then
-    loc=$(apparish "$1")
-  fi
-  if [[ $? == 0 ]]; then
-    ls -d "$loc"/*
-  fi
+# apparix listing of directories of mark
+function ald() {
+    if [[ 2 == "$#" ]]; then
+        loc="$(apparish "$1" "$2")"
+    elif [[ 1 == "$#" ]]; then
+        loc="$(apparish "$1")"
+    fi
+    if [[ "$?" == 0 ]]; then
+        ls -d "$loc"/*
+    fi
 }
 
-   # apparix ls of mark
-function als () {
-  if [[ 2 == $# ]]; then
-    loc=$(apparish "$1" "$2")
-  elif [[ 1 == $# ]]; then
-    loc=$(apparish "$1")
-  fi
-  if [[ $? == 0 ]]; then
-    ls "$loc"
-  fi
+# apparix ls of mark
+function als() {
+    if [[ 2 == "$#" ]]; then
+        loc="$(apparish "$1" "$2")"
+    elif [[ 1 == "$#" ]]; then
+        loc="$(apparish "$1")"
+    fi
+    if [[ "$?" == 0 ]]; then
+        ls "$loc"
+    fi
 }
 
-  # apparix search bookmark
-function amibm () {
-  grep ",$(pwd)$" $APPARIXRC | cut -f 2 -d ',' | paste -s -d ' ' -
+# apparix search bookmark
+function amibm() {
+    grep ",$(grepsanitise "$PWD")$" "$APPARIXRC" | \
+        cut -f 2 -d ',' | paste -s -d ' ' -
 }
 
-  # apparix search bookmark
-function bmgrep () {
-  pat=${1?Need a pattern to seasrch}
-  grep "$pat" $APPARIXRC | cut -f 2,3 -d ',' | tr ',' '\t' | column -t
+# apparix search bookmark
+function bmgrep() {
+    pat="${1?Need a pattern to search}"
+    grep "$pat" "$APPARIXRC" | cut -f 2,3 -d ',' | tr ',' '\t' | column -t
 }
 
-   # apparix get; get something from a mark
-function aget () {
-  if [[ 2 == $# ]]; then
-    loc=$(apparish "$1" "$2")
-  elif [[ 1 == $# ]]; then
-    loc=$(apparish "$1")
-  fi
-  if [[ $? == 0 ]]; then
-    cp "$loc" .
-  fi
+# apparix get; get something from a mark
+function aget() {
+    if [[ 2 == "$#" ]]; then
+        loc="$(apparish "$1" "$2")"
+    elif [[ 1 == "$#" ]]; then
+        loc="$(apparish "$1")"
+    fi
+    if [[ "$?" == 0 ]]; then
+        cp "$loc" .
+    fi
 }
 
-   # apparix mkdir in mark
-function amd () {
-  if [[ 2 == $# ]]; then
-    loc=$(apparish "$1" "$2")
-  elif [[ 1 == $# ]]; then
-    loc=$(apparish "$1")
-  fi
-  if [[ $? == 0 ]]; then
-    mkdir -p "$loc"
-  fi
+# apparix mkdir in mark
+function amd() {
+    if [[ 2 == "$#" ]]; then
+        loc="$(apparish "$1" "$2")"
+    elif [[ 1 == "$#" ]]; then
+        loc="$(apparish "$1")"
+    fi
+    if [[ "$?" == 0 ]]; then
+        mkdir -p "$loc"
+    fi
 }
 
-   # apparix edit of file in mark or subdirectory of mark
-function av () {
-  if [[ 2 == $# ]]; then
-    loc=$(apparish "$1" "$2")
-  elif [[ 1 == $# ]]; then
-    loc=$(apparish "$1")
-  fi
-  if [[ $? == 0 ]]; then
-     view "$loc"
-  fi
+# apparix edit of file in mark or subdirectory of mark
+function av() {
+    if [[ 2 == "$#" ]]; then
+        loc="$(apparish "$1" "$2")"
+    elif [[ 1 == "$#" ]]; then
+        loc="$(apparish "$1")"
+    fi
+    if [[ "$?" == 0 ]]; then
+        view "$loc"
+    fi
 }
 
-   # apparix edit of file in mark or subdirectory of mark
-function ae () {
-  if [[ 2 == $# ]]; then
-    loc=$(apparish "$1" "$2")
-  elif [[ 1 == $# ]]; then
-    loc=$(apparish "$1")
-  fi
-  if [[ $? == 0 ]]; then
-     $EDITOR "$loc"
-  fi
+# apparix edit of file in mark or subdirectory of mark
+function ae() {
+    if [[ 2 == "$#" ]]; then
+        loc="$(apparish "$1" "$2")"
+    elif [[ 1 == "$#" ]]; then
+        loc="$(apparish "$1")"
+    fi
+    if [[ "$?" == 0 ]]; then
+        "${EDITOR:-vi}" "$loc"
+    fi
 }
 
-function apparish_ls () {
-cat <<EOH
+function apparish_ls() {
+    cat <<EOH
   bm MARK                 Bookmark current directory as mark
   to MARK [SUBDIR]        Jump to mark or a subdirectory of mark
   ald MARK [SUBDIR]       List subdirectories of mark directory or subdir
@@ -320,100 +415,115 @@ cat <<EOH
   ae MARK [SUBDIR/]FILE   Edit file in mark
   av MARK [SUBDIR/]FILE   View file in mark
   amibm                   See if the current directory is a bookmark
-  bmgrep PATTERN          List all marks and targets where target matches PATTERN
+  bmgrep PATTERN          List all marks and targets where target matches
+                          PATTERN
   todo MARK [SUBDIR]      Edit TODO file in mark directory
   rme MARK [SUBDIR]       Edit README file
   whence MARK             Menu-based selection for mark with multiple targets
-  portal                  Add current directory as portal (subdirectories are mark names)
+  portal                  Add current directory as portal (subdirectories are
+                          mark names)
   portal-expand           Re-expand all portals
   apparix-list MARK       List all targets for bookmark mark
   apparix-init            Use one time after installing apparix
 EOH
 }
 
-if [[ -n $BASH_VERSION ]]; then
-    # function to complete sensibly on filenames and directories
-    # https://stackoverflow.com/questions/12933362/getting-compgen-to-include-slashes-on-directories-when-looking-for-files
-    function _all_files_compgen {
+if [[ -n "$BASH_VERSION" ]]; then
+    # complete sensibly on filenames and directories
+    # https://stackoverflow.com/questions/12933362/getting-compgen-to-include...
+    # -slashes-on-directories-when-looking-for-files
+    function _all_files_compgen() {
         local cur="$1"
 
-        # # The outcommented code splits directories and files but then treats them the same.
-        # # Previously, it used to add a slash for directories, but this makes completing actually harder;
-        # # Manually adding a slash is a good way of instigating the next level of completion.
-        # # Anyway, I've kept this around in case people want to change this behaviour.
-        # # I use comm because old greps have an issue where -v does not treat an empty file with -f correctly.
-        # comm -3 <(compgen -f -- "$cur" | sort) <(compgen -d -- "$cur" | sort) # | sed -e 's/$/ /'
-        # # Directories (add -S / for slash separator):
-        # compgen -d -- "$cur"
+        # The outcommented code splits directories and files but then treats
+        # them the same. Previously, it used to add a slash for directories, but
+        # this makes completing actually harder; Manually adding a slash is a
+        # good way of instigating the next level of completion. Anyway, I've
+        # kept this around in case people want to change this behaviour. I use
+        # comm because old greps have an issue where -v does not treat an empty
+        # file with -f correctly.
+        # $ comm -3 <(compgen -f -- "$cur" | sort) \
+        #           <(compgen -d -- "$cur" | sort) # | sed -e 's/$/ /'
+        # Directories (add -S / for slash separator):
+        # $ compgen -d -- "$cur"
 
         compgen -f -- "$cur"
     }
 
-    # function completing a file, used by _apparix_comp
-    function _apparix_comp_file {
-      local caller="$1"
-      local cur_file="$2"
-      # local IFS=$'\n'
-      case $caller in
-        # complete on directories. this is easy with compgen.
-        to|als|ald|amd)
-          # Directories (add -S / for slash separator):
-          compgen -d -- "$cur_file"
-          ;;
-        # complete on filenames. this is a little harder to do nicely.
-        a|ae|av|aget|apparish) # Huffman (remove a|)
-          _all_files_compgen "$cur_file"
-          ;;
-        *)
-          echo "please register this function in ~/.bash_apparix:_apparix_dirs" 1>&2
-          ;;
-      esac
+    # https://stackoverflow.com/questions/3685970/check-if-a-bash-array-...
+    # contains-a-value
+    function elemOf() {
+        local e match="$1"
+        shift
+        for e; do [[ "$e" == "$match" ]] && return 0; done
+        return 1
     }
 
-    # function to complete an apparix tag followed by a file inside that tag's
-    # directory
-    function _apparix_comp {
-      local tag="${COMP_WORDS[1]}"
-      local IFS=$'\n'
-      COMPREPLY=()
-      if [[ $COMP_CWORD == 1 ]]; then
-        local tags=( $(cut -f2 -d, $APPARIXRC $APPARIXEXPAND) )
-        COMPREPLY=( $(compgen -W "${tags[*]}" -- "$tag") )
-      else
-        local cur_file="${COMP_WORDS[2]}"
-        local app_dir=$(apparish $tag 2>/dev/null)
-        if [[ -d $app_dir ]]; then
-            # run in subshell so cd isn't permanent
-            COMPREPLY=( $(cd $app_dir && _apparix_comp_file $1 $cur_file) )
+    # a file, used by _apparix_comp
+    function _apparix_comp_file() {
+        local caller="$1"
+        local cur_file="$2"
+        if elemOf "$caller" "${APPARIX_DIR_FUNCTIONS[@]}"; then
+            # Directories (add -S / for slash separator):
+            compgen -d -- "$cur_file"
+        elif elemOf "$caller" "${APPARIX_FILE_FUNCTIONS[@]}"; then
+            # complete on filenames. this is a little harder to do nicely.
+            _all_files_compgen "$cur_file"
         else
-            COMPREPLY=()
+            >&2 echo "please register this ~/.bourne_apparix, in" \
+                "APPARIX_{DIR,FILE}_FUNCTIONS"
         fi
-      fi
-      if (( ${#COMPREPLY[@]} > 0 )); then
-        # The line below makes all know cases with spaces in directory names work.
-        COMPREPLY=($(printf "%q\n" "${COMPREPLY[@]}"))
-      fi
-      return 0
-    }
-  # register completions
-  complete -o nospace -F _apparix_comp a to als ald amd ae av aget apparish   # Huffman (remove a)
-elif [[ -n $ZSH_VERSION ]]; then
-    function _apparix_file {
-        # local IFS=$'\n'
-        _arguments '1:mark:_values "\n" $(cut -d, -f2 $APPARIXRC $APPARIXEXPAND)' \
-                   '2:file:_path_files -W "$(apparish $words[2] 2>/dev/null)"'
     }
 
-    function _apparix_directory {
-        # local IFS=$'\n'
-        _arguments '1:mark:_values "\n" $(cut -d, -f2 $APPARIXRC $APPARIXEXPAND)' \
-                   '2:file:_path_files -/W "$(apparish $words[2] 2>/dev/null)"'
+    # complete an apparix tag followed by a file inside that tag's
+    # directory
+    function _apparix_comp() {
+        local tag="${COMP_WORDS[1]}"
+        local IFS=$'\n'
+        COMPREPLY=()
+        if [[ "$COMP_CWORD" == 1 ]]; then
+            read_array <(cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND")
+            local tags=( "${izaak_array[@]}" )
+            read_array <(compgen -W "${tags[*]}" -- "$tag")
+            COMPREPLY=( "${izaak_array[@]}" )
+        else
+            local cur_file="${COMP_WORDS[2]}"
+            local app_dir="$(apparish "$tag" 2>/dev/null)"
+            if [[ -d "$app_dir" ]]; then
+                # run in subshell so cd isn't permanent
+                read_array <(cd "$app_dir" &&
+                              _apparix_comp_file "$1" "$cur_file")
+                COMPREPLY=( "${izaak_array[@]}" )
+            else
+                COMPREPLY=()
+            fi
+        fi
+        if (( ${#COMPREPLY[@]} > 0 )); then
+            # The line below makes all known cases with spaces in directory
+            # names work.
+            read_array <(printf "%q\n" "${COMPREPLY[@]}")
+            COMPREPLY=( "${izaak_array[@]}" )
+        fi
+        return 0
     }
 
-    compdef _apparix_file ae av apparish aget a       # Huffman (remove a)
-    compdef _apparix_directory to ald als amd
+    # register completions
+    complete -o nospace -F _apparix_comp "${APPARIX_FILE_FUNCTIONS[@]}" \
+                                         "${APPARIX_DIR_FUNCTIONS[@]}"
+
+elif [[ -n "$ZSH_VERSION" ]]; then
+    function _apparix_file() {
+        _arguments \
+          '1:mark:_values "\n" $(cut -d, -f2 "$APPARIXRC" "$APPARIXEXPAND")' \
+          '2:file:_path_files -W "$(apparish "$words[2]" 2>/dev/null)"'
+    }
+
+    function _apparix_directory() {
+        _arguments \
+          '1:mark:_values "\n" $(cut -d, -f2 "$APPARIXRC" "$APPARIXEXPAND")' \
+          '2:file:_path_files -/W "$(apparish "$words[2]" 2>/dev/null)"'
+    }
+
+    compdef _apparix_file "${APPARIX_FILE_FUNCTIONS[@]}"
+    compdef _apparix_directory "${APPARIX_DIR_FUNCTIONS[@]}"
 fi
-
-alias a='apparish'                              # Huffman (remove entire line)
-alias via='vi $APPARIXRC'
-
