@@ -277,7 +277,10 @@ function portal-expand() {
     grep '^e,' "$APPARIXRC" | cut -f 2 -d , | \
         while read -r parentdir; do
             cd "$parentdir" || return 1
-            # find . -maxdepth 1 -mindepth 1 -type d -printf "%f\n" | \
+            # this would be a more complicated alternative for if the number of
+            # files is greater than ARGMAX or whatever. Either approach is
+            # resistant to weird filenames.
+            # find . -maxdepth 1 -mindepth 1 -type d -printf "%f\0" | \
             # while IFS='' read -r -d '' subdir; do ...; done
             for _subdir in */ .*/; do
                 local subdir="${_subdir%/}"
@@ -309,7 +312,7 @@ function toot() {
         return
     fi
     if [[ "$?" == 0 ]]; then
-        "${EDITOR:-vi}" "$file"
+        "${EDITOR:-cat}" "$file"
     fi
 }
 
@@ -401,7 +404,7 @@ function ae() {
         loc="$(apparish "$1")"
     fi
     if [[ "$?" == 0 ]]; then
-        "${EDITOR:-vi}" "$loc"
+        "${EDITOR:-cat}" "$loc"
     fi
 }
 
@@ -470,7 +473,7 @@ if [[ -n "$BASH_VERSION" ]]; then
             # complete on filenames. this is a little harder to do nicely.
             _all_files_compgen "$cur_file"
         else
-            >&2 echo "please register this ~/.bourne_apparix, in" \
+            >&2 echo "please register this in ~/.bourne-apparish, in" \
                 "APPARIX_{DIR,FILE}_FUNCTIONS"
         fi
     }
