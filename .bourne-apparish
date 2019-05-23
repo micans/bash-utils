@@ -281,15 +281,28 @@ function portal-expand() {
     grep '^e,' "$APPARIXRC" | cut -f 2 -d , | \
         while read -r parentdir; do
             cd "$parentdir" || return 1
-            # this breaks on empty globs. Could set nullglob but that sounds
-            # complicated. Also this might break if there are too many to fit in
-            # ARGMAX
-            # for _subdir in */ .*/; do
+            # This depends on GNU find's printf
+            # find . -maxdepth 1 -mindepth 1 -type d -printf "%f\0" | \
+            # while IFS='' read -r -d '' subdir; do
+            #     echo "j,$subdir,$parentdir/$subdir" >> "$APPARIXEXPAND"
+            # done
 
-            find . -maxdepth 1 -mindepth 1 -type d -printf "%f\0" | \
-            while IFS='' read -r -d '' subdir; do
+            # this might break if you have more directories than ARGMAX
+            # run in subshell to locally set nullglob
+            (
+            if [[ -n "$BASH_VERSION" ]]; then
+                shopt -s nullglob
+                shopt -u dotglob
+                shopt -u failglob
+                GLOBIGNORE=".:.."
+            elif [[ -n "$ZSH_VERSION" ]]; then
+                setopt nullglob
+            fi
+            for _subdir in */ .*/; do
+                local subdir="${_subdir%/}"
                 echo "j,$subdir,$parentdir/$subdir" >> "$APPARIXEXPAND"
             done
+            )
         done
 }
 
