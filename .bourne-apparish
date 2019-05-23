@@ -480,6 +480,15 @@ if [[ -n "$BASH_VERSION" ]]; then
         fi
     }
 
+    # generate completions for a bookmark
+    # this is currently case sensitive. Good? Bad? Who knows!
+    function _apparix_compgen_bm() {
+        cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND" | sort |\
+            \grep "^$(grepsanitise "$1")"
+        cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND" | sort |\
+            \grep "^..*$(grepsanitise "$1")"
+    }
+
     # complete an apparix tag followed by a file inside that tag's
     # directory
     function _apparix_comp() {
@@ -487,9 +496,7 @@ if [[ -n "$BASH_VERSION" ]]; then
         local IFS=$'\n'
         COMPREPLY=()
         if [[ "$COMP_CWORD" == 1 ]]; then
-            read_array <(cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND")
-            local tags=( "${izaak_array[@]}" )
-            read_array <(compgen -W "${tags[*]}" | grep -F "$tag")
+            read_array <(_apparix_compgen_bm "$tag")
             COMPREPLY=( "${izaak_array[@]}" )
         else
             local cur_file="${COMP_WORDS[2]}"
@@ -513,8 +520,11 @@ if [[ -n "$BASH_VERSION" ]]; then
     }
 
     # register completions
-    complete -o nospace -F _apparix_comp "${APPARIX_FILE_FUNCTIONS[@]}" \
-                                         "${APPARIX_DIR_FUNCTIONS[@]}"
+    # nospace prevents bash putting a space after partially completed paths
+    # nosort prevents bash from messing up the bespoke order in which bookmarks
+    # are completed
+    complete -o nospace -o nosort -F _apparix_comp \
+        "${APPARIX_FILE_FUNCTIONS[@]}" "${APPARIX_DIR_FUNCTIONS[@]}"
 
 elif [[ -n "$ZSH_VERSION" ]]; then
     function _apparix_file() {
