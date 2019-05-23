@@ -24,7 +24,7 @@
 # to offer a speedup of over 50%, which is worthwile. The tput command used to
 # obtain the sequence is also provided as a comment.
 # Vim tput hardcoding macro (acts on next match of $(tput[^)]*)
-# let @q = "/\\$(tput[^)]*)\<CR>ft\"ayi(cgn\<C-r>\<C-r>=system(\"\<C-r>a\")\<CR>\<Esc>"
+# :let @q = "/\\$(tput[^)]*)\<CR>ft\"ayi(cgn\<C-r>\<C-r>=system(\"\<C-r>a\")\<CR>\<Esc>"
 # initialise using 0fly$:<C-r><C-r>"<CR>
 # fix escape sequences with :%s/<C-v>x1b/\\e/g (you have to type the proper
 # sequences yourself)
