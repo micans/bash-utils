@@ -281,13 +281,13 @@ function portal-expand() {
     grep '^e,' "$APPARIXRC" | cut -f 2 -d , | \
         while read -r parentdir; do
             cd "$parentdir" || return 1
-            # this would be a more complicated alternative for if the number of
-            # files is greater than ARGMAX or whatever. Either approach is
-            # resistant to weird filenames.
-            # find . -maxdepth 1 -mindepth 1 -type d -printf "%f\0" | \
-            # while IFS='' read -r -d '' subdir; do ...; done
-            for _subdir in */ .*/; do
-                local subdir="${_subdir%/}"
+            # this breaks on empty globs. Could set nullglob but that sounds
+            # complicated. Also this might break if there are too many to fit in
+            # ARGMAX
+            # for _subdir in */ .*/; do
+
+            find . -maxdepth 1 -mindepth 1 -type d -printf "%f\0" | \
+            while IFS='' read -r -d '' subdir; do
                 echo "j,$subdir,$parentdir/$subdir" >> "$APPARIXEXPAND"
             done
         done
