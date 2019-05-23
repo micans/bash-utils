@@ -172,6 +172,7 @@ elif [[ -n "$ZSH_VERSION" ]] || silent version_assert 3 0 0; then
 else
     >&2 echo "really, bash 2 isn't cool enough to run apparix"
     function read_array() {
+        local IFS=$'\n'
         izaak_array=( $(cat "$1") )
     }
 fi
