@@ -2,7 +2,7 @@
 # vim: ft=sh ts=4 sw=0 sts=-1 et
 
 # ignore errors about:
-# - testing $?, becuase that's useful when you have branches
+# - testing $?, because that's useful when you have branches
 # - declaring and assigning at the same time because I know what I'm doing
 #   (fingers crossed)
 # - unexpanded substitutions in single quotes for similar reasons
