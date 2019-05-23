@@ -2,7 +2,14 @@
 
 ## Apparix
 
-Completion functions for bash and zsh in `.bourne-apparix`.
+Directory bookmarking system. It used to be implemented in C, shipped with bash
+wrapper functions and completion code. This is now legacy, but it is provided in
+`.bourne_apparix`.
+
+The new pure shell implementation is in `.bourne-apparish`.
+
+There is also a reference prompt that can talk to apparix, if you've got it set
+up, in `.bashpromptrc`.
 
 ## bash-myutils
 
@@ -10,7 +17,7 @@ Small functions that I use in `.bash-myutils`.
 
 ## bash-workutils
 
-Space/time bash functions in `.bourne-apparix`. Most of these will lead to a lot
+Space/time bash functions in `.bash-workutils`. Most of these will lead to a lot
 of disk access, use with care.
 
 
