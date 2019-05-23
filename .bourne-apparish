@@ -497,19 +497,18 @@ if [[ -n "$BASH_VERSION" ]]; then
     # generate completions for a bookmark
     # this is currently case sensitive. Good? Bad? Who knows!
     function _apparix_compgen_bm() {
+        cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND" | sort |\
+            \grep "^$(grepsanitise "$1")"
         if [[ -n "$1" ]]; then
             cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND" | sort |\
-                \grep "^$(grepsanitise "$1")"
+                \grep "^..*$(grepsanitise "$1")"
         fi
-        cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND" | sort |\
-            \grep "^..*$(grepsanitise "$1")"
     }
 
     # complete an apparix tag followed by a file inside that tag's
     # directory
     function _apparix_comp() {
         local tag="${COMP_WORDS[1]}"
-        local IFS=$'\n'
         COMPREPLY=()
         if [[ "$COMP_CWORD" == 1 ]]; then
             read_array <(_apparix_compgen_bm "$tag")
@@ -539,8 +538,14 @@ if [[ -n "$BASH_VERSION" ]]; then
     # nospace prevents bash putting a space after partially completed paths
     # nosort prevents bash from messing up the bespoke order in which bookmarks
     # are completed
-    complete -o nospace -o nosort -F _apparix_comp \
-        "${APPARIX_FILE_FUNCTIONS[@]}" "${APPARIX_DIR_FUNCTIONS[@]}"
+    if version_assert 4 4 0; then
+        complete -o nospace -o nosort -F _apparix_comp \
+            "${APPARIX_FILE_FUNCTIONS[@]}" "${APPARIX_DIR_FUNCTIONS[@]}"
+    else
+        >&2 echo "(Apparish: Can't disable alphabetic sorting of completions)"
+        complete -o nospace -F _apparix_comp \
+            "${APPARIX_FILE_FUNCTIONS[@]}" "${APPARIX_DIR_FUNCTIONS[@]}"
+    fi
 
 elif [[ -n "$ZSH_VERSION" ]]; then
     function _apparix_file() {
