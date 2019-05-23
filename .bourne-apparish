@@ -483,8 +483,10 @@ if [[ -n "$BASH_VERSION" ]]; then
     # generate completions for a bookmark
     # this is currently case sensitive. Good? Bad? Who knows!
     function _apparix_compgen_bm() {
-        cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND" | sort |\
-            \grep "^$(grepsanitise "$1")"
+        if [[ -n "$1" ]]; then
+            cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND" | sort |\
+                \grep "^$(grepsanitise "$1")"
+        fi
         cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND" | sort |\
             \grep "^..*$(grepsanitise "$1")"
     }
