@@ -115,7 +115,7 @@
 #  suggesting the name apparish.
  #
 
-# TODO: allow commas in directory names
+# TODO: allow commas and newlines in directory names
 
 APPARIXHOME="${APPARIXHOME:=$HOME}"
 APPARIXRC="$APPARIXHOME/.apparixrc"
@@ -173,13 +173,15 @@ else
     >&2 echo "really, bash 2 isn't cool enough to run apparix"
     function read_array() {
         local IFS=$'\n'
+        # this is a bad fallback implementation on purpose
+        # shellcheck disable=SC2207
         izaak_array=( $(cat "$1") )
     }
 fi
 
-
+# Huffman (remove this paragraph, or just alias "a" yourself)
 if ! silent command -v a; then
-    alias a='apparish' # Huffman (remove entire line)
+    alias a='apparish'
 else
     >&2 echo "Apparish: not aliasing a"
 fi
@@ -296,7 +298,6 @@ function whence() {
         return 1
     fi
     local mark="$1"
-    # blissfully ignorant of what this does
     select target in $(apparix-list "$mark"); do
         cd "$target" || return 1
         break
@@ -309,8 +310,8 @@ function toot() {
     elif [[ 2 == "$#" ]]; then
         file="$(apparish "$1")/$2"
     else
-        echo "toot tag dir file OR toot tag file"
-        return
+        >&2 echo "toot tag dir file OR toot tag file"
+        return 1
     fi
     if [[ "$?" == 0 ]]; then
         "${EDITOR:-cat}" "$file"
