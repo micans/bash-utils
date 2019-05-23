@@ -116,6 +116,9 @@
  #
 
 # TODO: allow commas and newlines in directory names
+# TODO: maybe write these as scripts with shebangs, and keep shell functions to
+# very hollow wrapper, to prevent the constant checks for bash/zsh and make it
+# easier to extend to other shells.
 
 APPARIXHOME="${APPARIXHOME:=$HOME}"
 APPARIXRC="${APPARIXRC:=$APPARIXHOME/.apparixrc}"
@@ -281,7 +284,7 @@ function portal-expand() {
     grep '^e,' "$APPARIXRC" | cut -f 2 -d , | \
         while read -r parentdir; do
             cd "$parentdir" || return 1
-            # This depends on GNU find's printf
+            # This unfortunately depends on GNU find's printf
             # find . -maxdepth 1 -mindepth 1 -type d -printf "%f\0" | \
             # while IFS='' read -r -d '' subdir; do
             #     echo "j,$subdir,$parentdir/$subdir" >> "$APPARIXEXPAND"
