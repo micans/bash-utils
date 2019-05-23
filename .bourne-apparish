@@ -118,9 +118,9 @@
 # TODO: allow commas and newlines in directory names
 
 APPARIXHOME="${APPARIXHOME:=$HOME}"
-APPARIXRC="$APPARIXHOME/.apparixrc"
-APPARIXEXPAND="$APPARIXHOME/.apparixexpand"
-APPARIXLOG="$APPARIXHOME/.apparixlog"
+APPARIXRC="${APPARIXRC:=$APPARIXHOME/.apparixrc}"
+APPARIXEXPAND="${APPARIXRC:=$APPARIXHOME/.apparixexpand}"
+APPARIXLOG="${APPARIXLOG:=$APPARIXHOME/.apparixlog}"
 
 APPARIX_FILE_FUNCTIONS=( a ae av aget toot apparish ) # Huffman (remove a)
 APPARIX_DIR_FUNCTIONS=( to als ald amd todo rme )
