@@ -119,7 +119,7 @@
 
 APPARIXHOME="${APPARIXHOME:=$HOME}"
 APPARIXRC="${APPARIXRC:=$APPARIXHOME/.apparixrc}"
-APPARIXEXPAND="${APPARIXRC:=$APPARIXHOME/.apparixexpand}"
+APPARIXEXPAND="${APPARIXEXPAND:=$APPARIXHOME/.apparixexpand}"
 APPARIXLOG="${APPARIXLOG:=$APPARIXHOME/.apparixlog}"
 
 APPARIX_FILE_FUNCTIONS=( a ae av aget toot apparish ) # Huffman (remove a)
@@ -270,12 +270,13 @@ function to() {
 }
 
 function portal() {
-   echo "e,$PWD" >> "$APPARIXRC"
-   portal-expand
+    echo "e,$PWD" >> "$APPARIXRC"
+    portal-expand
 }
 
 function portal-expand() {
     local parentdir subdir
+    rm -f "$APPARIXEXPAND"
     true > "$APPARIXEXPAND"
     grep '^e,' "$APPARIXRC" | cut -f 2 -d , | \
         while read -r parentdir; do
@@ -289,7 +290,7 @@ function portal-expand() {
                 local subdir="${_subdir%/}"
                 echo "j,$subdir,$parentdir/$subdir" >> "$APPARIXEXPAND"
             done
-    done
+        done
 }
 
 function whence() {
