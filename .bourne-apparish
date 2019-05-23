@@ -489,7 +489,7 @@ if [[ -n "$BASH_VERSION" ]]; then
         if [[ "$COMP_CWORD" == 1 ]]; then
             read_array <(cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND")
             local tags=( "${izaak_array[@]}" )
-            read_array <(compgen -W "${tags[*]}" -- "$tag")
+            read_array <(compgen -W "${tags[*]}" | grep -F "$tag")
             COMPREPLY=( "${izaak_array[@]}" )
         else
             local cur_file="${COMP_WORDS[2]}"
