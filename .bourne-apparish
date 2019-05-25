@@ -171,7 +171,7 @@ function apparix-init() {
 
 function apparish() {
     if [[ 0 == "$#" ]]; then
-        cat "$APPARIXRC" "$APPARIXEXPAND" | tr ', ' '\t_' | column -t
+        cat -- "$APPARIXRC" "$APPARIXEXPAND" | tr ', ' '\t_' | column -t
         return
     fi
     local mark="$1"
@@ -194,7 +194,7 @@ function apparix-list() {
         return 1
     fi
     local mark="$1"
-    grep -F ",$mark," "$APPARIXRC" "$APPARIXEXPAND" | cut -f 3 -d ','
+    grep -F ",$mark," -- "$APPARIXRC" "$APPARIXEXPAND" | cut -f 3 -d ','
 }
 
 function bm() {
@@ -204,7 +204,7 @@ function bm() {
     fi
     local mark="$1"
     local list="$(apparix-list "$mark")"
-    echo "j,$mark,$PWD" | tee -a "$APPARIXLOG" >> "$APPARIXRC"
+    echo "j,$mark,$PWD" | tee -a -- "$APPARIXLOG" >> "$APPARIXRC"
     if [[ -n "$list" ]]; then
         listsize="$(wc -l <<< "$list")"
         listtail="$(tail -n 2 <<< "$list")"
@@ -232,7 +232,7 @@ function to() {
         return 1
     fi
     if [[ "$?" == 0 ]]; then
-        cd "$loc" || return 1
+        cd -- "$loc" || return 1
     fi
 }
 
@@ -243,9 +243,9 @@ function portal() {
 
 function portal-expand() {
     local parentdir
-    rm -f "$APPARIXEXPAND"
+    rm -f -- "$APPARIXEXPAND"
     true > "$APPARIXEXPAND"
-    grep '^e,' "$APPARIXRC" | cut -f 2 -d , | \
+    grep '^e,' -- "$APPARIXRC" | cut -f 2 -d , | \
         while read -r parentdir; do
             # This unfortunately depends on GNU find's printf
             # could maybe be rewritten in a hackier way to remove the ./
@@ -259,7 +259,7 @@ function portal-expand() {
             # run in an explicit bash subshell to be able to locally set the
             # right options
             parentdir="$parentdir" APPARIXEXPAND="$APPARIXEXPAND" bash <<EOF
-            cd "\$parentdir" || return 1
+            cd -- "\$parentdir" || return 1
             shopt -s nullglob
             shopt -u dotglob
             shopt -u failglob
@@ -279,7 +279,7 @@ function whence() {
     fi
     local mark="$1"
     select target in $(apparix-list "$mark"); do
-        cd "$target" || return 1
+        cd -- "$target" || return 1
         break
     done
 }
@@ -294,7 +294,7 @@ function toot() {
         return 1
     fi
     if [[ "$?" == 0 ]]; then
-        "${EDITOR:-cat}" "$file"
+        "${EDITOR:-vim}" "$file"
     fi
 }
 
@@ -332,14 +332,14 @@ function als() {
 
 # apparix search bookmark
 function amibm() {
-    grep ",$(grepsanitise "$PWD")$" "$APPARIXRC" | \
+    grep -- ",$(grepsanitise "$PWD")$" "$APPARIXRC" | \
         cut -f 2 -d ',' | paste -s -d ' ' -
 }
 
 # apparix search bookmark
 function bmgrep() {
     pat="${1?Need a pattern to search}"
-    grep "$pat" "$APPARIXRC" | cut -f 2,3 -d ',' | tr ',' '\t' | column -t
+    grep -- "$pat" "$APPARIXRC" | cut -f 2,3 -d ',' | tr ',' '\t' | column -t
 }
 
 # apparix get; get something from a mark
@@ -362,7 +362,7 @@ function amd() {
         loc="$(apparish "$1")"
     fi
     if [[ "$?" == 0 ]]; then
-        mkdir -p "$loc"
+        mkdir -p -- "$loc"
     fi
 }
 
@@ -374,7 +374,7 @@ function av() {
         loc="$(apparish "$1")"
     fi
     if [[ "$?" == 0 ]]; then
-        view "$loc"
+        view -- "$loc"
     fi
 }
 
@@ -386,7 +386,7 @@ function ae() {
         loc="$(apparish "$1")"
     fi
     if [[ "$?" == 0 ]]; then
-        "${EDITOR:-cat}" "$loc"
+        "${EDITOR:-vim}" "$loc"
     fi
 }
 
@@ -448,7 +448,7 @@ if [[ -n "$BASH_VERSION" ]]; then
             local IFS=$'\n'
             # this is a bad fallback implementation on purpose
             # shellcheck disable=SC2207
-            izaak_array=( $(cat "$1") )
+            izaak_array=( $(cat -- "$1") )
         }
     fi
 
@@ -493,19 +493,19 @@ if [[ -n "$BASH_VERSION" ]]; then
             # complete on filenames. this is a little harder to do nicely.
             _all_files_compgen "$cur_file"
         else
-            >&2 echo "please register this in ~/.bourne-apparish, in" \
-                "APPARIX_{DIR,FILE}_FUNCTIONS"
+            >&2 echo "Unknown caller: Izaak has probably messed something up"
+            return 1
         fi
     }
 
     # generate completions for a bookmark
     # this is currently case sensitive. Good? Bad? Who knows!
     function _apparix_compgen_bm() {
-        cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND" | sort |\
-            \grep "^$(grepsanitise "$1")"
+        cut -f2 -d, -- "$APPARIXRC" "$APPARIXEXPAND" | sort |\
+            \grep -i -- "^$(grepsanitise "$1")"
         if [[ -n "$1" ]]; then
-            cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND" | sort |\
-                \grep "^..*$(grepsanitise "$1")"
+            cut -f2 -d, -- "$APPARIXRC" "$APPARIXEXPAND" | sort |\
+                \grep -i -- "^..*$(grepsanitise "$1")"
         fi
     }
 
@@ -522,7 +522,7 @@ if [[ -n "$BASH_VERSION" ]]; then
             local app_dir="$(apparish "$tag" 2>/dev/null)"
             if [[ -d "$app_dir" ]]; then
                 # run in subshell so cd isn't permanent
-                read_array <(cd "$app_dir" &&
+                read_array <(cd -- "$app_dir" &&
                               _apparix_comp_file "$1" "$cur_file")
                 COMPREPLY=( "${izaak_array[@]}" )
             else
