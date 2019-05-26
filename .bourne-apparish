@@ -98,15 +98,7 @@
 #  bourne shell.  Name this file for example .bourne-apparish in your $HOME
 #  directory, and put the line 'source $HOME/.bourne-apparish' (without quotes)
 #  in the file $HOME/.bashrc or $HOME/.bash_login if you use bash, in the file
-#  $HOME/.zshrc if you use zsh.  If you use zsh, you may need to additionally
-#  put the lines
-#
-#     autoload -Uz compinit
-#     compinit
-#
-#  (without outcommenting them as above) *BEFORE* the line where you source
-#  $HOME/.bourne-apparish. This is not the case for example if you use
-#  oh-my-zsh.
+#  $HOME/.zshrc if you use zsh.
 
  #
 #  Thanks to Sitaram Chamarty for all the important parts of the bash completion
@@ -119,6 +111,8 @@
 # TODO: maybe write these as scripts with shebangs, and keep shell functions to
 # very hollow wrapper, to prevent the constant checks for bash/zsh and make it
 # easier to extend to other shells.
+
+# TODO: replace echo with printf
 
 APPARIXHOME="${APPARIXHOME:=$HOME}"
 APPARIXRC="${APPARIXRC:=$APPARIXHOME/.apparixrc}"
@@ -135,6 +129,12 @@ APPARIX_DIR_FUNCTIONS=( to als ald amd todo rme )
 # sanitise $1 so that it becomes suitable for use with your basic grep
 function grepsanitise() {
     sed 's/[].*^$]\|\[/\\&/g' <<< "$1"
+}
+
+# similar for find -name
+# TODO look up the actual posix dealio
+function findsanitise() {
+    sed 's/[]*]\|\[/\\&/g' <<< "$1"
 }
 
 # vim-like: totally silence the given command, with less of the tedium. doesn't
@@ -247,15 +247,6 @@ function portal-expand() {
     true > "$APPARIXEXPAND"
     grep '^e,' -- "$APPARIXRC" | cut -f 2 -d , | \
         while read -r parentdir; do
-            # This unfortunately depends on GNU find's printf
-            # could maybe be rewritten in a hackier way to remove the ./
-            # prefixes.
-            # find . -maxdepth 1 -mindepth 1 -type d -printf "%f\0" | \
-            # while IFS='' read -r -d '' subdir; do
-            #     echo "j,$subdir,$parentdir/$subdir" >> "$APPARIXEXPAND"
-            # done
-
-            # this might break if you have more directories than ARGMAX
             # run in an explicit bash subshell to be able to locally set the
             # right options
             parentdir="$parentdir" APPARIXEXPAND="$APPARIXEXPAND" bash <<EOF
@@ -331,6 +322,7 @@ function als() {
 }
 
 # apparix search bookmark
+# TODO: does this still work
 function amibm() {
     grep -- ",$(grepsanitise "$PWD")$" "$APPARIXRC" | \
         cut -f 2 -d ',' | paste -s -d ' ' -
@@ -433,13 +425,13 @@ if [[ -n "$BASH_VERSION" ]]; then
     # https://github.com/koalaman/shellcheck/wiki/SC2207
     if silent version_assert 4 0 0; then
         function read_array() {
-            mapfile -t izaak_array < "$1"
+            mapfile -t goedel_array < "$1"
         }
     elif silent version_assert 3 0 0; then
         function read_array() {
-            izaak_array=()
+            goedel_array=()
             while IFS='' read -r line; do
-                izaak_array+=("$line");
+                goedel_array+=("$line");
             done < "$1"
         }
     else
@@ -448,7 +440,7 @@ if [[ -n "$BASH_VERSION" ]]; then
             local IFS=$'\n'
             # this is a bad fallback implementation on purpose
             # shellcheck disable=SC2207
-            izaak_array=( $(cat -- "$1") )
+            goedel_array=( $(cat -- "$1") )
         }
     fi
 
@@ -487,15 +479,48 @@ if [[ -n "$BASH_VERSION" ]]; then
         local caller="$1"
         local cur_file="$2"
         if elemOf "$caller" "${APPARIX_DIR_FUNCTIONS[@]}"; then
-            # Directories (add -S / for slash separator):
-            compgen -d -- "$cur_file"
+            # # Directories (add -S / for slash separator):
+            # compgen -d -- "$cur_file"
+            goedel_compgen "$cur_file" "-type d"
         elif elemOf "$caller" "${APPARIX_FILE_FUNCTIONS[@]}"; then
             # complete on filenames. this is a little harder to do nicely.
-            _all_files_compgen "$cur_file"
+            goedel_compgen "$cur_file"
         else
             >&2 echo "Unknown caller: Izaak has probably messed something up"
             return 1
         fi
+
+    }
+
+    # the existence of this function is a counterexample to Gödel's little known
+    # incompletion theorem: there's no such thing as good completion on files in
+    # Bash
+    function goedel_compgen() {
+        local part_esc="$1"
+        local find_type="${2:--true}"
+        # TODO: echo doesn't understand --? (probably fine) (but what if somehow
+        # the dirname is -n or something?)
+        local part_unesc="$(bash -c "echo -n $part_esc")"
+        local part_unesc="${part_unesc%/}"
+        local part_dir="$(dirname "$part_unesc")"
+        COMPREPLY=()
+        # TODO: check if find regex standard
+        # can't use a pipe that's a subshell because we need to modify COMREPLY.
+        while IFS='' read -r -d '' result; do
+            COMPREPLY+=("$(printf "%q" "${result#./}")")
+        done < <(
+            if [[ "$part_dir" == "." ]]; then
+                find_name_prefix="./"
+            fi
+            # find_type not escaped as it can be eg "-type f -o -type d"
+            if [[ -d "$part_unesc" ]]; then
+                find "$part_unesc" -mindepth 1 -maxdepth 1 \( $find_type \) \
+                    -print0
+            else
+                find "$part_dir" -mindepth 1 -maxdepth 1 \( $find_type \) \
+                    -path "$find_name_prefix$(findsanitise "$part_unesc")*" \
+                    -print0
+            fi)
     }
 
     # generate completions for a bookmark
@@ -515,25 +540,21 @@ if [[ -n "$BASH_VERSION" ]]; then
         local tag="${COMP_WORDS[1]}"
         COMPREPLY=()
         if [[ "$COMP_CWORD" == 1 ]]; then
-            read_array <(_apparix_compgen_bm "$tag")
-            COMPREPLY=( "${izaak_array[@]}" )
+            read_array <(_apparix_compgen_bm "$tag" | \
+                xargs -d $'\n' printf "%q\n")
+            COMPREPLY=( "${goedel_array[@]}" )
         else
             local cur_file="${COMP_WORDS[2]}"
             local app_dir="$(apparish "$tag" 2>/dev/null)"
             if [[ -d "$app_dir" ]]; then
-                # run in subshell so cd isn't permanent
-                read_array <(cd -- "$app_dir" &&
-                              _apparix_comp_file "$1" "$cur_file")
-                COMPREPLY=( "${izaak_array[@]}" )
+                # can't run in subshell as _apparix_comp_file modifies COMREPLY.
+                # Just hope that nothing goes wrong, basically
+                silent pushd -- "$app_dir"
+                _apparix_comp_file "$1" "$cur_file"
+                silent popd
             else
                 COMPREPLY=()
             fi
-        fi
-        if (( ${#COMPREPLY[@]} > 0 )); then
-            # The line below makes all known cases with spaces in directory
-            # names work.
-            read_array <(printf "%q\n" "${COMPREPLY[@]}")
-            COMPREPLY=( "${izaak_array[@]}" )
         fi
         return 0
     }
@@ -552,6 +573,12 @@ if [[ -n "$BASH_VERSION" ]]; then
     fi
 
 elif [[ -n "$ZSH_VERSION" ]]; then
+    # Use zsh's completion system, as this seems a lot more robust, rather
+    # than using bashcompinit to reuse the bash code but really this wasn't
+    # a hassle to write
+    autoload -Uz compinit
+    compinit
+
     function _apparix_file() {
         _arguments \
           '1:mark:_values "\n" $(cut -d, -f2 "$APPARIXRC" "$APPARIXEXPAND")' \
