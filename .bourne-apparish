@@ -481,10 +481,10 @@ if [[ -n "$BASH_VERSION" ]]; then
         if elemOf "$caller" "${APPARIX_DIR_FUNCTIONS[@]}"; then
             # # Directories (add -S / for slash separator):
             # compgen -d -- "$cur_file"
-            goedel_compgen "$cur_file" "-type d"
+            goedel_compfile "$cur_file" d
         elif elemOf "$caller" "${APPARIX_FILE_FUNCTIONS[@]}"; then
             # complete on filenames. this is a little harder to do nicely.
-            goedel_compgen "$cur_file"
+            goedel_compfile "$cur_file" f
         else
             >&2 echo "Unknown caller: Izaak has probably messed something up"
             return 1
@@ -495,32 +495,56 @@ if [[ -n "$BASH_VERSION" ]]; then
     # the existence of this function is a counterexample to Gödel's little known
     # incompletion theorem: there's no such thing as good completion on files in
     # Bash
-    function goedel_compgen() {
+    function goedel_compfile() {
         local part_esc="$1"
-        local find_type="${2:--true}"
-        # TODO: echo doesn't understand --? (probably fine) (but what if somehow
-        # the dirname is -n or something?)
-        local part_unesc="$(bash -c "echo -n $part_esc")"
-        local part_unesc="${part_unesc%/}"
+        case "$2" in
+            f)
+                local find_files=true;;
+            d) ;;
+            *) >&2 echo "Specify file type"; return 1;;
+        esac
+        local part_unesc="$(bash -c "printf '%s' $part_esc")"
         local part_dir="$(dirname "$part_unesc")"
         COMPREPLY=()
-        # TODO: check if find regex standard
-        # can't use a pipe that's a subshell because we need to modify COMREPLY.
+        # can't pipe to while because that's a subshell and we need to modify
+        # COMREPLY.
         while IFS='' read -r -d '' result; do
-            COMPREPLY+=("$(printf "%q" "${result#./}")")
-        done < <(
-            if [[ "$part_dir" == "." ]]; then
+            # this is a bit of a weird hack because printf "%q\n" with no
+            # arguments prints ''. It should be robust, because any actual
+            # single quotes will have been escaped by printf.
+            if [[ "$result" != "''" ]]; then
+                COMPREPLY+=("$result")
+            fi
+        # use an explicit bash subshell to set some glob flags.
+        done < <(part_dir="$part_dir" part_unesc="$part_unesc" \
+                 find_files="$find_files" bash <<EOF
+            shopt -s nullglob
+            shopt -s extglob
+            shopt -u dotglob
+            shopt -u failglob
+            GLOBIGNORE="./:../"
+            if [[ "\$part_dir" == "." ]]; then
                 find_name_prefix="./"
             fi
-            # find_type not escaped as it can be eg "-type f -o -type d"
-            if [[ -d "$part_unesc" ]]; then
-                find "$part_unesc" -mindepth 1 -maxdepth 1 \( $find_type \) \
-                    -print0
+            # here we delay the %q escaping because I want to strip trailing /s
+            if [[ -d "\$part_unesc" ]]; then
+                if [[ "\$part_unesc" != +(/) ]]; then
+                    part_unesc="\${part_unesc%%+(/)}"
+                fi
+                if [[ "\$find_files" == true ]]; then
+                    printf "%q\\0" "\$part_unesc"/* "\$part_unesc"/*/
+                else
+                    printf "%q\\0" "\$part_unesc"/*/
+                fi
             else
-                find "$part_dir" -mindepth 1 -maxdepth 1 \( $find_type \) \
-                    -path "$find_name_prefix$(findsanitise "$part_unesc")*" \
-                    -print0
-            fi)
+                if [[ "\$find_files" == true ]]; then
+                    printf "%q\\0" "\$part_unesc"*/ "\$part_unesc"*
+                else
+                    printf "%q\\0" "\$part_unesc"*/
+                fi
+            fi
+EOF
+        )
     }
 
     # generate completions for a bookmark
