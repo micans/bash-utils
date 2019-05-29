@@ -102,11 +102,6 @@
 #  suggesting the name apparish.
  #
 
-# TODO: allow commas and newlines in directory names
-# TODO: maybe write these as scripts with shebangs, and keep shell functions to
-# very hollow wrapper, to prevent the constant checks for bash/zsh and make it
-# easier to extend to other shells.
-
 APPARIXHOME="${APPARIXHOME:=$HOME}"
 # ensure APPARIXHOME exists
 mkdir -p "$APPARIXHOME"
@@ -461,18 +456,25 @@ if [[ -n "$BASH_VERSION" ]]; then
     function _apparix_comp_file() {
         local caller="$1"
         local cur_file="$2"
+
         if elemOf "$caller" "${APPARIX_DIR_FUNCTIONS[@]}"; then
-            # # Directories (add -S / for slash separator):
-            # compgen -d -- "$cur_file"
-            goedel_compfile "$cur_file" d
+            if [[ -n "$BERTRAND_RUSSEL" ]]; then
+                # # Directories (add -S / for slash separator):
+                compgen -d -- "$cur_file"
+            else
+                goedel_compfile "$cur_file" d
+            fi
         elif elemOf "$caller" "${APPARIX_FILE_FUNCTIONS[@]}"; then
             # complete on filenames. this is a little harder to do nicely.
-            goedel_compfile "$cur_file" f
+            if [[ -n "$BERTRAND_RUSSEL" ]]; then
+                _all_files_compgen "$cur_file"
+            else
+                goedel_compfile "$cur_file" f
+            fi
         else
             >&2 echo "Unknown caller: Izaak has probably messed something up"
             return 1
         fi
-
     }
 
     # the existence of this function is a counterexample to Gödel's little known
