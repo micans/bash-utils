@@ -112,8 +112,6 @@
 # very hollow wrapper, to prevent the constant checks for bash/zsh and make it
 # easier to extend to other shells.
 
-# TODO: replace echo with printf
-
 APPARIXHOME="${APPARIXHOME:=$HOME}"
 mkdir -p "$APPARIXHOME"
 APPARIXRC="${APPARIXRC:=$APPARIXHOME/.apparixrc}"
@@ -130,12 +128,6 @@ APPARIX_DIR_FUNCTIONS=( to als ald amd todo rme )
 # sanitise $1 so that it becomes suitable for use with your basic grep
 function grepsanitise() {
     sed 's/[].*^$]\|\[/\\&/g' <<< "$1"
-}
-
-# similar for find -name
-# TODO look up the actual posix dealio
-function findsanitise() {
-    sed 's/[]*]\|\[/\\&/g' <<< "$1"
 }
 
 # vim-like: totally silence the given command, with less of the tedium. doesn't
@@ -323,7 +315,7 @@ function als() {
 }
 
 # apparix search bookmark
-# TODO: does this still work
+# TODO: fix when cwd has newlines in
 function amibm() {
     grep -- ",$(grepsanitise "$PWD")$" "$APPARIXRC" | \
         cut -f 2 -d ',' | paste -s -d ' ' -
