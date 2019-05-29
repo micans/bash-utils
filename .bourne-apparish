@@ -24,7 +24,6 @@
 #  Quick Guide:
 #  -  save this file in $HOME/.bourne-apparish
 #  -  issue 'source $HOME/.bourne-apparish'
-#  -  issue 'apparix-init'
 #  -  go to a directory and issue 'bm foo'
 #  -  you can now go to that directory by issuing 'to foo'
 #  -  try tab completion and command substitution, see the examples below.
@@ -35,11 +34,10 @@
 #  implementations and the function definitions are very similar.  The apparix
 #  shell functions invoke a C executable. Apparish uses another shell funtion
 #  to mimic this C program and apparish provides two additional funcctions,
-#  apparix-init and apparix-list. The pivotal commands however are 'bm'
-#  (bookmark) and 'to' (go to mark). You can change from apparix to apparish
-#  and vice versa, as they use the same resource files.
+#  apparix-list. The pivotal commands however are 'bm' (bookmark) and 'to' (go
+#  to mark). You can change from apparix to apparish and vice versa, as they use
+#  the same resource files.
 #
-#     apparix-init            initialise apparix (needed only once)
 #  ---
 #     bm <tag>                create bookmark <tag> for current directory
 #  ---
@@ -113,10 +111,16 @@
 # easier to extend to other shells.
 
 APPARIXHOME="${APPARIXHOME:=$HOME}"
+# ensure APPARIXHOME exists
 mkdir -p "$APPARIXHOME"
 APPARIXRC="${APPARIXRC:=$APPARIXHOME/.apparixrc}"
 APPARIXEXPAND="${APPARIXEXPAND:=$APPARIXHOME/.apparixexpand}"
 APPARIXLOG="${APPARIXLOG:=$APPARIXHOME/.apparixlog}"
+
+# ensure set up and log files exist
+touch "$APPARIXRC"
+touch "$APPARIXEXPAND"
+touch "$APPARIXLOG"
 
 APPARIX_FILE_FUNCTIONS=( a ae av aget toot apparish ) # Huffman (remove a)
 APPARIX_DIR_FUNCTIONS=( to als ald amd todo rme )
@@ -151,16 +155,6 @@ if ! silent command -v via; then
 else
     >&2 echo "Apparish: not aliasing via"
 fi
-
-function apparix-init() {
-    already=""
-    if [[ -e "$APPARIXRC" && -e "$APPARIXEXPAND" ]]; then
-        already=" already"
-    fi
-    true >> "$APPARIXRC"
-    true >> "$APPARIXEXPAND"
-    echo "Apparish is up and running$already"
-}
 
 function apparish() {
     if [[ 0 == "$#" ]]; then
@@ -394,7 +388,6 @@ function apparish_ls() {
                           mark names)
   portal-expand           Re-expand all portals
   apparix-list MARK       List all targets for bookmark mark
-  apparix-init            Use one time after installing apparix
 EOH
 }
 
