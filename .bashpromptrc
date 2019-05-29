@@ -1,12 +1,12 @@
 # vim: ft=sh
 
-# FIGMENTIZE: prompt
 #                                          __
 # ______ _______   ____    _____  ______ _/  |_
 # \____ \\_  __ \ /  _ \  /     \ \____ \\   __\
 # |  |_> >|  | \/(  <_> )|  Y Y  \|  |_> >|  |
 # |   __/ |__|    \____/ |__|_|  /|   __/ |__|
 # |__|                         \/ |__|
+# FIGMENTIZE: prompt
 
 # file that sets up my flashy bashy prompt
 # This file was taken from

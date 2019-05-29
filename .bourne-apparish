@@ -9,13 +9,13 @@
 
 # Vim modeline to try and keep the indentation in check.
 
-# FIGMENTIZE: apparish
 #                                       .__         .__
 # _____   ______  ______ _____  _______ |__|  ______|  |__
 # \__  \  \____ \ \____ \\__  \ \_  __ \|  | /  ___/|  |  \
 #  / __ \_|  |_> >|  |_> >/ __ \_|  | \/|  | \___ \ |   Y  \
 # (____  /|   __/ |   __/(____  /|__|   |__|/____  >|___|  /
 #      \/ |__|    |__|        \/                 \/      \/
+# FIGMENTIZE: apparish
 
 #  bookmarks for the command line with comprehensive tab completion on target
 #                                   content
