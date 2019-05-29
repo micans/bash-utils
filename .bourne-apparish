@@ -1,33 +1,30 @@
 # shellcheck disable=SC2155,SC2181,SC2016 shell=bash
 # vim: ft=sh ts=4 sw=0 sts=-1 et
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#                              A P P A R I S H
+#
+#  bookmarks for the command line with comprehensive tab completion on target
+#                                   content
+#                             works for bash and zsh
+#                                                            Authors:
+#                                                            Stijn van Dongen
+#                                                            Sitaram Chamarty
+#                                                            Izaak van Dongen
+#                               Quick Guide:
+#  -  save this file in $HOME/.bourne-apparish
+#  -  issue 'source $HOME/.bourne-apparish'
+#  -  go to a directory and issue 'bm foo'
+#  -  you can now go to that directory by issuing 'to foo'
+#  -  try tab completion and command substitution, see the examples below.
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 # ignore errors about:
 # - testing $?, because that's useful when you have branches
 # - declaring and assigning at the same time because I know what I'm doing
 #   (fingers crossed)
 # - unexpanded substitutions in single quotes for similar reasons
 
-# Vim modeline to try and keep the indentation in check.
-
-#                                       .__         .__
-# _____   ______  ______ _____  _______ |__|  ______|  |__
-# \__  \  \____ \ \____ \\__  \ \_  __ \|  | /  ___/|  |  \
-#  / __ \_|  |_> >|  |_> >/ __ \_|  | \/|  | \___ \ |   Y  \
-# (____  /|   __/ |   __/(____  /|__|   |__|/____  >|___|  /
-#      \/ |__|    |__|        \/                 \/      \/
-# FIGMENTIZE: apparish
-
-#  bookmarks for the command line with comprehensive tab completion on target
-#                                   content
-#                             works for bash and zsh
-#
-#  Quick Guide:
-#  -  save this file in $HOME/.bourne-apparish
-#  -  issue 'source $HOME/.bourne-apparish'
-#  -  go to a directory and issue 'bm foo'
-#  -  you can now go to that directory by issuing 'to foo'
-#  -  try tab completion and command substitution, see the examples below.
-#
 #  Apparish is a pure shell implementation of an older system, apparix, written
 #  partly in C.  For both systems the bookmarking commands are implemented as
 #  shell functions.  The names of these functions are the same between the two
