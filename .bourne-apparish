@@ -14,7 +14,6 @@
 #                               Quick Guide:
 #  -  save this file in $HOME/.bourne-apparish
 #  -  issue 'source $HOME/.bourne-apparish'
-#  -  issue 'apparix-init'
 #  -  go to a directory and issue 'bm foo'
 #  -  you can now go to that directory by issuing 'to foo'
 #  -  try tab completion and command substitution, see the examples below.
@@ -32,11 +31,10 @@
 #  implementations and the function definitions are very similar.  The apparix
 #  shell functions invoke a C executable. Apparish uses another shell funtion
 #  to mimic this C program and apparish provides two additional funcctions,
-#  apparix-init and apparix-list. The pivotal commands however are 'bm'
-#  (bookmark) and 'to' (go to mark). You can change from apparix to apparish
-#  and vice versa, as they use the same resource files.
+#  apparix-list. The pivotal commands however are 'bm' (bookmark) and 'to' (go
+#  to mark). You can change from apparix to apparish and vice versa, as they use
+#  the same resource files.
 #
-#     apparix-init            initialise apparix (needed only once)
 #  ---
 #     bm <tag>                create bookmark <tag> for current directory
 #  ---
@@ -95,15 +93,7 @@
 #  bourne shell.  Name this file for example .bourne-apparish in your $HOME
 #  directory, and put the line 'source $HOME/.bourne-apparish' (without quotes)
 #  in the file $HOME/.bashrc or $HOME/.bash_login if you use bash, in the file
-#  $HOME/.zshrc if you use zsh.  If you use zsh, you may need to additionally
-#  put the lines
-#
-#     autoload -Uz compinit
-#     compinit
-#
-#  (without outcommenting them as above) *BEFORE* the line where you source
-#  $HOME/.bourne-apparish. This is not the case for example if you use
-#  oh-my-zsh.
+#  $HOME/.zshrc if you use zsh.
 
  #
 #  Thanks to Sitaram Chamarty for all the important parts of the bash completion
@@ -112,15 +102,17 @@
 #  suggesting the name apparish.
  #
 
-# TODO: allow commas and newlines in directory names
-# TODO: maybe write these as scripts with shebangs, and keep shell functions to
-# very hollow wrapper, to prevent the constant checks for bash/zsh and make it
-# easier to extend to other shells.
-
 APPARIXHOME="${APPARIXHOME:=$HOME}"
+# ensure APPARIXHOME exists
+mkdir -p "$APPARIXHOME"
 APPARIXRC="${APPARIXRC:=$APPARIXHOME/.apparixrc}"
 APPARIXEXPAND="${APPARIXEXPAND:=$APPARIXHOME/.apparixexpand}"
 APPARIXLOG="${APPARIXLOG:=$APPARIXHOME/.apparixlog}"
+
+# ensure set up and log files exist
+touch "$APPARIXRC"
+touch "$APPARIXEXPAND"
+touch "$APPARIXLOG"
 
 APPARIX_FILE_FUNCTIONS=( a ae av aget toot apparish ) # Huffman (remove a)
 APPARIX_DIR_FUNCTIONS=( to als ald amd todo rme )
@@ -143,42 +135,6 @@ silent() {
     "$@" > /dev/null 2> /dev/null
 }
 
-# assert that bash version is at least $1.$2.$3
-version_assert() {
-    for i in {1..3}; do
-        if ((BASH_VERSINFO[$((i - 1))] > ${!i})); then
-            return 0
-        elif ((BASH_VERSINFO[$((i - 1))] < ${!i})); then
-            echo "Your bash is older than $1.$2.$3" >&2
-            return 1
-        fi
-    done
-    return 0
-}
-
-# define a function to read lines from a file into an array
-# https://github.com/koalaman/shellcheck/wiki/SC2207
-if [[ -n "$BASH_VERSION" ]] && silent version_assert 4 0 0; then
-    function read_array() {
-        mapfile -t izaak_array < "$1"
-    }
-elif [[ -n "$ZSH_VERSION" ]] || silent version_assert 3 0 0; then
-    function read_array() {
-        izaak_array=()
-        while IFS='' read -r line; do
-            izaak_array+=("$line");
-        done < "$1"
-    }
-else
-    >&2 echo "really, bash 2 isn't cool enough to run apparix"
-    function read_array() {
-        local IFS=$'\n'
-        # this is a bad fallback implementation on purpose
-        # shellcheck disable=SC2207
-        izaak_array=( $(cat "$1") )
-    }
-fi
-
 # Huffman (remove this paragraph, or just alias "a" yourself)
 if ! silent command -v a; then
     alias a='apparish'
@@ -187,28 +143,18 @@ else
 fi
 
 if ! silent command -v via; then
-    alias via='vi "$APPARIXRC"'
+    alias via='"${EDITOR:-vim}" "$APPARIXRC"'
 else
     >&2 echo "Apparish: not aliasing via"
 fi
 
-function apparix-init() {
-    already=""
-    if [[ -e "$APPARIXRC" && -e "$APPARIXEXPAND" ]]; then
-        already=" already"
-    fi
-    true >> "$APPARIXRC"
-    true >> "$APPARIXEXPAND"
-    echo "Apparish is up and running$already"
-}
-
 function apparish() {
     if [[ 0 == "$#" ]]; then
-        cat "$APPARIXRC" "$APPARIXEXPAND" | tr ', ' '\t_' | column -t
+        cat -- "$APPARIXRC" "$APPARIXEXPAND" | tr ', ' '\t_' | column -t
         return
     fi
     local mark="$1"
-    local list="$(grep -F ",$mark," "$APPARIXRC" "$APPARIXEXPAND")"
+    local list="$(command grep -F ",$mark," "$APPARIXRC" "$APPARIXEXPAND")"
     if [[ -z "$list" ]]; then
         >&2 echo "Mark '$mark' not found"
         return 1
@@ -227,7 +173,7 @@ function apparix-list() {
         return 1
     fi
     local mark="$1"
-    grep -F ",$mark," "$APPARIXRC" "$APPARIXEXPAND" | cut -f 3 -d ','
+    command grep -F ",$mark," -- "$APPARIXRC" "$APPARIXEXPAND" | cut -f 3 -d ','
 }
 
 function bm() {
@@ -237,7 +183,7 @@ function bm() {
     fi
     local mark="$1"
     local list="$(apparix-list "$mark")"
-    echo "j,$mark,$PWD" | tee -a "$APPARIXLOG" >> "$APPARIXRC"
+    echo "j,$mark,$PWD" | tee -a -- "$APPARIXLOG" >> "$APPARIXRC"
     if [[ -n "$list" ]]; then
         listsize="$(wc -l <<< "$list")"
         listtail="$(tail -n 2 <<< "$list")"
@@ -265,7 +211,7 @@ function to() {
         return 1
     fi
     if [[ "$?" == 0 ]]; then
-        cd "$loc" || return 1
+        cd -- "$loc" || return 1
     fi
 }
 
@@ -275,34 +221,24 @@ function portal() {
 }
 
 function portal-expand() {
-    local parentdir subdir
-    rm -f "$APPARIXEXPAND"
+    local parentdir
+    rm -f -- "$APPARIXEXPAND"
     true > "$APPARIXEXPAND"
-    grep '^e,' "$APPARIXRC" | cut -f 2 -d , | \
+    command grep '^e,' -- "$APPARIXRC" | cut -f 2 -d , | \
         while read -r parentdir; do
-            cd "$parentdir" || return 1
-            # This unfortunately depends on GNU find's printf
-            # find . -maxdepth 1 -mindepth 1 -type d -printf "%f\0" | \
-            # while IFS='' read -r -d '' subdir; do
-            #     echo "j,$subdir,$parentdir/$subdir" >> "$APPARIXEXPAND"
-            # done
-
-            # this might break if you have more directories than ARGMAX
-            # run in subshell to locally set nullglob
-            (
-            if [[ -n "$BASH_VERSION" ]]; then
-                shopt -s nullglob
-                shopt -u dotglob
-                shopt -u failglob
-                GLOBIGNORE=".:.."
-            elif [[ -n "$ZSH_VERSION" ]]; then
-                setopt nullglob
-            fi
+            # run in an explicit bash subshell to be able to locally set the
+            # right options
+            parentdir="$parentdir" APPARIXEXPAND="$APPARIXEXPAND" bash <<EOF
+            cd -- "\$parentdir" || return 1
+            shopt -s nullglob
+            shopt -u dotglob
+            shopt -u failglob
+            GLOBIGNORE="./:../"
             for _subdir in */ .*/; do
-                local subdir="${_subdir%/}"
-                echo "j,$subdir,$parentdir/$subdir" >> "$APPARIXEXPAND"
+                subdir="\${_subdir%/}"
+                echo "j,\$subdir,\$parentdir/\$subdir" >> "\$APPARIXEXPAND"
             done
-            )
+EOF
         done
 }
 
@@ -313,7 +249,7 @@ function whence() {
     fi
     local mark="$1"
     select target in $(apparix-list "$mark"); do
-        cd "$target" || return 1
+        cd -- "$target" || return 1
         break
     done
 }
@@ -328,7 +264,7 @@ function toot() {
         return 1
     fi
     if [[ "$?" == 0 ]]; then
-        "${EDITOR:-cat}" "$file"
+        "${EDITOR:-vim}" "$file"
     fi
 }
 
@@ -365,15 +301,16 @@ function als() {
 }
 
 # apparix search bookmark
+# TODO: fix when cwd has newlines in
 function amibm() {
-    grep ",$(grepsanitise "$PWD")$" "$APPARIXRC" | \
+    command grep -- ",$(grepsanitise "$PWD")$" "$APPARIXRC" | \
         cut -f 2 -d ',' | paste -s -d ' ' -
 }
 
 # apparix search bookmark
 function bmgrep() {
     pat="${1?Need a pattern to search}"
-    grep "$pat" "$APPARIXRC" | cut -f 2,3 -d ',' | tr ',' '\t' | column -t
+    command grep -- "$pat" "$APPARIXRC" | cut -f 2,3 -d ',' | tr ',' '\t' | column -t
 }
 
 # apparix get; get something from a mark
@@ -396,7 +333,7 @@ function amd() {
         loc="$(apparish "$1")"
     fi
     if [[ "$?" == 0 ]]; then
-        mkdir -p "$loc"
+        mkdir -p -- "$loc"
     fi
 }
 
@@ -408,7 +345,7 @@ function av() {
         loc="$(apparish "$1")"
     fi
     if [[ "$?" == 0 ]]; then
-        view "$loc"
+        view -- "$loc"
     fi
 }
 
@@ -420,7 +357,7 @@ function ae() {
         loc="$(apparish "$1")"
     fi
     if [[ "$?" == 0 ]]; then
-        "${EDITOR:-cat}" "$loc"
+        "${EDITOR:-vim}" "$loc"
     fi
 }
 
@@ -443,11 +380,48 @@ function apparish_ls() {
                           mark names)
   portal-expand           Re-expand all portals
   apparix-list MARK       List all targets for bookmark mark
-  apparix-init            Use one time after installing apparix
 EOH
 }
 
 if [[ -n "$BASH_VERSION" ]]; then
+    # bash specific helper functions
+
+    # assert that bash version is at least $1.$2.$3
+    version_assert() {
+        for i in {1..3}; do
+            if ((BASH_VERSINFO[$((i - 1))] > ${!i})); then
+                return 0
+            elif ((BASH_VERSINFO[$((i - 1))] < ${!i})); then
+                echo "Your bash is older than $1.$2.$3" >&2
+                return 1
+            fi
+        done
+        return 0
+    }
+
+    # define a function to read lines from a file into an array
+    # https://github.com/koalaman/shellcheck/wiki/SC2207
+    if silent version_assert 4 0 0; then
+        function read_array() {
+            mapfile -t goedel_array < "$1"
+        }
+    elif silent version_assert 3 0 0; then
+        function read_array() {
+            goedel_array=()
+            while IFS='' read -r line; do
+                goedel_array+=("$line");
+            done < "$1"
+        }
+    else
+        >&2 echo "really, bash 2 isn't cool enough to run apparix"
+        function read_array() {
+            local IFS=$'\n'
+            # this is a bad fallback implementation on purpose
+            # shellcheck disable=SC2207
+            goedel_array=( $(cat -- "$1") )
+        }
+    fi
+
     # complete sensibly on filenames and directories
     # https://stackoverflow.com/questions/12933362/getting-compgen-to-include...
     # -slashes-on-directories-when-looking-for-files
@@ -482,26 +456,90 @@ if [[ -n "$BASH_VERSION" ]]; then
     function _apparix_comp_file() {
         local caller="$1"
         local cur_file="$2"
+
         if elemOf "$caller" "${APPARIX_DIR_FUNCTIONS[@]}"; then
-            # Directories (add -S / for slash separator):
-            compgen -d -- "$cur_file"
+            if [[ -n "$BERTRAND_RUSSEL" ]]; then
+                # # Directories (add -S / for slash separator):
+                compgen -d -- "$cur_file"
+            else
+                goedel_compfile "$cur_file" d
+            fi
         elif elemOf "$caller" "${APPARIX_FILE_FUNCTIONS[@]}"; then
             # complete on filenames. this is a little harder to do nicely.
-            _all_files_compgen "$cur_file"
+            if [[ -n "$BERTRAND_RUSSEL" ]]; then
+                _all_files_compgen "$cur_file"
+            else
+                goedel_compfile "$cur_file" f
+            fi
         else
-            >&2 echo "please register this in ~/.bourne-apparish, in" \
-                "APPARIX_{DIR,FILE}_FUNCTIONS"
+            >&2 echo "Unknown caller: Izaak has probably messed something up"
+            return 1
         fi
+    }
+
+    # the existence of this function is a counterexample to Gödel's little known
+    # incompletion theorem: there's no such thing as good completion on files in
+    # Bash
+    function goedel_compfile() {
+        local part_esc="$1"
+        case "$2" in
+            f)
+                local find_files=true;;
+            d) ;;
+            *) >&2 echo "Specify file type"; return 1;;
+        esac
+        local part_unesc="$(bash -c "printf '%s' $part_esc")"
+        local part_dir="$(dirname "$part_unesc")"
+        COMPREPLY=()
+        # can't pipe to while because that's a subshell and we need to modify
+        # COMREPLY.
+        while IFS='' read -r -d '' result; do
+            # this is a bit of a weird hack because printf "%q\n" with no
+            # arguments prints ''. It should be robust, because any actual
+            # single quotes will have been escaped by printf.
+            if [[ "$result" != "''" ]]; then
+                COMPREPLY+=("$result")
+            fi
+        # use an explicit bash subshell to set some glob flags.
+        done < <(part_dir="$part_dir" part_unesc="$part_unesc" \
+                 find_files="$find_files" bash <<EOF
+            shopt -s nullglob
+            shopt -s extglob
+            shopt -u dotglob
+            shopt -u failglob
+            GLOBIGNORE="./:../"
+            if [[ "\$part_dir" == "." ]]; then
+                find_name_prefix="./"
+            fi
+            # here we delay the %q escaping because I want to strip trailing /s
+            if [[ -d "\$part_unesc" ]]; then
+                if [[ "\$part_unesc" != +(/) ]]; then
+                    part_unesc="\${part_unesc%%+(/)}"
+                fi
+                if [[ "\$find_files" == true ]]; then
+                    printf "%q\\0" "\$part_unesc"/* "\$part_unesc"/*/
+                else
+                    printf "%q\\0" "\$part_unesc"/*/
+                fi
+            else
+                if [[ "\$find_files" == true ]]; then
+                    printf "%q\\0" "\$part_unesc"*/ "\$part_unesc"*
+                else
+                    printf "%q\\0" "\$part_unesc"*/
+                fi
+            fi
+EOF
+        )
     }
 
     # generate completions for a bookmark
     # this is currently case sensitive. Good? Bad? Who knows!
     function _apparix_compgen_bm() {
-        cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND" | sort |\
-            \grep "^$(grepsanitise "$1")"
+        cut -f2 -d, -- "$APPARIXRC" "$APPARIXEXPAND" | sort |\
+            command grep -i -- "^$(grepsanitise "$1")"
         if [[ -n "$1" ]]; then
-            cut -f2 -d, "$APPARIXRC" "$APPARIXEXPAND" | sort |\
-                \grep "^..*$(grepsanitise "$1")"
+            cut -f2 -d, -- "$APPARIXRC" "$APPARIXEXPAND" | sort |\
+                command grep -i -- "^..*$(grepsanitise "$1")"
         fi
     }
 
@@ -511,25 +549,21 @@ if [[ -n "$BASH_VERSION" ]]; then
         local tag="${COMP_WORDS[1]}"
         COMPREPLY=()
         if [[ "$COMP_CWORD" == 1 ]]; then
-            read_array <(_apparix_compgen_bm "$tag")
-            COMPREPLY=( "${izaak_array[@]}" )
+            read_array <(_apparix_compgen_bm "$tag" | \
+                xargs -d $'\n' printf "%q\n")
+            COMPREPLY=( "${goedel_array[@]}" )
         else
             local cur_file="${COMP_WORDS[2]}"
             local app_dir="$(apparish "$tag" 2>/dev/null)"
             if [[ -d "$app_dir" ]]; then
-                # run in subshell so cd isn't permanent
-                read_array <(cd "$app_dir" &&
-                              _apparix_comp_file "$1" "$cur_file")
-                COMPREPLY=( "${izaak_array[@]}" )
+                # can't run in subshell as _apparix_comp_file modifies COMREPLY.
+                # Just hope that nothing goes wrong, basically
+                silent pushd -- "$app_dir"
+                _apparix_comp_file "$1" "$cur_file"
+                silent popd
             else
                 COMPREPLY=()
             fi
-        fi
-        if (( ${#COMPREPLY[@]} > 0 )); then
-            # The line below makes all known cases with spaces in directory
-            # names work.
-            read_array <(printf "%q\n" "${COMPREPLY[@]}")
-            COMPREPLY=( "${izaak_array[@]}" )
         fi
         return 0
     }
@@ -548,18 +582,28 @@ if [[ -n "$BASH_VERSION" ]]; then
     fi
 
 elif [[ -n "$ZSH_VERSION" ]]; then
+    # Use zsh's completion system, as this seems a lot more robust, rather
+    # than using bashcompinit to reuse the bash code but really this wasn't
+    # a hassle to write
+    autoload -Uz compinit
+    compinit
+
     function _apparix_file() {
+        IFS=$'\n'
         _arguments \
-          '1:mark:_values "\n" $(cut -d, -f2 "$APPARIXRC" "$APPARIXEXPAND")' \
-          '2:file:_path_files -W "$(apparish "$words[2]" 2>/dev/null)"'
+            '1:mark:($(cut -d, -f2 "$APPARIXRC" "$APPARIXEXPAND"))' \
+            '2:file:_path_files -W "$(apparish "$words[2]" 2>/dev/null)"'
     }
 
     function _apparix_directory() {
+        IFS=$'\n'
         _arguments \
-          '1:mark:_values "\n" $(cut -d, -f2 "$APPARIXRC" "$APPARIXEXPAND")' \
-          '2:file:_path_files -/W "$(apparish "$words[2]" 2>/dev/null)"'
+            '1:mark:($(cut -d, -f2 "$APPARIXRC" "$APPARIXEXPAND"))' \
+            '2:file:_path_files -/W "$(apparish "$words[2]" 2>/dev/null)"'
     }
 
     compdef _apparix_file "${APPARIX_FILE_FUNCTIONS[@]}"
     compdef _apparix_directory "${APPARIX_DIR_FUNCTIONS[@]}"
+else
+    >&2 echo "Apparish: I don't know how to generate completions"
 fi
