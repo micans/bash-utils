@@ -317,7 +317,7 @@ function howoldami {
    name=$(whoami)
    host=$HOSTNAME
    if [[ ! -z $LSB_JOBID ]]; then
-     info=($(bjobs -o "queue slots mem" $LSB_JOBID | tail -n 1))
+     info=($(bjobs -o "queue slots memlimit" $LSB_JOBID | tail -n 1))
     echo "$name $age $host (queue ${info[0]}, cpus ${info[1]}, mem ${info[2]})"
    else
     echo "$name $age $host"
