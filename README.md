@@ -18,8 +18,23 @@ What apparish does:
 - Even better, jump to the subdirectory `barzoodle` of `foo` using\
   `to foo barzoodle`
 
-- Even betterer, use tab completion with subdirectory jumping:`
+- Even betterer, use tab completion with subdirectory jumping:\
   `to foo b<TAB>`
+
+- Even even betterer, this works at arbitrary levels:\
+  `to foo barzoodle/ti<TAB>`
+
+- No less excellent, there are several *distant* listing/editing commands.
+  In all cases, tab completions works on subdirectories and files:\
+```
+  als foo           # list directory for apparish mark (plus optional subdirectories)
+  amd foo           # make directory in apparix mark (plus optional subdirectories)
+  ae foo bar.txt    # edit file in apparix mark
+  av foo bar.txt    # view file in apparix mark
+  aget foo bar.txt  # copy file from apparix mark
+  amibm             # Is the current directory a bookmark? Useful in prompt.
+```
+  These helper commands correspond to small bash functions and are easy to add.
 
 More information can be found at [Apparix's spirtitual home](http://micans.org/apparix).
 
