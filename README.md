@@ -1,41 +1,37 @@
 # bash-utils
 
-## Apparix
+## Apparish
 
-Directory bookmarking system. It used to be implemented in C, shipped with bash
-wrapper functions and completion code. This is now legacy, and if you want it
-you should go and get it from an old commit
-(https://github.com/micans/bash-utils/tree/b825f656bc1092613d74d30ce5a1efc644d37948).
+Apparish implements apparix directory bookmarking in *bash* and *zsh*.
 
-The new pure shell implementation is in `.bourne-apparish`. This works with bash
-and zsh, providing tab completion for both. The zsh version goes through the
-native zsh completion mechanism for files, so it will complete exactly like you
-expect it to.
+There is a cool [*fish* implementation](https://github.com/mzuther/appari-fish)
+made by Martin Zuther, renamed appari-fish.
 
-The bash version implements its own file completions. It has an extra
-sophisticated mode called Gödel completion, which quotes directories and can
-still complete on subdirectories. To disable this mode, set the variable
-`$BERTRAND_RUSSEL` to a nonempty string.
+What apparish does:
 
-There may be some weird behaviour if you have file names with colons in. This
-is because of `$COMP_WORDBREAKS`: see
-https://stackoverflow.com/questions/2805412/bash-completion-for-maven-escapes-colon.
-You may have to manually override this variable. If you do, check that it
-doesn't get re-overriden by any other scripts. (`git-completion` seems to
-forcefully add a colon, for example.)
+- Bookmark the current directory by issuing `bm foo`. This takes effect instantly
+  across all your sessions (it is stored in `$HOME/.apparixrc`).
 
-There is also a reference bash prompt that can talk to apparix, if you've got it
-set up, in `.bashpromptrc`.
+- Jump to `foo` by issuing\
+  `to foo`
 
-If you're a user of `bash-completion`
-(requiring Bash >= 4.1) you may be interested in the compatibility-breaking
-branch https://github.com/goedel-gang/bash-utils/tree/twenty-first-century,
-which just uses `_filedir`.
+- Even better, jump to the subdirectory `barzoodle` of `foo` using\
+  `to foo barzoodle`
 
-This fork allows itself to be a little more extravagant, and also has an
-alternative zsh apparix that wraps directory hashing, automatically providing
-bookmarks everywhere that zsh does file expansion. It also has some more prompts
-for Zsh and packages some demo shells and screenshots.
+- Even betterer, use tab completion with subdirectory jumping:`
+  `to foo b<TAB>`
+
+More information can be found at [Apparix's spirtitual home](http://micans.org/apparix).
+
+### Apparix
+In the beginning the system was called Apparix; it was implemented in C, and
+shipped with bash wrapper functions and completion code.  The C code was not
+really needed (although it must consumes many fewer CPU cycles). Its
+reimplementation was called apparish. Then Martin added appari-fish to the
+family.
+
+This new bash+zsh implementation will soon move to its own github repository.
+
 
 ## bash-myutils
 
