@@ -30,9 +30,9 @@ What apparish does:
 ```
   als foo              # list directory for apparish mark (plus optional subdirectories)
   amd foo              # make directory in apparix mark (plus optional subdirectories)
-  ae foo bar.txt       # edit file in apparix mark
-  av foo bar.txt       # view file in apparix mark
-  aget foo bar.txt     # copy file from apparix mark
+  ae foo bar.txt       # edit file in apparix mark (plus o.s.)
+  av foo bar.txt       # view file in apparix mark (p.o.s.)
+  aget foo bar.txt     # copy file from apparix mark (pos)
   amibm                # Is the current directory a bookmark? Useful in prompt.
 ```
   These helper commands correspond to small bash functions and are easy to add.
