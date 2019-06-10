@@ -2,10 +2,11 @@
 
 ## Apparish
 
-Apparish implements apparix directory bookmarking in *bash* and *zsh*.
+Apparish implements apparix directory bookmarking in **bash** and **zsh**.
+You just need the file [.bourne-apparish](.bourne-apparish).
 
-There is a cool [*fish* implementation](https://github.com/mzuther/appari-fish)
-made by Martin Zuther, renamed appari-fish.
+There is a cool [**fish** implementation](https://github.com/mzuther/appari-fish)
+made by Martin Zuther, named appari-fish).
 
 What apparish does:
 
@@ -25,7 +26,7 @@ What apparish does:
   `to foo barzoodle/ti<TAB>`
 
 - No less excellent, there are several *distant* listing/editing commands.
-  In all cases, tab completions works on subdirectories and files:\
+  In all cases, tab completions works on subdirectories and files:
 ```
   als foo           # list directory for apparish mark (plus optional subdirectories)
   amd foo           # make directory in apparix mark (plus optional subdirectories)
@@ -41,7 +42,7 @@ More information can be found at [Apparix's spirtitual home](http://micans.org/a
 ### Apparix
 In the beginning the system was called Apparix; it was implemented in C, and
 shipped with bash wrapper functions and completion code.  The C code was not
-really needed (although it must consumes many fewer CPU cycles). Its
+really needed (although it must consume many fewer CPU cycles). Its
 reimplementation was called apparish. Then Martin added appari-fish to the
 family.
 
