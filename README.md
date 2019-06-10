@@ -3,10 +3,10 @@
 ## Apparish
 
 Apparish implements apparix directory bookmarking in **bash** and **zsh**.
-You just need the file [.bourne-apparish](.bourne-apparish).
+You just need the file [.bourne-apparish](https://raw.githubusercontent.com/micans/bash-utils/master/.bourne-apparish).
 
 There is a cool [**fish** implementation](https://github.com/mzuther/appari-fish)
-made by Martin Zuther, named appari-fish).
+made by Martin Zuther, named appari-fish.
 
 What apparish does:
 
@@ -26,14 +26,14 @@ What apparish does:
   `to foo barzoodle/ti<TAB>`
 
 - No less excellent, there are several *distant* listing/editing commands.
-  In all cases, tab completions works on subdirectories and files:
+  In all cases, tab completions work on subdirectories and files:
 ```
-  als foo           # list directory for apparish mark (plus optional subdirectories)
-  amd foo           # make directory in apparix mark (plus optional subdirectories)
-  ae foo bar.txt    # edit file in apparix mark
-  av foo bar.txt    # view file in apparix mark
-  aget foo bar.txt  # copy file from apparix mark
-  amibm             # Is the current directory a bookmark? Useful in prompt.
+  als foo              # list directory for apparish mark (plus optional subdirectories)
+  amd foo              # make directory in apparix mark (plus optional subdirectories)
+  ae foo bar.txt       # edit file in apparix mark
+  av foo bar.txt       # view file in apparix mark
+  aget foo bar.txt     # copy file from apparix mark
+  amibm                # Is the current directory a bookmark? Useful in prompt.
 ```
   These helper commands correspond to small bash functions and are easy to add.
 
