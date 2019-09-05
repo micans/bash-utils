@@ -392,7 +392,7 @@ if [[ -n "$BASH_VERSION" ]]; then
             if ((BASH_VERSINFO[$((i - 1))] > ${!i})); then
                 return 0
             elif ((BASH_VERSINFO[$((i - 1))] < ${!i})); then
-                echo "Your bash is older than $1.$2.$3" >&2
+                # echo "Your bash is older than $1.$2.$3" >&2
                 return 1
             fi
         done
@@ -576,7 +576,7 @@ EOF
         complete -o nospace -o nosort -F _apparix_comp \
             "${APPARIX_FILE_FUNCTIONS[@]}" "${APPARIX_DIR_FUNCTIONS[@]}"
     else
-        >&2 echo "(Apparish: Can't disable alphabetic sorting of completions)"
+        # >&2 echo "(Apparish: Can't disable alphabetic sorting of completions)"
         complete -o nospace -F _apparix_comp \
             "${APPARIX_FILE_FUNCTIONS[@]}" "${APPARIX_DIR_FUNCTIONS[@]}"
     fi

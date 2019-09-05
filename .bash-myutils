@@ -75,6 +75,12 @@ function theminmax {
   perl -ne 'chomp;$h=$_ if$_>$h;$l=$_ if$_<$l; END { print "$l $h\n"; } BEGIN { $h=<>; chomp $h; $l=$h; }'
 }
 
+function decolon {
+  local sep=${2:-:}
+  local string=${1:?Need something to decolonise}
+  echo $string | tr "$sep" '\n'
+}
+
 function debug_bash {
   foobar=${1:?Gimme something to run}
   ( bash --debugger <<EOC
