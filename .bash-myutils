@@ -108,3 +108,7 @@ function nflogcmd {
   name=${1:?Need nextflow run name (nextflow log)}
   nextflow log $name -f script > nf.$name.cmd.txt
 }
+
+function helpme {
+  echo 'declare -F                       ¯\\_(ツ)_/¯'
+}
