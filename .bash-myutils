@@ -112,3 +112,7 @@ function nflogcmd {
 function helpme {
   echo 'declare -F                       ¯\\_(ツ)_/¯'
 }
+
+function fqfa {
+  gzip -dcf ${1:?Need file} | perl -ne '$i=($.+2)/4; print ">$i\n$_" if $. % 4 == 2'
+}
