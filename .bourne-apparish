@@ -549,8 +549,10 @@ EOF
         local tag="${COMP_WORDS[1]}"
         COMPREPLY=()
         if [[ "$COMP_CWORD" == 1 ]]; then
+            # use command as xargs will use /usr/bin/printf rather than the
+            # builtin.
             read_array <(_apparix_compgen_bm "$tag" | \
-                xargs -d $'\n' printf "%q\n")
+                xargs -d $'\n' command printf "%q\n")
             COMPREPLY=( "${goedel_array[@]}" )
         else
             local cur_file="${COMP_WORDS[2]}"
