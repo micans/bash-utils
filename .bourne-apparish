@@ -185,15 +185,8 @@ function bm() {
     local list="$(apparix-list "$mark")"
     echo "j,$mark,$PWD" | tee -a -- "$APPARIXLOG" >> "$APPARIXRC"
     if [[ -n "$list" ]]; then
-        listsize="$(wc -l <<< "$list")"
-        listtail="$(tail -n 2 <<< "$list")"
-        ellipsis=""
-        if (( listsize > 2 )); then ellipsis="\n(...)"; fi
-        if (( listsize > 0 )); then
-            echo -e "Bookmark $mark exists" \
-                    "($listsize total):$ellipsis\n$listtail"
-        fi
-        echo "$PWD (added)"
+        listsize=$((1 + $(wc -l <<< "$list") ))
+        echo "$PWD added, $listsize total"
     fi
 }
 
