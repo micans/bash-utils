@@ -1,0 +1,81 @@
+#!/bin/bash
+
+# primitive bsub convenience wrapper, see below.
+
+set -euo pipefail
+
+thequeue=long
+themem=5000
+thetag="bubba"
+nproc=1
+logdir=.
+TEST=
+
+while getopts :q:n:m:l:t:hT opt
+do
+    case "$opt" in
+    q)
+      thequeue=$OPTARG
+      ;;
+    l)
+      logdir=$OPTARG
+      ;;
+    m)
+      mem=$OPTARG
+      ;;
+    n)
+      nproc=$OPTARG
+      ;;
+    t)
+      thetag=$OPTARG
+      ;;
+    T)
+      TEST=echo
+      ;;
+    h)
+      cat <<EOU
+Usage: bubba [options] thecommand [with] [optional] [arguments]
+  ● Primitive bsub wrapper.
+  ● Options can change things like queues, memory, and log file names/destination.
+  ● Use -T to just print the bsub command.
+  ● The command thecommand is checked for existence.
+-q queue (default $thequeue)
+-m memory (default $themem)
+-n nproc (default $nproc)
+-t thetag (default $thetag)
+-l logdir (default $logdir)
+-T        test: show the bsub command, do not run it
+EOU
+      exit
+      ;;
+    :) echo "Flag $OPTARG needs argument"
+        exit 1;;
+    ?) echo "Flag $OPTARG unknown"              # Yes that's right, $OPTARG. bash bish bosh.
+        exit 1;;
+   esac
+done
+
+# The OPTIND lines below ensure that the opt-parsed arguments are removed from $@
+# (the name of the array where command line arguments are stored in a bash script).
+# The remaining trailing arguments are the only ones left; we pass those on to bsub, below.
+
+OPTIND=$(($OPTIND-1))
+shift $OPTIND
+
+
+(( $# == 0 )) && echo "No command to run" && false
+
+! command -v "$1" && echo "Command $1 not found" && false
+
+[[ $thetag =~ " " ]] && echo "No space please: [$thetag]" && false
+
+[[ ! -d $logdir ]] && echo "Not a directory: $logdir" && false
+
+$TEST bsub -n$nproc -R'span[hosts=1]' \
+    -e "$logdir/eee.$thetag.%J.stderr" \
+    -o "$logdir/ooo.$thetag.%J.stdout" \
+    -q $thequeue \
+    -R"'select[mem>$themem] rusage[mem=$themem]'" -M$themem \
+    "$@"
+
+
