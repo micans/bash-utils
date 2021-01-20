@@ -369,3 +369,11 @@ function ungroupify()
 function nchar()
 {  echo -n "$1" | wc -c
 }
+
+function lines()
+{ [[ -z $1 ]] && echo "Need <lineno> or <lineno> <count>, I only read STDIN" && return 1
+  count=1
+  if [[ ! -z $2 ]]; then count=$2; fi
+  head -n $(($1+$count-1)) | tail -n $count
+}
+

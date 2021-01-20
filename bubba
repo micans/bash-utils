@@ -7,11 +7,12 @@ set -euo pipefail
 thequeue=long
 themem=5000
 thetag="bubba"
+usegroup=""
 nproc=1
 logdir=logs
 TEST=
 
-while getopts :q:n:m:l:t:hT opt
+while getopts :q:n:m:g:l:t:hT opt
 do
     case "$opt" in
     q)
@@ -20,8 +21,11 @@ do
     l)
       logdir=$OPTARG
       ;;
+    g)
+      usegroup="-g /$OPTARG"
+      ;;
     m)
-      mem=$OPTARG
+      themem=$OPTARG
       ;;
     n)
       nproc=$OPTARG
@@ -42,6 +46,7 @@ Usage: bubba [options] thecommand [with] [optional] [arguments]
 -q queue (default $thequeue)
 -m memory (default $themem)
 -n nproc (default $nproc)
+-g group (default none)
 -t thetag (default $thetag)
 -l logdir (default $logdir, use "." for current directory)
 -T        test: show the bsub command, do not run it
@@ -65,16 +70,16 @@ shift $OPTIND
 
 (( $# == 0 )) &&          echo "No command to run" && false
 
-! command -v "$1" &&      echo "Command $1 not found" && false
+! command -v "$1" > /dev/null &&      echo "Command $1 not found" && false
 
 [[ $thetag =~ " " ]] &&   echo "No space please: [$thetag]" && false
 
 [[ ! -d $logdir ]] &&     echo "Not a directory: $logdir" && false
 
 $TEST bsub -n$nproc -R'span[hosts=1]' \
-    -e "$logdir/eee.$thetag.%J.stderr" \
-    -o "$logdir/ooo.$thetag.%J.stdout" \
-    -q $thequeue \
+    -e "$logdir/eee.$thetag.%J.txt" \
+    -o "$logdir/ooo.$thetag.%J.txt" \
+    -q $thequeue $usegroup \
     -R"'select[mem>$themem] rusage[mem=$themem]'" -M$themem \
     "$@"
 
