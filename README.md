@@ -29,6 +29,7 @@ What apparish does:
   In all cases, tab completions work on subdirectories and files:
 ```
   als foo              # list directory for apparish mark (plus optional subdirectories)
+  als foo -ltr         # trailing part that looks like options is passed to ls
   amd foo              # make directory in apparix mark (plus optional subdirectories)
   ae foo bar.txt       # edit file in apparix mark (plus o.s.)
   av foo bar.txt       # view file in apparix mark (p.o.s.)

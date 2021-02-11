@@ -286,6 +286,7 @@ function als() {
     local narg=$#
     local lastarg=${!narg}
     local options=""
+    local loc=""
     if [[ $lastarg == -* ]]; then options=$lastarg; narg=$((narg-1)); fi
     if (( 2 == narg )); then
         loc="$(apparish "$1" "$2")"
