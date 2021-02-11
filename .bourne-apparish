@@ -294,7 +294,7 @@ function als() {
         loc="$(apparish "$1")"
     fi
     if [[ "$?" == 0 ]]; then
-        ls $options "$loc"
+        ls $options $loc
     fi
 }
 

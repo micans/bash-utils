@@ -44,25 +44,6 @@ function ls_ls {
 }
 
 
-  # Nextflow specific, and even then a matter of taste.
-  #
-function nf_check {
-if [[ -z $1 || $1 == '-h' ]]; then
-cat <<DOC
-  cd to a nextflow work directory specified by ticket name and tag.
-  first argument: ticket name (directory in $LUSTRECELLGENI).
-  second argument: work directory tag produced by Nextflow.
-  Example:
-  ${FUNCNAME[0]} tic-31 f2/e5ec31
-DOC
-return 1
-fi
-  local ticket=$1
-  local tag=$2
-  cd $LUSTRECELLGENI/$ticket/work/$tag*
-}
-
-
 function ls_bigold {
 if [[ -z $1 || $1 == '-h' ]]; then
 cat <<DOC
@@ -190,6 +171,16 @@ function ls_count_files {
   fi
   find .//. ! -name . -print | grep -c //
   )
+}
+
+function public {
+  local dir=${1:-.}
+  if [[ ! -d $dir ]]; then
+    echo "Need a directory"
+    return 1
+  fi
+  find $dir -type d -exec chmod a+rx {} ';'
+  find $dir -type f -exec chmod a+r {} ';'
 }
 
 
@@ -346,6 +337,9 @@ function ls_misc() {
 cat <<DOC
 F: a file name. F+ one or more file names.
 fu: a function name
+S: a string
+i: integer
+n: integer
   colcount F    output field counts for first three lines (tab separator)
   colcount -a F output field counts for all lines -c and -a do not mix yet
   colcount -c F check field count consistency for first three lines.
@@ -360,6 +354,8 @@ fu: a function name
   howoldami     how old is the current shell
   tailafter P [F]     print lines in file after first pattern P match
   grab P1 P2 [F]  print chunks inbetween patterns P1 and P2, inclusive
+  nchar S       how many bytes in string S
+  lines i n     print n lines from i onwards, first line is 1.
 DOC
 }
 
