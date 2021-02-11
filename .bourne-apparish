@@ -283,13 +283,17 @@ function ald() {
 
 # apparix ls of mark
 function als() {
-    if [[ 2 == "$#" ]]; then
+    local narg=$#
+    local lastarg=${!narg}
+    local options=""
+    if [[ $lastarg == -* ]]; then options=$lastarg; narg=$((narg-1)); fi
+    if (( 2 == narg )); then
         loc="$(apparish "$1" "$2")"
-    elif [[ 1 == "$#" ]]; then
+    elif (( 1 == narg )); then
         loc="$(apparish "$1")"
     fi
     if [[ "$?" == 0 ]]; then
-        ls "$loc"
+        ls $options "$loc"
     fi
 }
 

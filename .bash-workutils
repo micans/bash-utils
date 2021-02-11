@@ -11,7 +11,7 @@ declare -A ls_shorthelp
    ls_shorthelp[ls_size_any]="[low] [high]        # 4k 10M 2G etc"
 ls_shorthelp[ls_size_suffix]="<suffix> [low]      # 4k 10M 2G etc"
 ls_shorthelp[ls_file_spread]="# no argument"
-ls_shorthelp[ls_count_files]="# no argument" 
+ls_shorthelp[ls_count_files]="<dir name>"
 
 
 function ls_ls {
@@ -183,7 +183,13 @@ fi
   # to check the number of files a particular piece of software creates.
   #
 function ls_count_files {
+  dir=${1:-.}
+  (
+  if ! cd $dir; then
+    return 1
+  fi
   find .//. ! -name . -print | grep -c //
+  )
 }
 
 
