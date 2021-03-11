@@ -115,7 +115,7 @@ touch "$APPARIXEXPAND"
 touch "$APPARIXLOG"
 
 APPARIX_FILE_FUNCTIONS=( a ae av aget toot apparish ) # Huffman (remove a)
-APPARIX_DIR_FUNCTIONS=( to als als2 ald amd todo rme )
+APPARIX_DIR_FUNCTIONS=( to als als2 ald aldr amd todo rme )
 
 # these are some helper functions. With my system they are mostly redundant
 # copies of functions I already have defined, but I aim to make this file
@@ -248,6 +248,7 @@ function whence() {
 }
 
 function toot() {
+    local file
     if [[ 3 == "$#" ]]; then
         file="$(apparish "$1" "$2")/$3"
     elif [[ 2 == "$#" ]]; then
@@ -272,10 +273,15 @@ function rme() {
 # apparix listing of directories of mark
 function ald() {
     local loc
-    (( 2 >= $# )) && loc="$(apparish "$@")" && find "$loc" -maxdepth 1 -type d
+    (( 2 >= $# )) && loc="$(apparish "$@")" && find "$loc" -mindepth 1 -maxdepth 1 -type d -printf '%P\n'
+}
+# apparix listing of directories of mark, recursively
+function aldr() {
+    local loc
+    (( 2 >= $# )) && loc="$(apparish "$@")" && find "$loc" -mindepth 1 -type d -printf '%P\n'
 }
 
-# apparix ls of mark. Annoyingly awkward.
+# apparix ls of mark. Annoyingly awkward. Abstract this.
 function als() {
     local narg=$#
     local lastarg=${!narg}
@@ -283,7 +289,7 @@ function als() {
     local loc=""
     if [[ $lastarg == -* ]]; then options=$lastarg; narg=$((narg-1)); fi
     local args=("$1")
-    (( 2 >= narg )) && args=("$1" "$2")
+    (( 2 == narg )) && args+=("$2")
     (( 2 >= narg )) && loc="$(apparish "${args[@]}")" && ls $options -- $loc
 }
 
@@ -343,10 +349,11 @@ function ae() {
 function apparish_ls() {
     cat <<EOH
   bm MARK                 Bookmark current directory as mark
-  to MARK [SUBDIR]        Jump to mark or a subdirectory of mark
-  ald MARK [SUBDIR]       List subdirectories of mark directory or subdir
-  als MARK [SUBDIR]       List mark directory or subdir
-  amd MARK [SUBDIR]       Make directory in mark
+  to   MARK [SUBDIR]      Jump to mark or a subdirectory of mark
+  ald  MARK [SUBDIR]      List subdirectories of mark directory or subdir
+  aldr MARK [SUBDIR]      Like ald, recursively
+  als  MARK [SUBDIR] [ls-options]  List mark directory or subdir
+  amd  MARK [SUBDIR]      Make directory in mark
   ae MARK [SUBDIR/]FILE   Edit file in mark
   av MARK [SUBDIR/]FILE   View file in mark
   amibm                   See if the current directory is a bookmark
