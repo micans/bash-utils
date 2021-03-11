@@ -1,14 +1,14 @@
 # bash-utils
 
-## Apparish
+## Apparix
 
-Apparish implements apparix directory bookmarking in **bash** and **zsh**.
-You just need the file [.bourne-apparish](https://raw.githubusercontent.com/micans/bash-utils/master/.bourne-apparish).
+Apparix is a tiny set of commands implementing directory bookmarking in **bash** and **zsh**.
+You just need the file [.bourne-apparix](https://raw.githubusercontent.com/micans/bash-utils/master/.bourne-apparix).
 
 There is a cool [**fish** implementation](https://github.com/mzuther/appari-fish)
 made by Martin Zuther, named appari-fish.
 
-What apparish does:
+What apparix does:
 
 - Bookmark the current directory by issuing `bm foo`. This takes effect instantly
   across all your sessions (it is stored in `$HOME/.apparixrc`).
@@ -28,7 +28,7 @@ What apparish does:
 - No less excellent, there are several *distant* listing/editing commands.
   In all cases, tab completions work on subdirectories and files:
 ```
-  als foo              # list directory for apparish mark (plus optional subdirectories)
+  als foo              # list directory for apparix mark (plus optional subdirectories)
   als foo -ltr         # trailing part that looks like options is passed to ls
   amd foo              # make directory in apparix mark (plus optional subdirectories)
   ae foo bar.txt       # edit file in apparix mark (plus o.s.)
@@ -40,14 +40,15 @@ What apparish does:
 
 More information can be found at [Apparix's spirtitual home](http://micans.org/apparix).
 
-### Apparix
+### Apparix/apparish
 In the beginning the system was called Apparix; it was implemented in C, and
 shipped with bash wrapper functions and completion code.  The C code was not
 really needed (although it must consume many fewer CPU cycles). Its
 reimplementation was called apparish. Then Martin added appari-fish to the
-family.
-
-This new bash+zsh implementation will soon move to its own github repository.
+family. I then realised that I still think of the thing as apparix, so I've
+tweaked documentation and renamed files to revert back to apparix. But the
+glorious shell code itself is still apparish-rich. Stay tuned for further
+naming shenanigans.
 
 
 ## bash-myutils
