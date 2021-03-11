@@ -2,20 +2,23 @@
 # vim: ft=sh ts=4 sw=0 sts=-1 et
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#                              A P P A R I S H
+#                              A P P A R I X
 #
-#  bookmarks for the command line with comprehensive tab completion on target
-#                                   content
+#        bookmarks for the command line with comprehensive tab completion
 #                             works for bash and zsh
 #                                                            Authors:
 #                                                            Stijn van Dongen
 #                                                            Sitaram Chamarty
 #                                                            Izaak van Dongen
 #                               Quick Guide:
-#  -  save this file in $HOME/.bourne-apparish
-#  -  issue 'source $HOME/.bourne-apparish'
+#
+#  -  save this file in $HOME/.bourne-apparix
+#  -  issue 'source $HOME/.bourne-apparix
 #  -  go to a directory and issue 'bm foo'
 #  -  you can now go to that directory by issuing 'to foo'
+#  -  you can go straight to a subdirectory       'to foo asubdirname'
+#  -  you can use tab completion:                 'to foo as<TAB>'
+#                                                 'to foo asubdirname/<TAB>'
 #  -  try tab completion and command substitution, see the examples below.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -25,16 +28,12 @@
 #   (fingers crossed)
 # - unexpanded substitutions in single quotes for similar reasons
 
-#  Apparish is a pure shell implementation of an older system, apparix, written
-#  partly in C.  For both systems the bookmarking commands are implemented as
-#  shell functions.  The names of these functions are the same between the two
-#  implementations and the function definitions are very similar.  The apparix
-#  shell functions invoke a C executable. Apparish uses another shell funtion
-#  to mimic this C program and apparish provides two additional funcctions,
-#  apparix-list. The pivotal commands however are 'bm' (bookmark) and 'to' (go
-#  to mark). You can change from apparix to apparish and vice versa, as they use
-#  the same resource files.
-#
+#  This Apparix is a pure shell implementation of an older system written
+#  partly in C. This shell re-implementation is the reason why several of the
+#  names here use apparish.  I prefer to think of the abstract system itself as
+#  apparix. Never mind!
+
+
 #  ---
 #     bm <tag>                create bookmark <tag> for current directory
 #  ---
@@ -80,18 +79,11 @@
 #  it, go to all the places in the lines below where the name Huffman is
 #  mentioned and remove the relevant part.
 #
-#  Apparish (this file) implements apparix functionality in shell code,
-#  compatible with apparix resource files. You can either use old apparix
-#  (compiling and installing the application apparix) in conjunction with
-#  sourcing .bourne-apparix, or you can simply source this file without needing
-#  to install apparix.  This file implements nearly all apparix functionality
-#  in shell code. It uses a apparish in place of apparix.
-#
 #                       BASH and ZSH functions
 #
-#  Apparish should work for modern bourne-style shells, not including the
-#  bourne shell.  Name this file for example .bourne-apparish in your $HOME
-#  directory, and put the line 'source $HOME/.bourne-apparish' (without quotes)
+#  Apparix should work for modern bourne-style shells, not including the
+#  bourne shell.  Name this file for example .bourne-apparix in your $HOME
+#  directory, and put the line 'source $HOME/.bourne-apparix' (without quotes)
 #  in the file $HOME/.bashrc or $HOME/.bash_login if you use bash, in the file
 #  $HOME/.zshrc if you use zsh.
 
@@ -139,13 +131,13 @@ silent() {
 if ! silent command -v a; then
     alias a='apparish'
 else
-    >&2 echo "Apparish: not aliasing a"
+    >&2 echo "Apparix: not aliasing a"
 fi
 
 if ! silent command -v via; then
     alias via='"${EDITOR:-vim}" "$APPARIXRC"'
 else
-    >&2 echo "Apparish: not aliasing via"
+    >&2 echo "Apparix: not aliasing via"
 fi
 
 function apparish() {
@@ -273,12 +265,12 @@ function rme() {
 # apparix listing of directories of mark
 function ald() {
     local loc
-    (( 2 >= $# )) && loc="$(apparish "$@")" && find "$loc" -mindepth 1 -maxdepth 1 -type d -printf '%P\n'
+    (( 2 >= $# )) && loc="$(apparish "$@")" && find -L "$loc" -mindepth 1 -maxdepth 1 -type d -printf '%P\n'
 }
 # apparix listing of directories of mark, recursively
 function aldr() {
     local loc
-    (( 2 >= $# )) && loc="$(apparish "$@")" && find "$loc" -mindepth 1 -type d -printf '%P\n'
+    (( 2 >= $# )) && loc="$(apparish "$@")" && find -L "$loc" -mindepth 1 -type d -printf '%P\n'
 }
 
 # apparix ls of mark. Annoyingly awkward. Abstract this.
@@ -346,7 +338,7 @@ function ae() {
     (( 2 >= $# )) && loc="$(apparish "$@")" && "${EDITOR:-vim}" "$loc"
 }
 
-function apparish_ls() {
+function apparix_ls() {
     cat <<EOH
   bm MARK                 Bookmark current directory as mark
   to   MARK [SUBDIR]      Jump to mark or a subdirectory of mark
@@ -562,7 +554,7 @@ EOF
         complete -o nospace -o nosort -F _apparix_comp \
             "${APPARIX_FILE_FUNCTIONS[@]}" "${APPARIX_DIR_FUNCTIONS[@]}"
     else
-        # >&2 echo "(Apparish: Can't disable alphabetic sorting of completions)"
+        # >&2 echo "(Apparix: Can't disable alphabetic sorting of completions)"
         complete -o nospace -F _apparix_comp \
             "${APPARIX_FILE_FUNCTIONS[@]}" "${APPARIX_DIR_FUNCTIONS[@]}"
     fi
@@ -591,5 +583,5 @@ elif [[ -n "$ZSH_VERSION" ]]; then
     compdef _apparix_file "${APPARIX_FILE_FUNCTIONS[@]}"
     compdef _apparix_directory "${APPARIX_DIR_FUNCTIONS[@]}"
 else
-    >&2 echo "Apparish: I don't know how to generate completions"
+    >&2 echo "Aparix: I don't know how to generate completions"
 fi
