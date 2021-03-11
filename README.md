@@ -40,7 +40,10 @@ What apparix does:
 ```
   These helper commands correspond to small bash functions and are easy to add.
 
-More information can be found at [Apparix's spirtitual home](http://micans.org/apparix).
+Apparix's spiritual home nowadays is right here.
+It previously was at what I would now consider the
+[site of historical documents](http://micans.org/apparix).
+
 
 ### Apparix/apparish
 In the beginning the system was called Apparix; it was implemented in C, and
