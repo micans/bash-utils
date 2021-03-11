@@ -115,7 +115,7 @@ touch "$APPARIXEXPAND"
 touch "$APPARIXLOG"
 
 APPARIX_FILE_FUNCTIONS=( a ae av aget toot apparish ) # Huffman (remove a)
-APPARIX_DIR_FUNCTIONS=( to als ald amd todo rme )
+APPARIX_DIR_FUNCTIONS=( to als als2 ald amd todo rme )
 
 # these are some helper functions. With my system they are mostly redundant
 # copies of functions I already have defined, but I aim to make this file
@@ -271,18 +271,23 @@ function rme() {
 
 # apparix listing of directories of mark
 function ald() {
-    if [[ 2 == "$#" ]]; then
-        loc="$(apparish "$1" "$2")"
-    elif [[ 1 == "$#" ]]; then
-        loc="$(apparish "$1")"
-    fi
-    if [[ "$?" == 0 ]]; then
-        ls -d "$loc"/*
-    fi
+    local loc
+    (( 2 >= $# )) && loc="$(apparish "$@")" && find "$loc" -maxdepth 1 -type d
 }
 
-# apparix ls of mark
+# apparix ls of mark. Annoyingly awkward.
 function als() {
+    local narg=$#
+    local lastarg=${!narg}
+    local options=""
+    local loc=""
+    if [[ $lastarg == -* ]]; then options=$lastarg; narg=$((narg-1)); fi
+    local args=("$1")
+    (( 2 >= narg )) && args=("$1" "$2")
+    (( 2 >= narg )) && loc="$(apparish "${args[@]}")" && ls $options -- $loc
+}
+
+function als2() {
     local narg=$#
     local lastarg=${!narg}
     local options=""
@@ -313,50 +318,26 @@ function bmgrep() {
 
 # apparix get; get something from a mark
 function aget() {
-    if [[ 2 == "$#" ]]; then
-        loc="$(apparish "$1" "$2")"
-    elif [[ 1 == "$#" ]]; then
-        loc="$(apparish "$1")"
-    fi
-    if [[ "$?" == 0 ]]; then
-        cp "$loc" .
-    fi
+    local loc
+    (( 2 >= $# )) && loc="$(apparish "$@")" && cp "$loc" .
 }
 
 # apparix mkdir in mark
 function amd() {
-    if [[ 2 == "$#" ]]; then
-        loc="$(apparish "$1" "$2")"
-    elif [[ 1 == "$#" ]]; then
-        loc="$(apparish "$1")"
-    fi
-    if [[ "$?" == 0 ]]; then
-        mkdir -p -- "$loc"
-    fi
+    local loc
+    (( 2 >= $# )) && loc="$(apparish "$@")" && mkdir -p -- "$loc"
 }
 
 # apparix edit of file in mark or subdirectory of mark
 function av() {
-    if [[ 2 == "$#" ]]; then
-        loc="$(apparish "$1" "$2")"
-    elif [[ 1 == "$#" ]]; then
-        loc="$(apparish "$1")"
-    fi
-    if [[ "$?" == 0 ]]; then
-        view -- "$loc"
-    fi
+    local loc
+    (( 2 >= $# )) && loc="$(apparish "$@")" && view -- "$loc"
 }
 
 # apparix edit of file in mark or subdirectory of mark
 function ae() {
-    if [[ 2 == "$#" ]]; then
-        loc="$(apparish "$1" "$2")"
-    elif [[ 1 == "$#" ]]; then
-        loc="$(apparish "$1")"
-    fi
-    if [[ "$?" == 0 ]]; then
-        "${EDITOR:-vim}" "$loc"
-    fi
+    local loc
+    (( 2 >= $# )) && loc="$(apparish "$@")" && "${EDITOR:-vim}" "$loc"
 }
 
 function apparish_ls() {
