@@ -40,6 +40,11 @@ What apparix does:
 ```
   These helper commands correspond to small bash functions and are easy to add.
 
+Tab completion with apparix works best, IMHO, with cyclic tab completion. This
+is activated by the line `TAB: menu-complete` in the file `$HOME/.inputrc` (and you may
+need as well put `INPUTRC=$HOME/.inputrc` in `$HOME/.bashrc`), or the
+line `bind '"\t":menu-complete'` in `$HOME/.bashrc`. 
+
 Apparix's spiritual home nowadays is right here.
 It previously was at what I would now consider the
 [site of historical documents](http://micans.org/apparix).
