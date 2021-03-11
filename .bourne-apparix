@@ -107,7 +107,7 @@ touch "$APPARIXEXPAND"
 touch "$APPARIXLOG"
 
 APPARIX_FILE_FUNCTIONS=( a ae av aget toot apparish ) # Huffman (remove a)
-APPARIX_DIR_FUNCTIONS=( to als als2 ald aldr amd todo rme )
+APPARIX_DIR_FUNCTIONS=( to als ald aldr amd todo rme )
 
 # these are some helper functions. With my system they are mostly redundant
 # copies of functions I already have defined, but I aim to make this file
@@ -283,22 +283,6 @@ function als() {
     local args=("$1")
     (( 2 == narg )) && args+=("$2")
     (( 2 >= narg )) && loc="$(apparish "${args[@]}")" && ls $options -- $loc
-}
-
-function als2() {
-    local narg=$#
-    local lastarg=${!narg}
-    local options=""
-    local loc=""
-    if [[ $lastarg == -* ]]; then options=$lastarg; narg=$((narg-1)); fi
-    if (( 2 == narg )); then
-        loc="$(apparish "$1" "$2")"
-    elif (( 1 == narg )); then
-        loc="$(apparish "$1")"
-    fi
-    if [[ "$?" == 0 ]]; then
-        ls $options $loc
-    fi
 }
 
 # apparix search bookmark

@@ -35,6 +35,8 @@ What apparix does:
   av foo bar.txt       # view file in apparix mark (p.o.s.)
   aget foo bar.txt     # copy file from apparix mark (pos)
   amibm                # Is the current directory a bookmark? Useful in prompt.
+  ald foo              # only list subdirectories of mark
+  aldr foo             # list subdirectories recursively of mark
 ```
   These helper commands correspond to small bash functions and are easy to add.
 
