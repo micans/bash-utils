@@ -49,6 +49,11 @@ Apparix's spiritual home nowadays is right here.
 It previously was at what I would now consider the
 [site of historical documents](http://micans.org/apparix).
 
+Many thanks to Sitaram Chamarty for the original idea of sub-directory
+completion and the first bash implementation thereof, and to Izaak van Dongen
+for the zsh completion code and complete overhaul and improvement of the bash
+completion code.
+
 
 ### Apparix/apparish
 In the beginning the system was called Apparix; it was implemented in C, and
