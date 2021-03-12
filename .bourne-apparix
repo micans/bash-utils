@@ -59,29 +59,26 @@ function apparix_ls() {
 EOH
 }
 
-#  --- apparix uses by default the most recent <tag> if identical tags exist.
-#                It can e.g. be useful to use 'now' as an often-changing tag.
-#     agather <tag>           list all destinations marked <tag>
-#     whence <tag>            Enter menu to select destination
+#                            Use notes
 #
-#  --- the functionality below mimics bash CDPATH.
-#     portal                  add all subdirectory names as mark
-#     portal-expand           refresh the portal subdirectory cache
-#
-#  If you use 'ae', make sure $EDITOR is set to the name of an available editor.
-#  I find it useful to have this alias:
-#
-#     alias a=apparish
-#
-#  as I use it in command substitution, e.g.
-#
-#     echo cp myfile $(a bm)
-#     cp myfile $(a bm)
+#  - apparix uses by default the most recent <tag> if identical tags exist.
+#  - I rarely delete bookmarks. They serve as a chronology of my travails.
+#  - For deleting bookmarks I find 'via' the quickest.
+#  - Bookmark obscure and rarely visited but important locations.
+#  - You can forget both and location but 'via' and 'bmgrep' will help.
+#  - Use 'via' and 'bmgrep'
+#  - It can e.g. be useful to use 'now' for the current hotspot of work.
+#  - The list of 'now' bookmarks (seen with 'agather now') is a log of activity.
+#  - The portal functionality mimics bash CDPATH.
+#  - I find it useful to have this alias:
+#        alias a=apparish
+#  for use in command substitution, e.g.
+#        cp myfile $(a bm)
 #
 #  This is a big decision from a Huffman point of view.  If you want to remove
 #  it, go to all the places in the lines below where the name Huffman is
 #  mentioned and remove the relevant part.
-#
+
 #                       BASH and ZSH functions
 #
 #  Apparix should work for modern bourne-style shells, not including the
