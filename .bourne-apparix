@@ -61,15 +61,16 @@ EOH
 
 #                            Use notes
 #
-#  - apparix uses by default the most recent <tag> if identical tags exist.
+#  - Use apparix with cyclic tab completion. It's what gives the oomph.
+#  - Apparix uses by default the most recent MARK if identical marks exist.
 #  - I rarely delete bookmarks. They serve as a chronology of my travails.
 #  - For deleting bookmarks I find 'via' the quickest.
 #  - Bookmark obscure and rarely visited but important locations.
-#  - You can forget both and location but 'via' and 'bmgrep' will help.
+#  - You can forget both mark and location; 'via' and 'bmgrep' will help.
 #  - Use 'via' and 'bmgrep'
 #  - It can e.g. be useful to use 'now' for the current hotspot of work.
 #  - The list of 'now' bookmarks (seen with 'agather now') is a log of activity.
-#  - The portal functionality mimics bash CDPATH.
+#  - The portal functionality mimics bash CDPATH. I don't use it.
 #  - I find it useful to have this alias:
 #        alias a=apparish
 #  for use in command substitution, e.g.
@@ -91,8 +92,9 @@ EOH
 #  Big thanks to Sitaram Chamarty for all the important parts of the initial
 #  bash completion code, and big thanks to Izaak van Dongen for figuring out
 #  the zsh completion code, subsequently improving and standardising the bash
-#  completion code, and suggesting the name apparish. Although it's now called
-#  apparix again. Still appreciate it.
+#  completion code, adding enhancements and rewrites all through the code base
+#  and suggesting the name apparish. Although it's now called apparix again.
+#  Still appreciate it.
  #
 
 APPARIXHOME="${APPARIXHOME:=$HOME}"
