@@ -20,44 +20,48 @@
 #  -  you can use tab completion:                 'to foo as<TAB>'
 #                                                 'to foo asubdirname/<TAB>'
 #  -  try tab completion and command substitution, see the examples below.
+#
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Ignore errors about:
-# - testing $?, because that's useful when you have branches
-# - declaring and assigning at the same time just because
-# - unexpanded substitutions in single quotes for similar reasons
-
+#
 #  This Apparix is a pure shell implementation of an older system written
 #  partly in C. This shell re-implementation is the reason why several of the
 #  names here use apparish.  I prefer to think of the abstract system itself as
 #  apparix. Never mind!
-
-
-#  ---
-#     bm <tag>                create bookmark <tag> for current directory
-#  ---
-#     to <tag>                jump to the directory marked <tag>
-#     to <tag> <TAB>          tab-complete on subdirectories of <tag>
-#     to <tag> s<TAB>         tab-complete on subdirectories of <tag> starting
-#                             with s
-#     to <tag> foo/<TAB>      tab-complete in subdirectory foo of <tag>
-#     to <tag> foo/bar<TAB>   et cetera et cetera
 #
-#  --- the commands below allow tab-completion identical to 'to' above.
-#     als <tag>               list contents of <tag> directory
-#     ald <tag>               list subdirectories of <tag> directory
-#     amd <tag> NAME          issue mkdir in <tag> directory
-#     amd <tag> PATH/<TAB>    amd allows tab completion
-#     ae <tag> FILE           edit FILE in <tag> directory
-#     ae <tag> FI<TAB>        complete on FI in <tag> directory
-#     a <tag> s<TAB>          echo the location of the <tag> directory or
-#                             content.
-#                             This is useful in command substitution, e.g.
-#                             'cp somefile ($a tag src)'
-#
+#  							An overview of apparix functionality.
+
+function apparix_ls() {
+    cat <<EOH
+             Below all SUBDIR and FILE can be tab-completed.
+
+  bm MARK                 Bookmark current directory as mark
+--
+  to   MARK [SUBDIR]      Jump to mark or a subdirectory of mark
+  ald  MARK [SUBDIR]      List subdirectories of mark directory or subdir
+  aldr MARK [SUBDIR]      Like ald, recursively
+  als  MARK [SUBDIR] [ls-options]  List mark directory or subdir
+  amd  MARK [SUBDIR]      Make directory in mark
+  a    MARK [SUBDIR]/FILE Echo the true location of file, useful in
+                          command substitution, e.g. cp file \$(a mark).
+  whence MARK             Menu-based selection for mark with multiple targets
+--
+  ae MARK [SUBDIR/]FILE   Edit file in mark
+  av MARK [SUBDIR/]FILE   View file in mark
+--
+  amibm                   See if the current directory is a bookmark
+  bmgrep PATTERN          List all marks where target matches PATTERN
+--
+  todo MARK [SUBDIR]      Edit TODO file in mark directory
+  rme MARK [SUBDIR]       Edit README file
+  portal                  Add current dir as portal (subdirs are mark names)
+  portal-expand           Re-expand all portals
+  agather MARK            List all targets for bookmark mark
+EOH
+}
+
 #  --- apparix uses by default the most recent <tag> if identical tags exist.
 #                It can e.g. be useful to use 'now' as an often-changing tag.
-#     apparix-list <tag>      list all destinations marked <tag>
+#     agather <tag>           list all destinations marked <tag>
 #     whence <tag>            Enter menu to select destination
 #
 #  --- the functionality below mimics bash CDPATH.
@@ -87,10 +91,11 @@
 #  $HOME/.zshrc if you use zsh.
 
  #
-#  Thanks to Sitaram Chamarty for all the important parts of the bash completion
-#  code, and thanks to Izaak van Dongen for figuring out the zsh completion
-#  code, subsequently improving and standardising the bash completion code, and
-#  suggesting the name apparish.
+#  Big thanks to Sitaram Chamarty for all the important parts of the initial
+#  bash completion code, and big thanks to Izaak van Dongen for figuring out
+#  the zsh completion code, subsequently improving and standardising the bash
+#  completion code, and suggesting the name apparish. Although it's now called
+#  apparix again. Still appreciate it.
  #
 
 APPARIXHOME="${APPARIXHOME:=$HOME}"
@@ -108,16 +113,12 @@ touch "$APPARIXLOG"
 APPARIX_FILE_FUNCTIONS=( a ae av aget toot apparish ) # Huffman (remove a)
 APPARIX_DIR_FUNCTIONS=( to als ald aldr amd todo rme )
 
-# these are some helper functions. With my system they are mostly redundant
-# copies of functions I already have defined, but I aim to make this file
-# stand-alone.
-
 # sanitise $1 so that it becomes suitable for use with your basic grep
 function grepsanitise() {
     sed 's/[].*^$]\|\[/\\&/g' <<< "$1"
 }
 
-# vim-like: totally silence the given command, with less of the tedium. does not
+# vim-like: totally silence the given command. does not
 # affect return status, so can be used inside if statements.
 silent() {
     "$@" > /dev/null 2> /dev/null
@@ -192,8 +193,10 @@ function aget() {
     amux "$@" ++ apparix_aget_cp
 }
 
-# apparix listing of directories (rather than files) directly below mark
-# with find argument/option order requirements not really amux material.
+# apparix listing of directories (rather than files) directly below mark.
+# With find argument/option order requirements not yet really amux material,
+# unless placeholder parachuting is added. 🤔 The outcome of apparix
+# *is* always just a simple string.
 # These versions print paths relative to target.
 function ald() {
     local loc
@@ -219,6 +222,16 @@ if ! silent command -v via; then
     alias via='"${EDITOR:-vim}" "$APPARIXRC"'
 else
     >&2 echo "Apparix: not aliasing via"
+fi
+
+if ! silent bind -q menu-complete; then
+    cat <<EOH
+--> Consider adding the line
+bind '"\t":menu-complete'
+<-- to e.g. $HOME/.bashrc
+This enables cyclic tab completion on directories and files below apparix marks.
+We apologise profusely for this interruption.
+EOH
 fi
 
 function apparish() {
@@ -337,30 +350,6 @@ function amibm() {
 function bmgrep() {
     pat="${1?Need a pattern to search}"
     command grep -- "$pat" "$APPARIXRC" | cut -f 2,3 -d ',' | tr ',' '\t' | column -t
-}
-
-
-function apparix_ls() {
-    cat <<EOH
-  bm MARK                 Bookmark current directory as mark
-  to   MARK [SUBDIR]      Jump to mark or a subdirectory of mark
-  ald  MARK [SUBDIR]      List subdirectories of mark directory or subdir
-  aldr MARK [SUBDIR]      Like ald, recursively
-  als  MARK [SUBDIR] [ls-options]  List mark directory or subdir
-  amd  MARK [SUBDIR]      Make directory in mark
-  ae MARK [SUBDIR/]FILE   Edit file in mark
-  av MARK [SUBDIR/]FILE   View file in mark
-  amibm                   See if the current directory is a bookmark
-  bmgrep PATTERN          List all marks and targets where target matches
-                          PATTERN
-  todo MARK [SUBDIR]      Edit TODO file in mark directory
-  rme MARK [SUBDIR]       Edit README file
-  whence MARK             Menu-based selection for mark with multiple targets
-  portal                  Add current directory as portal (subdirectories are
-                          mark names)
-  portal-expand           Re-expand all portals
-  apparix-list MARK       List all targets for bookmark mark
-EOH
 }
 
 if [[ -n "$BASH_VERSION" ]]; then
@@ -587,3 +576,8 @@ elif [[ -n "$ZSH_VERSION" ]]; then
 else
     >&2 echo "Aparix: I don't know how to generate completions"
 fi
+
+# shellcheck: Ignore errors about
+# - testing $?, because that's useful when you have branches
+# - declaring and assigning at the same time just because
+# - unexpanded substitutions in single quotes for similar reasons
