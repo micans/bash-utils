@@ -5,9 +5,6 @@
 Apparix is a tiny set of commands implementing directory bookmarking in **bash** and **zsh**.
 You just need the file [.bourne-apparix](https://raw.githubusercontent.com/micans/bash-utils/master/.bourne-apparix).
 
-There is a cool [**fish** implementation](https://github.com/mzuther/appari-fish)
-made by Martin Zuther, named appari-fish.
-
 What apparix does:
 
 - Bookmark the current directory by issuing `bm foo`. This takes effect instantly
@@ -53,17 +50,26 @@ Many thanks to Sitaram Chamarty for the original idea of sub-directory
 completion and the first bash implementation thereof, and to Izaak van Dongen
 for the zsh completion code and complete overhaul and improvement of the bash
 completion code.
+Thanks to Martin Zuther
+there is a cool [**fish** implementation](https://github.com/mzuther/appari-fish),
+named appari-fish.
 
 
-### Apparix/apparish
-In the beginning the system was called Apparix; it was implemented in C, and
-shipped with bash wrapper functions and completion code.  The C code was not
-really needed (although it must consume many fewer CPU cycles). Its
-reimplementation was called apparish. Then Martin added appari-fish to the
-family. I then realised that I still think of the thing as apparix, so I've
-tweaked documentation and renamed files to revert back to apparix. But the
+### Apparix/apparish developments, past and ongoing
+
+In the beginning (2005-ish) the system was called Apparix. It was
+implemented in C and shipped with bash wrapper functions and completion code.
+The C code was, in hindsight, a slightly heavy hammer (although it must consume
+many fewer CPU cycles). A simple bash shell reimplementation was undertaken
+many years later, around 2018.  Izaak thought of the name apparish and added
+zsh code and additionally contributed a thorough rewrite of the bash completion
+layer.  Martin added appari-fish to the family. The valley was peaceful for a
+while.  Early 2021 I realised that I still think of the valley as apparix, so
+I've tweaked documentation and renamed files to revert back to apparix. The
 glorious shell code itself is still apparish-rich. Stay tuned for further
-naming shenanigans.
+naming shenanigans. More relevant, the bash helper functions are still
+undergoing little tweaks and improvements every now and then. When this happens
+the functionality is described and added to the list of example commands at the top.
 
 
 ## bash-myutils
