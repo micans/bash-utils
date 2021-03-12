@@ -22,10 +22,9 @@
 #  -  try tab completion and command substitution, see the examples below.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# ignore errors about:
+# Ignore errors about:
 # - testing $?, because that's useful when you have branches
-# - declaring and assigning at the same time because I know what I'm doing
-#   (fingers crossed)
+# - declaring and assigning at the same time just because
 # - unexpanded substitutions in single quotes for similar reasons
 
 #  This Apparix is a pure shell implementation of an older system written
@@ -118,14 +117,96 @@ function grepsanitise() {
     sed 's/[].*^$]\|\[/\\&/g' <<< "$1"
 }
 
-# vim-like: totally silence the given command, with less of the tedium. doesn't
+# vim-like: totally silence the given command, with less of the tedium. does not
 # affect return status, so can be used inside if statements.
-# black magic: "$@" expands to each argument as a separate word.
-# gotcha: this won't expand any aliases you have. This is probably preferred
-# functionality anyway, though (at least for me)
 silent() {
     "$@" > /dev/null 2> /dev/null
 }
+
+# Below is essentially arun from goedel-gang fork of apparix,
+# with a provision added for passing options through to commands.
+#
+function amux() {
+   local opts=(); local mark=$1; local dir=
+   shift
+   local get_options=false
+
+   while [[ $# -gt 0 ]]; do
+      item="$1"; shift
+      if [[ $item == '++' ]]; then
+        break
+      elif $get_options || [[ $item == -* ]]; then
+        opts+=( $item )
+        get_options=true
+      elif [[ -z "$dir" ]]; then
+        dir="$item"
+      else
+        2>&1 echo "Mixed up mess in amux"
+        break
+      fi
+   done
+
+   command=$1
+   shift
+   ! silent command -v "$command" && 2>&1 echo "Not a command, $command"
+
+   if ! loc=$(apparish "$mark" "$dir"); then
+      return 1
+   fi
+   $command "${opts[@]}" "$@" "$loc"
+}
+
+
+# apparix list
+function als() {
+    amux "$@" ++ ls --
+}
+
+# apparix mkdir in mark
+function amd() {
+    amux "$@" ++ mkdir --
+}
+
+# apparix view of file
+function av() {
+    amux "$@" ++ view --
+}
+
+# apparix edit of file
+function ae() {
+    amux "$@" ++ "${EDITOR:-vim}" -- "$loc"
+}
+
+# cd to a mark
+function to() {
+    amux "$@" ++ cd --
+}
+
+# intermediate function to swap argument order
+function apparix_aget_cp() {
+    cp -v "$@" .
+}
+
+# apparix get; get something from a mark
+function aget() {
+    amux "$@" ++ apparix_aget_cp
+}
+
+# apparix listing of directories (rather than files) directly below mark
+# with find argument/option order requirements not really amux material.
+# These versions print paths relative to target.
+function ald() {
+    local loc
+    (( 2 >= $# )) && loc="$(apparish "$@")" && \
+	find -L "$loc" -mindepth 1 -maxdepth 1 -type d -printf '%P\n'
+}
+# apparix listing of subdirectories of mark, recursively
+function aldr() {
+    local loc
+    (( 2 >= $# )) && loc="$(apparish "$@")" && \
+  find -L "$loc" -mindepth 1 -type d -printf '%P\n'
+}
+
 
 # Huffman (remove this paragraph, or just alias "a" yourself)
 if ! silent command -v a; then
@@ -182,24 +263,6 @@ function bm() {
     fi
 }
 
-function to() {
-    if [[ 2 == "$#" ]]; then
-        loc="$(apparish "$1" "$2")"
-    elif [[ 1 == "$#" ]]; then
-        if [[ "$1" == '-' ]]; then
-            loc="-"
-        else
-            loc="$(apparish "$1")"
-        fi
-    else
-        >&2 echo "Usage: to MARK [SUBDIR1/[SUBDIR2/[etc]]]"
-        return 1
-    fi
-    if [[ "$?" == 0 ]]; then
-        cd -- "$loc" || return 1
-    fi
-}
-
 function portal() {
     echo "e,$PWD" >> "$APPARIXRC"
     portal-expand
@@ -239,6 +302,7 @@ function whence() {
     done
 }
 
+# This may need some love. But I mainly use the todo function.
 function toot() {
     local file
     if [[ 3 == "$#" ]]; then
@@ -262,29 +326,6 @@ function rme() {
     toot "$@" README
 }
 
-# apparix listing of directories of mark
-function ald() {
-    local loc
-    (( 2 >= $# )) && loc="$(apparish "$@")" && find -L "$loc" -mindepth 1 -maxdepth 1 -type d -printf '%P\n'
-}
-# apparix listing of directories of mark, recursively
-function aldr() {
-    local loc
-    (( 2 >= $# )) && loc="$(apparish "$@")" && find -L "$loc" -mindepth 1 -type d -printf '%P\n'
-}
-
-# apparix ls of mark. Annoyingly awkward. Abstract this.
-function als() {
-    local narg=$#
-    local lastarg=${!narg}
-    local options=""
-    local loc=""
-    if [[ $lastarg == -* ]]; then options=$lastarg; narg=$((narg-1)); fi
-    local args=("$1")
-    (( 2 == narg )) && args+=("$2")
-    (( 2 >= narg )) && loc="$(apparish "${args[@]}")" && ls $options -- $loc
-}
-
 # apparix search bookmark
 # TODO: fix when cwd has newlines in
 function amibm() {
@@ -298,29 +339,6 @@ function bmgrep() {
     command grep -- "$pat" "$APPARIXRC" | cut -f 2,3 -d ',' | tr ',' '\t' | column -t
 }
 
-# apparix get; get something from a mark
-function aget() {
-    local loc
-    (( 2 >= $# )) && loc="$(apparish "$@")" && cp "$loc" .
-}
-
-# apparix mkdir in mark
-function amd() {
-    local loc
-    (( 2 >= $# )) && loc="$(apparish "$@")" && mkdir -p -- "$loc"
-}
-
-# apparix edit of file in mark or subdirectory of mark
-function av() {
-    local loc
-    (( 2 >= $# )) && loc="$(apparish "$@")" && view -- "$loc"
-}
-
-# apparix edit of file in mark or subdirectory of mark
-function ae() {
-    local loc
-    (( 2 >= $# )) && loc="$(apparish "$@")" && "${EDITOR:-vim}" "$loc"
-}
 
 function apparix_ls() {
     cat <<EOH
