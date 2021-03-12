@@ -42,7 +42,7 @@ function apparix_ls() {
   als  MARK [SUBDIR] [ls-options]  List mark directory or subdir
   amd  MARK [SUBDIR]      Make directory in mark
   a    MARK [SUBDIR]/FILE Echo the true location of file, useful in
-                          command substitution, e.g. cp file \$(a mark).
+                          command substitution, e.g. cp file $(a mark).
   whence MARK             Menu-based selection for mark with multiple targets
 --
   ae MARK [SUBDIR/]FILE   Edit file in mark
