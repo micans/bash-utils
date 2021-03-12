@@ -420,7 +420,7 @@ if [[ -n "$BASH_VERSION" ]]; then
         local cur_file="$2"
 
         if elemOf "$caller" "${APPARIX_DIR_FUNCTIONS[@]}"; then
-            if [[ -n "$BERTRAND_RUSSEL" ]]; then
+            if [[ -n "$APPARIX_BERTRAND_RUSSEL" ]]; then
                 # # Directories (add -S / for slash separator):
                 compgen -d -- "$cur_file"
             else
@@ -428,7 +428,7 @@ if [[ -n "$BASH_VERSION" ]]; then
             fi
         elif elemOf "$caller" "${APPARIX_FILE_FUNCTIONS[@]}"; then
             # complete on filenames. this is a little harder to do nicely.
-            if [[ -n "$BERTRAND_RUSSEL" ]]; then
+            if [[ -n "$APPARIX_BERTRAND_RUSSEL" ]]; then
                 _all_files_compgen "$cur_file"
             else
                 goedel_compfile "$cur_file" f
@@ -471,7 +471,7 @@ if [[ -n "$BASH_VERSION" ]]; then
             shopt -u failglob
             GLOBIGNORE="./:../"
             if [[ "\$part_dir" == "." ]]; then
-                find_name_prefix="./"
+                find_name_prefix="./"               # what's this.
             fi
             # here we delay the %q escaping because I want to strip trailing /s
             if [[ -d "\$part_unesc" ]]; then
@@ -530,18 +530,18 @@ EOF
         return 0
     }
 
-    # register completions
-    # nospace prevents bash putting a space after partially completed paths
-    # nosort prevents bash from messing up the bespoke order in which bookmarks
-    # are completed
-    if version_assert 4 4 0; then
-        complete -o nospace -o nosort -F _apparix_comp \
-            "${APPARIX_FILE_FUNCTIONS[@]}" "${APPARIX_DIR_FUNCTIONS[@]}"
-    else
+    # Register completions
+    #   'nospace' prevents bash putting a space after partially completed paths
+    #   'nosort' prevents bash from messing up the bespoke order in which bookmarks
+    #   are completed
+    apparix_o_nosort="-o nosort"
+    if ! version_assert 4 4 0; then
         # >&2 echo "(Apparix: Can't disable alphabetic sorting of completions)"
-        complete -o nospace -F _apparix_comp \
-            "${APPARIX_FILE_FUNCTIONS[@]}" "${APPARIX_DIR_FUNCTIONS[@]}"
+        apparix_o_nosort=""
     fi
+    complete -o nospace $apparix_o_nosort -F _apparix_comp \
+            "${APPARIX_FILE_FUNCTIONS[@]}" "${APPARIX_DIR_FUNCTIONS[@]}"
+    unset apparix_o_nosort
 
 elif [[ -n "$ZSH_VERSION" ]]; then
     # Use zsh's completion system, as this seems a lot more robust, rather
