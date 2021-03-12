@@ -253,7 +253,7 @@ function apparish() {
     fi
 }
 
-function apparix-list() {
+function agather() {
     if [[ 0 == "$#" ]]; then
         >&2 echo "Need mark"
         return 1
@@ -268,7 +268,7 @@ function bm() {
         return 1
     fi
     local mark="$1"
-    local list="$(apparix-list "$mark")"
+    local list="$(agather "$mark")"
     echo "j,$mark,$PWD" | tee -a -- "$APPARIXLOG" >> "$APPARIXRC"
     if [[ -n "$list" ]]; then
         listsize=$((1 + $(wc -l <<< "$list") ))
@@ -309,7 +309,7 @@ function whence() {
         return 1
     fi
     local mark="$1"
-    select target in $(apparix-list "$mark"); do
+    select target in $(agather "$mark"); do
         cd -- "$target" || return 1
         break
     done
