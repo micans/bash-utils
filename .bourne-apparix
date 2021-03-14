@@ -459,45 +459,42 @@ if [[ -n "$BASH_VERSION" ]]; then
         local part_unesc="$(bash -c "printf '%s' $part_esc")"
         local part_dir="$(dirname "$part_unesc")"
         COMPREPLY=()
-        # can't pipe to while because that's a subshell and we need to modify
-        # COMREPLY.
+        # Cannot pipe to while as that's a subshell and we modify COMREPLY.
         while IFS='' read -r -d '' result; do
-            # this is a bit of a weird hack because printf "%q\n" with no
+            # This is a bit of a weird hack because printf "%q\n" with no
             # arguments prints ''. It should be robust, because any actual
             # single quotes will have been escaped by printf.
-            result=${result%/}
             if [[ "$result" != "''" ]]; then
-                COMPREPLY+=("$result")
+                COMPREPLY+=("${result%/}")
             fi
-        # use an explicit bash subshell to set some glob flags.
+        # Use an explicit bash subshell to set some glob flags.
         done < <(part_dir="$part_dir" part_unesc="$part_unesc" \
-                 find_files="$find_files" bash <<EOF
+                 find_files="$find_files" bash -c '
             shopt -s nullglob
             shopt -s extglob
             shopt -u dotglob
             shopt -u failglob
             GLOBIGNORE="./:../"
             if [[ "\$part_dir" == "." ]]; then
-                find_name_prefix="./"               # what's this.
+                find_name_prefix="./"               # what is this.
             fi
             # here we delay the %q escaping because I want to strip trailing /s
-            if [[ -d "\$part_unesc" ]]; then
-                if [[ "\$part_unesc" != +(/) ]]; then
-                    part_unesc="\${part_unesc%%+(/)}"
+            if [ -d "$part_unesc" ]; then
+                if [[ ! "$part_unesc" =~ '"'"'^/+$'"'"' ]]; then
+                    part_unesc="${part_unesc%%+(/)}"
                 fi
-                if [[ "\$find_files" == true ]]; then
-                    printf "%q\\0" "\$part_unesc"/* "\$part_unesc"/*/
+                if [ "$find_files" = "true" ]; then
+                    printf "%q\0" "$part_unesc"/* "$part_unesc"/*/
                 else
-                    printf "%q\\0" "\$part_unesc"/*/
+                    printf "%q\0" "$part_unesc"/*/
                 fi
             else
-                if [[ "\$find_files" == true ]]; then
-                    printf "%q\\0" "\$part_unesc"*/ "\$part_unesc"*
+                if [ "$find_files" = "true" ]; then
+                    printf "%q\0" "$part_unesc"*/ "$part_unesc"*
                 else
-                    printf "%q\\0" "\$part_unesc"*/
+                    printf "%q\0" "$part_unesc"*/
                 fi
-            fi
-EOF
+            fi'
         )
     }
 
