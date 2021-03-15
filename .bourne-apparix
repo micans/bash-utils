@@ -91,6 +91,12 @@ EOH
 #  in the file $HOME/.bashrc or $HOME/.bash_login if you use bash, in the file
 #  $HOME/.zshrc if you use zsh.
 
+#  This code goes a long way to dealing with spaces, tabs and nasty characters
+#  in paths thanks to Izaak.  A much simpler parallel completion implementation
+#  using bash native completion is triggered if you set APPARIX_BERTRAND_RUSSEL
+#  to a nonzero value before sourcing this file, but it will not cope as well
+#  with weird characters.
+
  #
 #  Big thanks to Sitaram Chamarty for all the important parts of the initial
 #  bash completion code, and big thanks to Izaak van Dongen for figuring out
@@ -422,27 +428,6 @@ if [[ -n "$BASH_VERSION" ]]; then
         }
     fi
 
-    # complete sensibly on filenames and directories
-    # https://stackoverflow.com/questions/12933362/getting-compgen-to-include...
-    # -slashes-on-directories-when-looking-for-files
-    function _all_files_compgen() {
-        local cur="$1"
-
-        # The outcommented code splits directories and files but then treats
-        # them the same. Previously, it used to add a slash for directories, but
-        # this makes completing actually harder; Manually adding a slash is a
-        # good way of instigating the next level of completion. Anyway, I've
-        # kept this around in case people want to change this behaviour. I use
-        # comm because old greps have an issue where -v does not treat an empty
-        # file with -f correctly.
-        # $ comm -3 <(compgen -f -- "$cur" | sort) \
-        #           <(compgen -d -- "$cur" | sort) # | sed -e 's/$/ /'
-        # Directories (add -S / for slash separator):
-        # $ compgen -d -- "$cur"
-
-        compgen -f -- "$cur"
-    }
-
     # https://stackoverflow.com/questions/3685970/check-if-a-bash-array-...
     # contains-a-value
     function elemOf() {
@@ -460,14 +445,14 @@ if [[ -n "$BASH_VERSION" ]]; then
         if elemOf "$caller" "${APPARIX_DIR_FUNCTIONS[@]}"; then
             if [[ -n "$APPARIX_BERTRAND_RUSSEL" ]]; then
                 # # Directories (add -S / for slash separator):
-                compgen -d -- "$cur_file"
+                COMPREPLY=( $(compgen -d -- "$cur_file") )
             else
                 goedel_compfile "$cur_file" d
             fi
         elif elemOf "$caller" "${APPARIX_FILE_FUNCTIONS[@]}"; then
             # complete on filenames. this is a little harder to do nicely.
             if [[ -n "$APPARIX_BERTRAND_RUSSEL" ]]; then
-                _all_files_compgen "$cur_file"
+                COMPREPLY=( $(compgen -f -- "$cur_file") )
             else
                 goedel_compfile "$cur_file" f
             fi
