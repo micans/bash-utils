@@ -43,6 +43,7 @@ function apparix_ls() {
   amd  MARK [SUBDIR]      Make directory in mark
   a    MARK [SUBDIR]/FILE Echo the true location of file, useful in
                           command substitution, e.g. cp file $(a mark).
+  agather MARK            List all targets for bookmark mark
   whence MARK             Menu-based selection for mark with multiple targets
 --
   ae MARK [SUBDIR/]FILE   Edit file in mark
@@ -55,7 +56,6 @@ function apparix_ls() {
   rme MARK [SUBDIR]       Edit README file
   portal                  Add current dir as portal (subdirs are mark names)
   portal-expand           Re-expand all portals
-  agather MARK            List all targets for bookmark mark
 EOH
 }
 
@@ -130,6 +130,11 @@ function amux() {
    local opts=(); local mark=$1; local dir=
    shift
    local get_options=false
+
+   if [[ $mark == '++' ]]; then
+     echo "Arguably a lack of argument"
+     return 1
+   fi 
 
    while [[ $# -gt 0 ]]; do
       item="$1"; shift
