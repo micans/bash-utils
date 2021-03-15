@@ -30,24 +30,24 @@
 #
 #  							An overview of apparix functionality.
 
-function apparix_ls() {
+function ahoy() {
     cat <<EOH
              Below all SUBDIR and FILE can be tab-completed.
 
   bm MARK                 Bookmark current directory as mark
 --
   to   MARK [SUBDIR]      Jump to mark or a subdirectory of mark
+  als  MARK [SUBDIR] [ls-options]  List mark directory or subdir
   ald  MARK [SUBDIR]      List subdirectories of mark directory or subdir
   aldr MARK [SUBDIR]      Like ald, recursively
-  als  MARK [SUBDIR] [ls-options]  List mark directory or subdir
-  amd  MARK [SUBDIR]      Make directory in mark
+  amd  MARK [SUBDIR] [mkdir options] Make directory in mark
   a    MARK [SUBDIR]/FILE Echo the true location of file, useful in
-                          command substitution, e.g. cp file $(a mark).
+                          command substitution, e.g. cp file \$(a mark).
   agather MARK            List all targets for bookmark mark
   whence MARK             Menu-based selection for mark with multiple targets
 --
-  ae MARK [SUBDIR/]FILE   Edit file in mark
-  av MARK [SUBDIR/]FILE   View file in mark
+  ae MARK [SUBDIR/]FILE [editor options] Edit file in mark
+  av MARK [SUBDIR/]FILE [editor options]  View file in mark
 --
   amibm                   See if the current directory is a bookmark
   bmgrep PATTERN          List all marks where target matches PATTERN
@@ -112,14 +112,25 @@ touch "$APPARIXLOG"
 APPARIX_FILE_FUNCTIONS=( a ae av aget toot apparish ) # Huffman (remove a)
 APPARIX_DIR_FUNCTIONS=( to als ald aldr amd todo rme )
 
+# require one or two
+function apx_onetwo() {
+  (( $1 == 1 )) || (( $1 == 2 ))
+}
+
+# print usage
+function apx_usage() {
+  echo -n $(ahoy | grep "^  *$1\>")
+  echo " (use ahoy for more)"
+}
+
 # sanitise $1 so that it becomes suitable for use with your basic grep
-function grepsanitise() {
+function apx_grepsanitise() {
     sed 's/[].*^$]\|\[/\\&/g' <<< "$1"
 }
 
 # vim-like: totally silence the given command. does not
 # affect return status, so can be used inside if statements.
-silent() {
+function apx_silent() {
     "$@" > /dev/null 2> /dev/null
 }
 
@@ -128,10 +139,13 @@ silent() {
 #
 function amux() {
    local opts=(); local mark=$1; local dir=
+   local copy=( "$@" )
    shift
    local get_options=false
+   local caller=${FUNCNAME[1]}
 
    if [[ $mark == '++' ]]; then
+     apx_usage "$caller"
      echo "Arguably a lack of argument"
      return 1
    fi 
@@ -146,14 +160,14 @@ function amux() {
       elif [[ -z "$dir" ]]; then
         dir="$item"
       else
-        2>&1 echo "Mixed up mess in amux"
+        2>&1 echo "Mixed up mess in amux (caller ${copy[@]})"
         break
       fi
    done
 
    command=$1
    shift
-   ! silent command -v "$command" && 2>&1 echo "Not a command, $command"
+   ! apx_silent command -v "$command" && 2>&1 echo "Not a command, $command"
 
    if ! loc=$(apparish "$mark" "$dir"); then
       return 1
@@ -179,7 +193,7 @@ function av() {
 
 # apparix edit of file
 function ae() {
-    amux "$@" ++ "${EDITOR:-vim}" -- "$loc"
+    amux "$@" ++ "${EDITOR:-vim}" --
 }
 
 # cd to a mark
@@ -204,31 +218,37 @@ function aget() {
 # These versions print paths relative to target.
 function ald() {
     local loc
-    (( 2 >= $# )) && loc="$(apparish "$@")" && \
-	find -L "$loc" -mindepth 1 -maxdepth 1 -type d -printf '%P\n'
+    if ! apx_onetwo $#; then apx_usage ald
+    else
+      loc="$(apparish "$@")" && \
+              find -L "$loc" -mindepth 1 -maxdepth 1 -type d -printf '%P\n'
+    fi
 }
 # apparix listing of subdirectories of mark, recursively
 function aldr() {
     local loc
-    (( 2 >= $# )) && loc="$(apparish "$@")" && \
-  find -L "$loc" -mindepth 1 -type d -printf '%P\n'
+    if ! apx_onetwo $#; then apx_usage aldr
+    else
+      loc="$(apparish "$@")" && \
+              find -L "$loc" -mindepth 1 -type d -printf '%P\n'
+    fi
 }
 
 
 # Huffman (remove this paragraph, or just alias "a" yourself)
-if ! silent command -v a; then
+if ! apx_silent command -v a; then
     alias a='apparish'
 else
     >&2 echo "Apparix: not aliasing a"
 fi
 
-if ! silent command -v via; then
+if ! apx_silent command -v via; then
     alias via='"${EDITOR:-vim}" "$APPARIXRC"'
 else
     >&2 echo "Apparix: not aliasing via"
 fi
 
-if ! silent bind -q menu-complete; then
+if ! apx_silent bind -q menu-complete; then
     cat <<EOH
 --> Consider adding the line
 bind '"\t":menu-complete'
@@ -259,7 +279,7 @@ function apparish() {
 
 function agather() {
     if [[ 0 == "$#" ]]; then
-        >&2 echo "Need mark"
+        apx_usage agather
         return 1
     fi
     local mark="$1"
@@ -268,7 +288,7 @@ function agather() {
 
 function bm() {
     if [[ 0 == "$#" ]]; then
-        >&2 echo Need mark
+        apx_usage bm
         return 1
     fi
     local mark="$1"
@@ -309,7 +329,7 @@ EOF
 
 function whence() {
     if [[ 0 == "$#" ]]; then
-        >&2 echo "Need mark"
+        apx_usage whence
         return 1
     fi
     local mark="$1"
@@ -346,7 +366,7 @@ function rme() {
 # apparix search bookmark
 # TODO: fix when cwd has newlines in
 function amibm() {
-    command grep -- ",$(grepsanitise "$PWD")$" "$APPARIXRC" | \
+    command grep -- ",$(apx_grepsanitise "$PWD")$" "$APPARIXRC" | \
         cut -f 2 -d ',' | paste -s -d ' ' -
 }
 
@@ -374,11 +394,11 @@ if [[ -n "$BASH_VERSION" ]]; then
 
     # define a function to read lines from a file into an array
     # https://github.com/koalaman/shellcheck/wiki/SC2207
-    if silent version_assert 4 0 0; then
+    if apx_silent version_assert 4 0 0; then
         function read_array() {
             mapfile -t goedel_array < "$1"
         }
-    elif silent version_assert 3 0 0; then
+    elif apx_silent version_assert 3 0 0; then
         function read_array() {
             goedel_array=()
             while IFS='' read -r line; do
@@ -386,7 +406,7 @@ if [[ -n "$BASH_VERSION" ]]; then
             done < "$1"
         }
     else
-        >&2 echo "really, bash 2 isn't cool enough to run apparix"
+        >&2 echo "really, bash 2 is too cool to run apparix"
         function read_array() {
             local IFS=$'\n'
             # this is a bad fallback implementation on purpose
@@ -507,10 +527,10 @@ if [[ -n "$BASH_VERSION" ]]; then
     # this is currently case sensitive. Good? Bad? Who knows!
     function _apparix_compgen_bm() {
         cut -f2 -d, -- "$APPARIXRC" "$APPARIXEXPAND" | sort |\
-            command grep -i -- "^$(grepsanitise "$1")"
+            command grep -i -- "^$(apx_grepsanitise "$1")"
         if [[ -n "$1" ]]; then
             cut -f2 -d, -- "$APPARIXRC" "$APPARIXEXPAND" | sort |\
-                command grep -i -- "^..*$(grepsanitise "$1")"
+                command grep -i -- "^..*$(apx_grepsanitise "$1")"
         fi
     }
 
@@ -529,9 +549,9 @@ if [[ -n "$BASH_VERSION" ]]; then
             if [[ -d "$app_dir" ]]; then
                 # can't run in subshell as _apparix_comp_file modifies COMREPLY.
                 # Just hope that nothing goes wrong, basically
-                silent pushd -- "$app_dir"
+                apx_silent pushd -- "$app_dir"
                 _apparix_comp_file "$1" "$cur_file"
-                silent popd
+                apx_silent popd
             else
                 COMPREPLY=()
             fi
@@ -576,7 +596,7 @@ elif [[ -n "$ZSH_VERSION" ]]; then
     compdef _apparix_file "${APPARIX_FILE_FUNCTIONS[@]}"
     compdef _apparix_directory "${APPARIX_DIR_FUNCTIONS[@]}"
 else
-    >&2 echo "Aparix: I don't know how to generate completions"
+    >&2 echo "Aparix: I do not know how to generate completions"
 fi
 
 # shellcheck: Ignore errors about
