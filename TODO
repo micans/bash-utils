@@ -1,4 +1,6 @@
 
+ald/alsd be smarter with hidden directories; pass arguments to find.
+
   to mark '<TAB>
   to mark ab'<TAB>
 explodes with bash -c ' parse error

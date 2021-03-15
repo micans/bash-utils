@@ -32,22 +32,24 @@
 
 function ahoy() {
     cat <<EOH
+Apparix functions.
              Below all SUBDIR and FILE can be tab-completed.
 
-  bm MARK                 Bookmark current directory as mark
---
+  bm   MARK               Bookmark current directory as mark
   to   MARK [SUBDIR]      Jump to mark or a subdirectory of mark
+--
   als  MARK [SUBDIR] [ls-options]  List mark directory or subdir
   ald  MARK [SUBDIR]      List subdirectories of mark directory or subdir
   aldr MARK [SUBDIR]      Like ald, recursively
   amd  MARK [SUBDIR] [mkdir options] Make directory in mark
-  a    MARK [SUBDIR]/FILE Echo the true location of file, useful in
-                          command substitution, e.g. cp file \$(a mark).
+  a    MARK [SUBDIR/]FILE Echo the true location of file, useful
+                          e.g. in: cp file \$(a mark dir/file.txt)
+  aget MARK [SUBDIR/]FILE Copy file to current directory
   agather MARK            List all targets for bookmark mark
   whence MARK             Menu-based selection for mark with multiple targets
 --
   ae MARK [SUBDIR/]FILE [editor options] Edit file in mark
-  av MARK [SUBDIR/]FILE [editor options]  View file in mark
+  av MARK [SUBDIR/]FILE [editor options] View file in mark
 --
   amibm                   See if the current directory is a bookmark
   bmgrep PATTERN          List all marks where target matches PATTERN
@@ -485,6 +487,9 @@ if [[ -n "$BASH_VERSION" ]]; then
         local part_dir="$(dirname "$part_unesc")"
         COMPREPLY=()
         # Cannot pipe to while as that's a subshell and we modify COMREPLY.
+# echo "[$part_dir]"
+# echo "[$part_unesc]"
+# echo "[${FUNCNAME[@]}]"
         while IFS='' read -r -d '' result; do
             # This is a bit of a weird hack because printf "%q\n" with no
             # arguments prints ''. It should be robust, because any actual
@@ -547,10 +552,16 @@ if [[ -n "$BASH_VERSION" ]]; then
             local cur_file="${COMP_WORDS[2]}"
             local app_dir="$(apparish "$tag" 2>/dev/null)"
             if [[ -d "$app_dir" ]]; then
-                # can't run in subshell as _apparix_comp_file modifies COMREPLY.
-                # Just hope that nothing goes wrong, basically
+                  # can't run in subshell as _apparix_comp_file modifies
+                  # COMREPLY.  Just hope that nothing goes wrong, basically
                 apx_silent pushd -- "$app_dir"
-                _apparix_comp_file "$1" "$cur_file"
+                  # below, just using "$cur_file", bash -c blows up down the
+                  # line.  sadly this breaks completion where user types a
+                  # quote (that is present in directory name).  However to MARK
+                  # <TAB> and to MARK xyz<TAB> still work on subdirectories
+                  # containing a quote as longs as the user does not meddle
+                  # with the quote(s) themself.
+                _apparix_comp_file "$1" $(printf %q "$cur_file")
                 apx_silent popd
             else
                 COMPREPLY=()
