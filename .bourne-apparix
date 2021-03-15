@@ -40,6 +40,7 @@ Apparix functions.
 --
   als  MARK [SUBDIR] [ls-options]  List mark directory or subdir
   ald  MARK [SUBDIR]      List subdirectories of mark directory or subdir
+                          ignores hidden directories
   aldr MARK [SUBDIR]      Like ald, recursively
   amd  MARK [SUBDIR] [mkdir options] Make directory in mark
   a    MARK [SUBDIR/]FILE Echo the true location of file, useful
@@ -217,13 +218,17 @@ function aget() {
 # With find argument/option order requirements not yet really amux material,
 # unless placeholder parachuting is added. 🤔 The outcome of apparix
 # *is* always just a simple string.
-# These versions print paths relative to target.
+# These versions print paths relative to target and ignore hidden files.
+# Future version perhaps pass in + parse flags to control
+# (1) prefix behaviour (-P for print prefix)
+# (2) hidden behaviour (-H for hidden)
+# Then also extract -maxdepth 1.
 function ald() {
     local loc
     if ! apx_onetwo $#; then apx_usage ald
     else
       loc="$(apparish "$@")" && \
-              find -L "$loc" -mindepth 1 -maxdepth 1 -type d -printf '%P\n'
+find -L "$loc" -mindepth 1 -maxdepth 1 -type d -a \( -name ".*" -prune -o -printf '%P\n' \)
     fi
 }
 # apparix listing of subdirectories of mark, recursively
@@ -232,7 +237,7 @@ function aldr() {
     if ! apx_onetwo $#; then apx_usage aldr
     else
       loc="$(apparish "$@")" && \
-              find -L "$loc" -mindepth 1 -type d -printf '%P\n'
+find -L "$loc" -mindepth 1 -type d -a \( -name ".*" -prune -o -printf '%P\n' \)
     fi
 }
 
