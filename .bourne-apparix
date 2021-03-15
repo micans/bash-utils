@@ -546,11 +546,11 @@ if [[ -n "$BASH_VERSION" ]]; then
                   # COMREPLY.  Just hope that nothing goes wrong, basically
                 apx_silent pushd -- "$app_dir"
                   # below, just using "$cur_file", bash -c blows up down the
-                  # line.  sadly this breaks completion where user types a
-                  # quote (that is present in directory name).  However to MARK
-                  # <TAB> and to MARK xyz<TAB> still work on subdirectories
-                  # containing a quote as longs as the user does not meddle
-                  # with the quote(s) themself.
+                  # line in the case that user types a quote (that is present
+                  # in directory name).  However to MARK <TAB> and to MARK
+                  # xyz<TAB> still work on subdirectories containing a quote as
+                  # longs as the user does not meddle with the quote(s)
+                  # themself.
                 _apparix_comp_file "$1" $(printf %q "$cur_file")
                 apx_silent popd
             else
