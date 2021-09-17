@@ -6,6 +6,8 @@ alias u3='cd ../../../'
 alias u4='cd ../../../../'
 alias m='cd -'
 
+alias fixpaste='printf "\e[?2004l"'
+
 alias bwork="bjobs | tail -n +2 | perl -ane '"'print "$F[2]\n";'"' | sort | uniq -c"
 alias duck1='du -ch -d 1  | sort -h'
 alias duck2='du -ch -d 2  | sort -h'
