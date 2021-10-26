@@ -1,0 +1,102 @@
+#!/bin/bash
+
+set -euo pipefail
+
+do_all=false
+do_last=true
+base=refs.last
+infix=
+do_dl=false
+update_map=false
+
+while getopts :i:hADM opt
+do
+    case "$opt" in
+    i)
+      infix=$OPTARG
+		base=refs.$OPTARG
+      ;;
+    D)
+      do_dl=true
+      ;;
+    M)
+      update_map=true
+      ;;
+    A)
+      do_all=true
+		do_last=false
+		base=refs.zut
+      ;;
+    h)
+      cat <<EOU
+Default action is to tally referer URLs
+Alternative with -D is to log downloads
+   -D uses a cached IP lookup;
+   add to IP cache in file .map with -M
+
+Default query last access log
+-i <NUM>   query access.log.<NUM>*, base becomes MODE.<NUM>
+-A         query all access.log* files, base becomes MODE.zut
+-D         query tar.gz downloads, not referers
+-M         update map (built for IPs that downloaded a tar.gz file)
+EOU
+      exit
+      ;;
+    :) echo "Flag $OPTARG needs argument"
+        exit 1;;
+    ?) echo "Flag $OPTARG unknown"              # Yes that's right, $OPTARG. bash bish bosh.
+        exit 1;;
+   esac
+done
+
+
+# just because I wanted one.
+rm -f readfromlogs
+mkfifo readfromlogs
+list=access.log
+
+if [[ $infix == 0 ]]; then
+   list=$(echo access.log.?.*)
+elif [[ ${#infix} == 1 ]]; then
+   list=$(echo access.log.$infix[^.]*)
+elif [[ ${#infix} == 2 ]]; then
+   list=$(echo access.log.$infix[^.].*)
+elif $do_all; then
+   list=$(echo access.log.*)
+fi
+
+echo "-- files $list"
+echo "-- $(zcat -f $list | wc -l) entries"
+zcat -f $list > readfromlogs &
+
+if $update_map; then
+   fnout=.add
+   > $fnout
+   grep ".tar.gz" readfromlogs | perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
+      name=$(dig +short -x $ip)
+      name=${name%.}
+      echo -e "$ip\t[$name]"
+      >&2 echo -e "$ip\t[$name]"
+   done >> $fnout
+   cat .map .add | sort > .mad
+   shopt -s nullglob
+   nmap=$(ls .map .map.* | wc -l)
+   mv .map .map.$nmap
+   mv .mad .map
+elif $do_dl; then
+   fnout=dl.${base#refs.}.txt
+   perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/\S+\s+(\S+).*?"GET (\S+.tar.gz).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs > $fnout
+   rev $fnout | sort | rev > $fnout.rev
+else
+   fnout=$base.ext
+   perl -ne '/".*?".*?(\d+)\s+\S+\s+"(.*?)"/ && print "$1-$2\n";' readfromlogs | sort | uniq -c | sort -n | perl -pe 's/-/     /' > $base.zut
+   grep -v micans.org $base.zut > $fnout
+   grep -v "\<\(ua\|ru\|kz\)\>" $fnout | grep -v "^  *1\>"
+fi
+
+echo "-- new $fnout"
+
+rm readfromlogs
+
+
+
