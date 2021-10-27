@@ -8,13 +8,25 @@ base=refs.last
 infix=
 do_dl=false
 update_map=false
+map_hook=.tar.gz
+dl_hook=.tar.gz
+tag=odl
 
-while getopts :i:hADM opt
+while getopts :b:i:d:m:hADM opt
 do
     case "$opt" in
     i)
       infix=$OPTARG
 		base=refs.$OPTARG
+      ;;
+    b)
+      tag=$OPTARG
+      ;;
+    m)
+      map_hook=$OPTARG
+      ;;
+    d)
+      dl_hook=$OPTARG
       ;;
     D)
       do_dl=true
@@ -37,7 +49,9 @@ Alternative with -D is to log downloads
 Default query last access log
 -i <NUM>   query access.log.<NUM>*, base becomes MODE.<NUM>
 -A         query all access.log* files, base becomes MODE.zut
--D         query tar.gz downloads, not referers
+-d <str>   grep <str> in input to query downloads
+-D         query downloads, not referers (default $dl_hook)
+-m <str>   grep <str> in input to add IPs to map
 -M         update map (built for IPs that downloaded a tar.gz file)
 EOU
       exit
@@ -72,7 +86,7 @@ zcat -f $list > readfromlogs &
 if $update_map; then
    fnout=.add
    > $fnout
-   grep ".tar.gz" readfromlogs | perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
+   grep "$map_hook" readfromlogs | perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
       name=$(dig +short -x $ip)
       name=${name%.}
       echo -e "$ip\t[$name]"
@@ -85,7 +99,9 @@ if $update_map; then
    mv .mad .map
 elif $do_dl; then
    fnout=dl.${base#refs.}.txt
-   perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/\S+\s+(\S+).*?"GET (\S+.tar.gz).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs > $fnout
+   fnout=$tag.${fnout#dl.}
+   export dl_hook
+   perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/\S+\s+(\S+).*?"GET (\S+$ENV{dl_hook}).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs > $fnout
    rev $fnout | sort | rev > $fnout.rev
 else
    fnout=$base.ext
