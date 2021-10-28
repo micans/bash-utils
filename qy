@@ -10,7 +10,7 @@ do_dl=false
 update_map=false
 map_hook=.tar.gz
 dl_hook=.tar.gz
-tag=odl
+tag=dl
 
 while getopts :b:i:d:m:hADM opt
 do
@@ -85,6 +85,7 @@ zcat -f $list > readfromlogs &
 
 if $update_map; then
    fnout=.add
+   echo "-- hook $map_hook (-m <hook>)"
    > $fnout
    grep "$map_hook" readfromlogs | perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
       name=$(dig +short -x $ip)
@@ -110,7 +111,7 @@ else
    grep -v "\<\(ua\|ru\|kz\)\>" $fnout | grep -v "^  *1\>"
 fi
 
-echo "-- new $fnout"
+echo "-- new $fnout ($(wc -l < $fnout) lines)"
 
 rm readfromlogs
 
