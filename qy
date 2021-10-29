@@ -1,6 +1,14 @@
 #!/bin/bash
 
-# todo: grep lines of interest, map address, tallyho.
+# Expects a set of referrer logs to live in the directory $LOGDIR.
+# Naming expecting to be
+#     access.log
+#     access.log.1.gz
+#     access.log.2.gz
+#     ..
+# Use -h for usage.
+
+# Todo: grep lines of interest, map address, tallyho.
 # can be done by invoking self from STDIN after grep;
 # need generic set of tally modes / queries.
 
