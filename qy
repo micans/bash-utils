@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Expects a set of referrer logs to live in the directory $LOGDIR.
-# Naming expecting to be
+# Naming expected to be
 #     access.log
 #     access.log.1.gz
 #     access.log.2.gz
@@ -26,10 +26,16 @@ update_map=false
 hook_map=.tar.gz
 hook_dl=.tar.gz
 tag_dl=dl
+remap_format=false
 
-while getopts :b:i:d:m:hADM opt
+fnout=
+
+while getopts :b:i:d:m:hADMT opt
 do
     case "$opt" in
+    T)
+		remap_format=true
+      ;;
     i)
       infix=$OPTARG
 		base=refs.$OPTARG
@@ -68,6 +74,7 @@ Default query last access log
 -D         query downloads, not referers (default $hook_dl)
 -m <str>   grep <str> in input to add IPs to map
 -M         update map (built for IPs that downloaded a tar.gz file)
+-T         remap format to tab-separated: IP MAPPEDIP URL STATUS REFERRER METHOD SIZE 
 EOU
       exit
       ;;
@@ -105,19 +112,27 @@ elif $do_all; then
    list=$(echo access.log.*)
 fi
 
-echo "-- files $list"
-echo "-- $(zcat -f $list | wc -l) entries"
-zcat -f $list > $Q/readfromlogs &
+>&2 echo "-- files $list"
+>&2 echo "-- $(zcat -f $list | wc -l) entries"
+>&2 zcat -f $list > $Q/readfromlogs &
 
 cd $Q
 
-if $update_map; then
+if $remap_format; then
+   perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+:\S+\s+(\S+)\s+\S+\s+\S+\s+\[.*?\]\s+"(\S+)\s+(.*?)\s+.*?"\s+(\d+)\s+(\d+)\s+"(.*?)"/&&(print "$1\t" . ($map{$1}?$map{$1}:"<>") . "\t$3\t$4\t$6\t$2\t$5\n")' < readfromlogs
+   #                                                            host:port ip=1  id    id        date      req=2   url=3         code=4  size=5   ref=6
+   # IP URL STATUS REFERRER TYPE SIZE 
+   #  1 3 4 6 2 5
+   # host:port ip clientid userid [date] "REQUESTTYPE URL" CODE objectsize referrer useragent
+elif $update_map; then
    fnout=.add
-   echo "-- hook $hook_map (-m <hook>)"
+   >&2 echo "-- hook $hook_map (-m <hook>)"
    > $fnout
    grep "$hook_map" readfromlogs | perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
       name=$(dig +short -x $ip)
-      name=${name%.}
+      name=$(echo $name)            # remove trailing ws
+      name=${name%.}                # remove trailing dot
+      name=$(tr ' ' '-' <<< $name)  # occassionally multi-line answer
       echo -e "$ip\t[$name]"
       >&2 echo -e "$ip\t[$name]"
    done >> $fnout
@@ -136,12 +151,20 @@ else
    fnout=$base.ext
    perl -ne '/".*?".*?(\d+)\s+\S+\s+"(.*?)"/ && print "$1-$2\n";' readfromlogs | sort | uniq -c | sort -n | perl -pe 's/-/     /' > $base.zut
    grep -v micans.org $base.zut > $fnout
-   grep -v "\<\(ua\|ru\|kz\)\>" $fnout | grep -v "^  *1\>"
+   # grep -v "\<\(ua\|ru\|kz\)\>" $fnout | grep -v "^  *1\>"
 fi
 
-echo "-- new $fnout ($(wc -l < $fnout) lines)"
+
+if [[ -n $fnout ]]; then
+   >&2 echo "-- new $fnout ($(wc -l < $fnout) lines)"
+fi
 
 rm readfromlogs
 
 
 
+# notes:
+# "I believe dig +short outputs two lines for you because the domain you query,
+# smtp.mydomain.net is a CNAME for smtp.ggs.mydomain.net, and dig prints the
+# intermediate resolution step.  You can probably rely on the last line from
+# dig's output being the IP you want, though."
