@@ -1,16 +1,23 @@
 #!/bin/bash
 
+# todo: grep lines of interest, map address, tallyho.
+# can be done by invoking self from STDIN after grep;
+# need generic set of tally modes / queries.
+
 set -euo pipefail
 
-do_all=false
+[[ -z ${Q+x} ]] && echo "Need Q variable set to query directory" && false
+[[ -z ${LOGDIR+x} ]] && echo "Need LOGDIR variable set to log directory" && false
+
 do_last=true
+do_all=false
 base=refs.last
 infix=
-do_dl=false
+do_dl=false                # default is tallying referer strings
 update_map=false
-map_hook=.tar.gz
-dl_hook=.tar.gz
-tag=dl
+hook_map=.tar.gz
+hook_dl=.tar.gz
+tag_dl=dl
 
 while getopts :b:i:d:m:hADM opt
 do
@@ -20,13 +27,13 @@ do
 		base=refs.$OPTARG
       ;;
     b)
-      tag=$OPTARG
+      tag_dl=$OPTARG
       ;;
     m)
-      map_hook=$OPTARG
+      hook_map=$OPTARG
       ;;
     d)
-      dl_hook=$OPTARG
+      hook_dl=$OPTARG
       ;;
     D)
       do_dl=true
@@ -50,7 +57,7 @@ Default query last access log
 -i <NUM>   query access.log.<NUM>*, base becomes MODE.<NUM>
 -A         query all access.log* files, base becomes MODE.zut
 -d <str>   grep <str> in input to query downloads
--D         query downloads, not referers (default $dl_hook)
+-D         query downloads, not referers (default $hook_dl)
 -m <str>   grep <str> in input to add IPs to map
 -M         update map (built for IPs that downloaded a tar.gz file)
 EOU
@@ -63,10 +70,21 @@ EOU
    esac
 done
 
+cd $LOGDIR
+
+read curnum < .curnum
+newlog=false
+while [[ -e access.log.$((curnum+1)).gz ]]; do
+   ((curnum += 1))
+   echo "-- archive $curnum"
+   newlog=true
+done
+
+if $newlog; then > $Q/.newlog; echo $curnum > .curnum; fi
 
 # just because I wanted one.
-rm -f readfromlogs
-mkfifo readfromlogs
+rm -f $Q/readfromlogs
+mkfifo $Q/readfromlogs
 list=access.log
 
 if [[ $infix == 0 ]]; then
@@ -74,35 +92,37 @@ if [[ $infix == 0 ]]; then
 elif [[ ${#infix} == 1 ]]; then
    list=$(echo access.log.$infix[^.]*)
 elif [[ ${#infix} == 2 ]]; then
-   list=$(echo access.log.$infix[^.].*)
+   list=$(echo access.log.$infix.*)
 elif $do_all; then
    list=$(echo access.log.*)
 fi
 
 echo "-- files $list"
 echo "-- $(zcat -f $list | wc -l) entries"
-zcat -f $list > readfromlogs &
+zcat -f $list > $Q/readfromlogs &
+
+cd $Q
 
 if $update_map; then
    fnout=.add
-   echo "-- hook $map_hook (-m <hook>)"
+   echo "-- hook $hook_map (-m <hook>)"
    > $fnout
-   grep "$map_hook" readfromlogs | perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
+   grep "$hook_map" readfromlogs | perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
       name=$(dig +short -x $ip)
       name=${name%.}
       echo -e "$ip\t[$name]"
       >&2 echo -e "$ip\t[$name]"
    done >> $fnout
-   cat .map .add | sort > .mad
+   cat .map .add | sort -V > .mad
    shopt -s nullglob
    nmap=$(ls .map .map.* | wc -l)
    mv .map .map.$nmap
    mv .mad .map
 elif $do_dl; then
    fnout=dl.${base#refs.}.txt
-   fnout=$tag.${fnout#dl.}
-   export dl_hook
-   perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/\S+\s+(\S+).*?"GET (\S+$ENV{dl_hook}).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs > $fnout
+   fnout=$tag_dl.${fnout#dl.}
+   export hook_dl
+   perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/\S+\s+(\S+).*?"GET (\S+$ENV{hook_dl}).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs > $fnout
    rev $fnout | sort | rev > $fnout.rev
 else
    fnout=$base.ext
