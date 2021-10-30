@@ -11,7 +11,7 @@
 # Todo
 # . generic set of tally modes / queries. Maybe datamash some queries.
 # . for (new) mappable visitors, sum up what interested them
-# . autofilter referrer spam
+# . autofilter referrer spam and crawlers
 
 set -euo pipefail
 
@@ -31,14 +31,18 @@ hook_map=mcl
 hook_dl=.tar.gz
 tag_dl=dl
 n_tail=+1                  # by default do everything in selection
+debug=false
 
 fnout=
 
-while getopts :b:i:d:l:m:hADMTRI opt
+while getopts :b:i:d:l:m:hADMTRI_ opt
 do
     case "$opt" in
     T)
 		remap_format=true
+      ;;
+    _)
+		debug=true
       ;;
     I)
 		read_stdin=true
@@ -71,7 +75,7 @@ do
 		base=refs.zut
       ;;
     h)
-      cat <<EOU
+      cat <<EOH
 Default action: using selected input expand IP map on trigger ($hook_map)
 Alternative with -D is to log downloads.
 Alternative with -R is to tally referrers.
@@ -87,11 +91,11 @@ Default query file 'access log'
 -b <str>   tag output with <str> (default $tag_dl)
 -D         query downloads, not referers (default $hook_dl)
 
--m <str>   grep <str> in input to add IPs to map (default $hook_map)
+-m <str>   grep "<str>" in input to add IPs to map (default $hook_map)
 
 -R         tally referrer URLs (all input, no subselection)
 -T         remap format to tsv: IP MAPPEDIP URL STATUS REFERRER METHOD SIZE 
-EOU
+EOH
       exit
       ;;
     :) echo "Flag $OPTARG needs argument"
@@ -174,11 +178,13 @@ elif $update_map; then
       echo -e "$ip\t[$name]"
       >&2 echo -e "$ip\t[$name]"
    done >> $fnout
-   cat .map .add | sort -u -V > .mad
-   shopt -s nullglob
-   nmap=$(ls .map .map.* | wc -l)
-   mv .map .map.$nmap
-   mv .mad .map
+   if ! $debug; then
+      cat .map .add | sort -u -V > .mad
+      shopt -s nullglob
+      nmap=$(ls .map .map.* | wc -l)
+      mv .map .map.$nmap
+      mv .mad .map
+   fi
 fi
 
 
