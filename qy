@@ -10,7 +10,7 @@
 
 # Todo: grep lines of interest, map address, tallyho.
 # can be done by invoking self from STDIN after grep;
-# need generic set of tally modes / queries.
+# need generic set of tally modes / queries. Maybe datamash some queries.
 
 set -euo pipefail
 
@@ -27,10 +27,11 @@ hook_map=.tar.gz
 hook_dl=.tar.gz
 tag_dl=dl
 remap_format=false
+n_tail=+1                  # by default do everything in selection
 
 fnout=
 
-while getopts :b:i:d:m:hADMT opt
+while getopts :b:i:d:l:m:hADMT opt
 do
     case "$opt" in
     T)
@@ -39,6 +40,9 @@ do
     i)
       infix=$OPTARG
 		base=refs.$OPTARG
+      ;;
+    l)
+      n_tail=$OPTARG
       ;;
     b)
       tag_dl=$OPTARG
@@ -62,18 +66,24 @@ do
       ;;
     h)
       cat <<EOU
-Default action is to tally referer URLs
-Alternative with -D is to log downloads
+Default action is to tally referer URLs.
+Alternative with -D is to log downloads.
    -D uses a cached IP lookup;
    add to IP cache in file .map with -M
 
 Default query last access log
+Input selection:
 -i <NUM>   query access.log.<NUM>*, base becomes MODE.<NUM>
 -A         query all access.log* files, base becomes MODE.zut
+-l <NUM>   query last <NUM> lines in selected input
+
 -d <str>   grep <str> in input to query downloads
+-b <str>   tag output with <str> (default $tag_dl)
 -D         query downloads, not referers (default $hook_dl)
+
 -m <str>   grep <str> in input to add IPs to map
 -M         update map (built for IPs that downloaded a tar.gz file)
+
 -T         remap format to tab-separated: IP MAPPEDIP URL STATUS REFERRER METHOD SIZE 
 EOU
       exit
@@ -98,8 +108,12 @@ done
 if $newlog; then > $Q/.newlog; echo $curnum > .curnum; fi
 
 # just because I wanted one.
-rm -f $Q/readfromlogs
-mkfifo $Q/readfromlogs
+source=$Q/readfromlogs
+
+trap "rm -f $source" EXIT
+
+rm -f $source
+mkfifo $source
 list=access.log
 
 if [[ $infix == 0 ]]; then
@@ -114,21 +128,23 @@ fi
 
 >&2 echo "-- files $list"
 >&2 echo "-- $(zcat -f $list | wc -l) entries"
->&2 zcat -f $list > $Q/readfromlogs &
+zcat -f $list | tail -n $n_tail > $Q/readfromlogs &
+# zcat -f $list > $Q/readfromlogs &
 
 cd $Q
 
 if $remap_format; then
    perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+:\S+\s+(\S+)\s+\S+\s+\S+\s+\[.*?\]\s+"(\S+)\s+(.*?)\s+.*?"\s+(\d+)\s+(\d+)\s+"(.*?)"/&&(print "$1\t" . ($map{$1}?$map{$1}:"<>") . "\t$3\t$4\t$6\t$2\t$5\n")' < readfromlogs
-   #                                                            host:port ip=1  id    id        date      req=2   url=3         code=4  size=5   ref=6
-   # IP URL STATUS REFERRER TYPE SIZE 
-   #  1 3 4 6 2 5
+   # parse input:                                               host:port  ip=1    id    id     date      req=2   url=3         code=4  size=5   ref=6
+   # our output: IP URL STATUS REFERRER TYPE SIZE 
+   #             1  3   4      6        2    5
    # host:port ip clientid userid [date] "REQUESTTYPE URL" CODE objectsize referrer useragent
 elif $update_map; then
+   # exit 14
    fnout=.add
    >&2 echo "-- hook $hook_map (-m <hook>)"
    > $fnout
-   grep "$hook_map" readfromlogs | perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
+   grep "$hook_map" < readfromlogs | perl -ne 'BEGIN{open(M,"<.map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;close(M)}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
       name=$(dig +short -x $ip)
       name=$(echo $name)            # remove trailing ws
       name=${name%.}                # remove trailing dot
@@ -136,7 +152,7 @@ elif $update_map; then
       echo -e "$ip\t[$name]"
       >&2 echo -e "$ip\t[$name]"
    done >> $fnout
-   cat .map .add | sort -V > .mad
+   cat .map .add | sort -u -V > .mad
    shopt -s nullglob
    nmap=$(ls .map .map.* | wc -l)
    mv .map .map.$nmap
@@ -145,9 +161,10 @@ elif $do_dl; then
    fnout=dl.${base#refs.}.txt
    fnout=$tag_dl.${fnout#dl.}
    export hook_dl
-   perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/\S+\s+(\S+).*?"GET (\S+$ENV{hook_dl}).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs > $fnout
+   perl -ne 'BEGIN{open("M",".map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;}/\S+\s+(\S+).*?"GET (\S+$ENV{hook_dl}).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs > $fnout
    rev $fnout | sort | rev > $fnout.rev
 else
+   >&2 echo "-- mode ref"
    fnout=$base.ext
    perl -ne '/".*?".*?(\d+)\s+\S+\s+"(.*?)"/ && print "$1-$2\n";' readfromlogs | sort | uniq -c | sort -n | perl -pe 's/-/     /' > $base.zut
    grep -v micans.org $base.zut > $fnout
@@ -159,7 +176,6 @@ if [[ -n $fnout ]]; then
    >&2 echo "-- new $fnout ($(wc -l < $fnout) lines)"
 fi
 
-rm readfromlogs
 
 
 
