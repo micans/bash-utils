@@ -35,7 +35,7 @@ debug=false
 
 fnout=
 
-while getopts :b:i:d:l:m:hADMTRI_ opt
+while getopts :b:i:d:l:m:hADTRI_ opt
 do
     case "$opt" in
     T)
@@ -99,23 +99,15 @@ EOH
       exit
       ;;
     :) echo "Flag $OPTARG needs argument"
-        exit 1;;
+       exit 1
+       ;;
     ?) echo "Flag $OPTARG unknown"              # Yes that's right, $OPTARG. bash bish bosh.
-        exit 1;;
+       exit 1
+       ;;
    esac
 done
 
 cd $LOGDIR
-
-read curnum < .curnum
-newlog=false
-while [[ -e access.log.$((curnum+1)).gz ]]; do
-   ((curnum += 1))
-   echo "-- archive $curnum"
-   newlog=true
-done
-
-if $newlog; then > $Q/.newlog; echo $curnum > .curnum; fi
 
 # just because I wanted one.
 source=$Q/readfromlogs
