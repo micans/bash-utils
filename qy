@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Moonshine script for access log queries.
 # Expects a set of referrer logs to live in the directory $QY_LOGDIR (or set with -L option).
 # Writes output in $QY_QRYDIR (or set with -Q option).
 #     Modes:
@@ -23,37 +24,42 @@
 
 set -euo pipefail
 
-do_last=true
-do_all=false
-do_week=false
-base=refs.last
-infix=
-do_dl=false                # default is tallying referer strings
+update_map=true            # Four main modes
+do_dl=false
 do_ref=false
-update_map=true
 remap_format=false
+
+debug=false
+
+do_last=true               # Input selection modes
+do_week=false              # Can use this for cron job per-week tallying
+infix=                     # select by log number (see help)
+do_all=false
 read_stdin=false
-hook_map=${QY_MAPTRIGGER:-/}
+n_tail=+1                  # by default do everything in selection
+
+base=refs.last
 hook_dl=.tar.gz
 tag_dl=dl
-n_tail=+1                  # by default do everything in selection
-debug=false
+
+QY_MAPTRIGGER=${QY_MAPTRIGGER:-/}
 QY_LOGDIR=${QY_LOGDIR:-QY_LOGDIR_unset}
 QY_QRYDIR=${QY_QRYDIR:-QY_QRYDIR_unset}
-
+QY_SITENAME=${QY_SITENAME:-QY_SITENAME_unset}
 
 fnout=
 
-while getopts :L:Q:b:i:d:l:m:WhADTRI_ opt
+while getopts :u:r:q:b:i:d:l:m:WhADTRI_ opt
 do
     case "$opt" in
     i) infix=$OPTARG; base=refs.$OPTARG ;;
     l) n_tail=$OPTARG ;;
     b) tag_dl=$OPTARG ;;
-    m) hook_map=$OPTARG ;;
+    m) QY_MAPTRIGGER=$OPTARG ;;
     d) hook_dl=$OPTARG ;;
-    L) QY_LOGDIR=$OPTARG ;;
-    Q) QY_QRYDIR=$OPTARG ;;
+    r) QY_LOGDIR=$OPTARG ;;
+    q) QY_QRYDIR=$OPTARG ;;
+    u) QY_SITENAME=$OPTARG ;;
     T) remap_format=true ;;
     _) debug=true ;;
     I) read_stdin=true ;;
@@ -62,12 +68,13 @@ do
     R) do_ref=true ;;
     A) do_all=true; do_last=false; base=refs.zut ;;
     h) cat <<EOH
-Default action: using selected input expand IP map on trigger ($hook_map)
+Default action: using selected input expand IP map on trigger ($QY_MAPTRIGGER)
 Alternative with -D is to log downloads.
 Alternative with -R is to tally referrers.
 
 Input selection:
 Default query file 'access log'
+-m <str>   grep "<str>" in input to add IPs to map (default $QY_MAPTRIGGER)
 -A         query all access.log* files, base becomes MODE.zut
 -W         query last 7 log files (currently hardcoded as access.log.1 access.log.[2-7].gz)
 -I         read STDIN
@@ -77,14 +84,13 @@ Default query file 'access log'
 
 -R         tally referrer URLs (all input, no subselection)
 -D         query downloads, not referers (default $hook_dl)
--d <str>   grep <str> in input to query downloads
+-d <str>   grep "<str>" in input to query downloads
 -b <str>   tag output with <str> (default $tag_dl)
+-T         remap input to tsv: IP MAPPEDIP URL STATUS REFERRER METHOD SIZE 
 
--m <str>   grep "<str>" in input to add IPs to map (default $hook_map)
-
--T         remap format to tsv: IP MAPPEDIP URL STATUS REFERRER METHOD SIZE 
--Q         set place for writing output (default $QY_QRYDIR, env QY_QRYDIR)
--L         set place for reading logs (default $QY_LOGDIR, env QY_LOGDIR)
+-q <str>   set place for writing output (default $QY_QRYDIR, env QY_QRYDIR)
+-r <str>   set place for reading logs (default $QY_LOGDIR, env QY_LOGDIR)
+-u <str>   set site name (default $QY_SITENAME, env QY_SITENAME)
 EOH
       exit 0 ;;
     :) echo "Flag $OPTARG needs argument"; exit 1 ;;
@@ -146,14 +152,14 @@ elif $do_ref; then
    >&2 echo "-- mode ref"
    fnout=$base.ext
    perl -ne '/".*?".*?(\d+)\s+\S+\s+"(.*?)"/ && print "$1-$2\n";' readfromlogs | sort | uniq -c | sort -n | perl -pe 's/-/     /' > $base.zut
-   grep -v micans.org $base.zut > $fnout
+   grep -v $QY_SITENAME $base.zut > $fnout
    # grep -v "\<\(ua\|ru\|kz\)\>" $fnout | grep -v "^  *1\>"
 elif $update_map; then
    # exit 14
    fnout=.add
-   >&2 echo "-- hook $hook_map (-m <hook>)"
+   >&2 echo "-- hook $QY_MAPTRIGGER (-m <hook>)"
    > $fnout
-   grep "$hook_map" < readfromlogs | perl -ne 'BEGIN{open(M,"<.map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;close(M)}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
+   grep "$QY_MAPTRIGGER" < readfromlogs | perl -ne 'BEGIN{open(M,"<.map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;close(M)}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
       name=$(dig +short -x $ip)
       name=$(echo $name)            # remove trailing ws
       name=${name%.}                # remove trailing dot
@@ -170,13 +176,9 @@ elif $update_map; then
    fi
 fi
 
-
 if [[ -n $fnout ]]; then
    >&2 echo "-- new $fnout ($(wc -l < $fnout) lines)"
 fi
-
-
-
 
 # notes:
 # "I believe dig +short outputs two lines for you because the domain you query,
