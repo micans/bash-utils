@@ -48,21 +48,21 @@ while getopts :L:Q:b:i:d:l:m:WhADTRI_ opt
 do
     case "$opt" in
     T)
-		remap_format=true
+      remap_format=true
       ;;
     _)
-		debug=true
+      debug=true
       ;;
     I)
-		read_stdin=true
+      read_stdin=true
       ;;
     i)
       infix=$OPTARG
-		base=refs.$OPTARG
+      base=refs.$OPTARG
       ;;
     W)
       do_week=true
-		base=refs.W$(date -d 'last Saturday' +%U)
+      base=refs.W$(date -d 'last Saturday' +%U)
       ;;
     l)
       n_tail=$OPTARG
@@ -90,8 +90,8 @@ do
       ;;
     A)
       do_all=true
-		do_last=false
-		base=refs.zut
+      do_last=false
+      base=refs.zut
       ;;
     h)
       cat <<EOH
