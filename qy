@@ -135,6 +135,7 @@ zcat -f $list | tail -n $n_tail > $QY_QRYDIR/readfromlogs &
 # zcat -f $list > $QY_QRYDIR/readfromlogs &
 
 cd $QY_QRYDIR
+touch .map
 
 if $remap_format; then
    perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+:\S+\s+(\S+)\s+\S+\s+\S+\s+\[.*?\]\s+"(\S+)\s+(.*?)\s+.*?"\s+(\d+)\s+(\d+)\s+"(.*?)"/&&(print "$1\t" . ($map{$1}?$map{$1}:"<>") . "\t$3\t$4\t$6\t$2\t$5\n")' < readfromlogs
