@@ -47,54 +47,21 @@ fnout=
 while getopts :L:Q:b:i:d:l:m:WhADTRI_ opt
 do
     case "$opt" in
-    T)
-      remap_format=true
-      ;;
-    _)
-      debug=true
-      ;;
-    I)
-      read_stdin=true
-      ;;
-    i)
-      infix=$OPTARG
-      base=refs.$OPTARG
-      ;;
-    W)
-      do_week=true
-      base=refs.W$(date -d 'last Saturday' +%U)
-      ;;
-    l)
-      n_tail=$OPTARG
-      ;;
-    b)
-      tag_dl=$OPTARG
-      ;;
-    m)
-      hook_map=$OPTARG
-      ;;
-    d)
-      hook_dl=$OPTARG
-      ;;
-    L)
-      QY_LOGDIR=$OPTARG
-      ;;
-    Q)
-      QY_QRYDIR=$OPTARG
-      ;;
-    D)
-      do_dl=true
-      ;;
-    R)
-      do_ref=true
-      ;;
-    A)
-      do_all=true
-      do_last=false
-      base=refs.zut
-      ;;
-    h)
-      cat <<EOH
+    i) infix=$OPTARG; base=refs.$OPTARG ;;
+    l) n_tail=$OPTARG ;;
+    b) tag_dl=$OPTARG ;;
+    m) hook_map=$OPTARG ;;
+    d) hook_dl=$OPTARG ;;
+    L) QY_LOGDIR=$OPTARG ;;
+    Q) QY_QRYDIR=$OPTARG ;;
+    T) remap_format=true ;;
+    _) debug=true ;;
+    I) read_stdin=true ;;
+    W) do_week=true; base=refs.W$(date -d 'last Saturday' +%U) ;;
+    D) do_dl=true ;;
+    R) do_ref=true ;;
+    A) do_all=true; do_last=false; base=refs.zut ;;
+    h) cat <<EOH
 Default action: using selected input expand IP map on trigger ($hook_map)
 Alternative with -D is to log downloads.
 Alternative with -R is to tally referrers.
@@ -119,14 +86,9 @@ Default query file 'access log'
 -Q         set place for writing output (default $QY_QRYDIR, env QY_QRYDIR)
 -L         set place for reading logs (default $QY_LOGDIR, env QY_LOGDIR)
 EOH
-      exit
-      ;;
-    :) echo "Flag $OPTARG needs argument"
-       exit 1
-       ;;
-    ?) echo "Flag $OPTARG unknown"              # Yes that's right, $OPTARG. bash bish bosh.
-       exit 1
-       ;;
+      exit 0 ;;
+    :) echo "Flag $OPTARG needs argument"; exit 1 ;;
+    ?) echo "Flag $OPTARG unknown"; exit 1 ;;
    esac
 done
 
