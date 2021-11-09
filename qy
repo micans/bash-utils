@@ -1,12 +1,20 @@
 #!/bin/bash
 
-# Expects a set of referrer logs to live in the directory $QY_LOGDIR.
-# Naming expected to be
+# Expects a set of referrer logs to live in the directory $QY_LOGDIR (or set with -L option).
+# Writes output in $QY_QRYDIR (or set with -Q option).
+#     Modes:
+# Default: try to reverse query IP addresses for lines that match $QY_MAPTRIGGER
+# (or set with -m), add to results cache in $QY_QRYDIR/.map
+# -R :     output a tally of referrer IDs
+# -D :     output a log of downloads
+# Different input selections and (output) modes are possible. See -h / EOH below.
+
+# Naming of log files expected to be
 #     access.log
-#     access.log.1.gz
+#     access.log.1
 #     access.log.2.gz
+#     access.log.3.gz
 #     ..
-# Use -h for usage.
 
 # Todo
 # . generic set of tally modes / queries. Maybe datamash some queries.
