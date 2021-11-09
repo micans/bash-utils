@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Expects a set of referrer logs to live in the directory $LOGDIR.
+# Expects a set of referrer logs to live in the directory $QY_LOGDIR.
 # Naming expected to be
 #     access.log
 #     access.log.1.gz
@@ -15,11 +15,9 @@
 
 set -euo pipefail
 
-[[ -z ${Q+x} ]] && echo "Need Q variable set to query directory" && false
-[[ -z ${LOGDIR+x} ]] && echo "Need LOGDIR variable set to log directory" && false
-
 do_last=true
 do_all=false
+do_week=false
 base=refs.last
 infix=
 do_dl=false                # default is tallying referer strings
@@ -27,15 +25,18 @@ do_ref=false
 update_map=true
 remap_format=false
 read_stdin=false
-hook_map=mcl
+hook_map=${QY_MAPTRIGGER:-/}
 hook_dl=.tar.gz
 tag_dl=dl
 n_tail=+1                  # by default do everything in selection
 debug=false
+QY_LOGDIR=${QY_LOGDIR:-QY_LOGDIR_unset}
+QY_QRYDIR=${QY_QRYDIR:-QY_QRYDIR_unset}
+
 
 fnout=
 
-while getopts :b:i:d:l:m:hADTRI_ opt
+while getopts :L:Q:b:i:d:l:m:WhADTRI_ opt
 do
     case "$opt" in
     T)
@@ -51,6 +52,10 @@ do
       infix=$OPTARG
 		base=refs.$OPTARG
       ;;
+    W)
+      do_week=true
+		base=refs.W$(date -d 'last Saturday' +%U)
+      ;;
     l)
       n_tail=$OPTARG
       ;;
@@ -62,6 +67,12 @@ do
       ;;
     d)
       hook_dl=$OPTARG
+      ;;
+    L)
+      QY_LOGDIR=$OPTARG
+      ;;
+    Q)
+      QY_QRYDIR=$OPTARG
       ;;
     D)
       do_dl=true
@@ -82,19 +93,23 @@ Alternative with -R is to tally referrers.
 
 Input selection:
 Default query file 'access log'
--i <NUM>   query access.log.<NUM>*, base becomes MODE.<NUM>
 -A         query all access.log* files, base becomes MODE.zut
--l <NUM>   query last <NUM> lines in selected input
+-W         query last 7 log files (currently hardcoded as access.log.1 access.log.[2-7].gz)
 -I         read STDIN
+-i <NUM>   -i 0: last 10 logs, -i 1: logs 10..19, -i 2: logs 20..29
+           base becomes MODE.<NUM>
+-l <NUM>   query last <NUM> lines in selected input
 
+-R         tally referrer URLs (all input, no subselection)
+-D         query downloads, not referers (default $hook_dl)
 -d <str>   grep <str> in input to query downloads
 -b <str>   tag output with <str> (default $tag_dl)
--D         query downloads, not referers (default $hook_dl)
 
 -m <str>   grep "<str>" in input to add IPs to map (default $hook_map)
 
--R         tally referrer URLs (all input, no subselection)
 -T         remap format to tsv: IP MAPPEDIP URL STATUS REFERRER METHOD SIZE 
+-Q         set place for writing output (default $QY_QRYDIR, env QY_QRYDIR)
+-L         set place for reading logs (default $QY_LOGDIR, env QY_LOGDIR)
 EOH
       exit
       ;;
@@ -107,10 +122,10 @@ EOH
    esac
 done
 
-cd $LOGDIR
+cd $QY_LOGDIR
 
 # just because I wanted one.
-source=$Q/readfromlogs
+source=$QY_QRYDIR/readfromlogs
 
 trap "rm -f $source" EXIT
 
@@ -120,10 +135,16 @@ list=access.log
 
 if $read_stdin; then
    list=-
+elif $do_week; then
+   list=$(echo access.log.1 access.log.[2-7].gz)
+elif [[ $infix == 1\. ]]; then
+   list=access.log.1
+elif [[ $infix =~ [2-9]\. ]]; then
+   list=$(echo access.log.$infix*)
 elif [[ $infix == 0 ]]; then
-   list=$(echo access.log.?.*)
+   list=$(echo access.log access.log.1 access.log.?.*)         # last 10 days
 elif [[ ${#infix} == 1 ]]; then
-   list=$(echo access.log.$infix[^.]*)
+   list=$(echo access.log.$infix[0-9]*)              # 10 day period 10..19 or 20..29
 elif [[ ${#infix} == 2 ]]; then
    list=$(echo access.log.$infix.*)
 elif $do_all; then
@@ -134,10 +155,10 @@ fi
 if ! $read_stdin; then
    >&2 echo "-- $(zcat -f $list | wc -l) entries"
 fi
-zcat -f $list | tail -n $n_tail > $Q/readfromlogs &
-# zcat -f $list > $Q/readfromlogs &
+zcat -f $list | tail -n $n_tail > $QY_QRYDIR/readfromlogs &
+# zcat -f $list > $QY_QRYDIR/readfromlogs &
 
-cd $Q
+cd $QY_QRYDIR
 
 if $remap_format; then
    perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+:\S+\s+(\S+)\s+\S+\s+\S+\s+\[.*?\]\s+"(\S+)\s+(.*?)\s+.*?"\s+(\d+)\s+(\d+)\s+"(.*?)"/&&(print "$1\t" . ($map{$1}?$map{$1}:"<>") . "\t$3\t$4\t$6\t$2\t$5\n")' < readfromlogs
