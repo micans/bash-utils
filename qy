@@ -32,14 +32,14 @@ remap_format=false
 
 debug=false
 
-do_last=true               # Input selection modes
-do_week=false              # Can use this for cron job per-week tallying
-do_all=false
-read_stdin=false
-n_tail=+1                  # by default do everything in selection
+                           # Default is to take access.log
+take_week=false            # Can use this for cron job per-week tallying
+take_all=false
+take_stdin=false
+take_n_tail=+1             # by default do everything in selection
 
 base=refs.last
-hook_dl=.tar.gz
+suffix_hook_dl=.tar.gz
 tag_dl=dl
 
 QY_MAPTRIGGER=${QY_MAPTRIGGER:-/}
@@ -53,20 +53,20 @@ fnout=
 while getopts :u:r:q:b:d:l:m:WhADTRI_ opt
 do
     case "$opt" in
-    l) n_tail=$OPTARG ;;
+    l) take_n_tail=$OPTARG ;;
     b) base=refs.$OPTARG ;;
     m) QY_MAPTRIGGER=$OPTARG ;;
-    d) hook_dl=$OPTARG ;;
+    d) suffix_hook_dl=$OPTARG ;;
     r) QY_LOGDIR=$OPTARG ;;
     q) QY_QRYDIR=$OPTARG ;;
     u) QY_SITENAME=$OPTARG ;;
     T) remap_format=true ;;
     _) debug=true ;;
-    I) read_stdin=true ;;
-    W) do_week=true; base=refs.w$(date -d "$QY_WEEKANCHOR" +%U) ;;
+    I) take_stdin=true ;;
+    W) take_week=true; base=refs.w$(date -d "$QY_WEEKANCHOR" +%U) ;;
     D) do_dl=true ;;
     R) do_ref=true ;;
-    A) do_all=true; do_last=false; base=refs.zut ;;
+    A) take_all=true; base=refs.zut ;;
     h) cat <<EOH
 Default action: using selected input expand IP map on trigger ($QY_MAPTRIGGER)
 Alternative with -D is to log downloads.
@@ -83,7 +83,7 @@ Default query file 'access log'
 -l <NUM>   query last <NUM> lines in selected input
 
 -R         tally referrer URLs
--D         query downloads, not referers (default $hook_dl)
+-D         query downloads, not referers (default $suffix_hook_dl)
 -d <str>   grep "<str>" in input to query downloads
 -b <str>   tag output with <str> (default $tag_dl)
 -T         remap input to tsv: IP MAPPEDIP URL STATUS REFERRER METHOD SIZE 
@@ -109,18 +109,20 @@ rm -f $source
 mkfifo $source
 
 list=access.log
-if $read_stdin; then
+if $take_stdin; then
    list=-
-elif $do_week; then
+elif $take_week; then
    list=$(echo access.log.1 access.log.[2-7].gz)
+elif $take_all; then
+   list=$(echo access.log*)
 fi
 
 
 >&2 echo "-- files $list"
-if ! $read_stdin; then
+if ! $take_stdin; then
    >&2 echo "-- $(zcat -f $list | wc -l) entries"
 fi
-zcat -f $list | tail -n $n_tail > $QY_QRYDIR/readfromlogs &
+zcat -f $list | tail -n $take_n_tail > $QY_QRYDIR/readfromlogs &
 # zcat -f $list > $QY_QRYDIR/readfromlogs &
 
 cd $QY_QRYDIR
@@ -135,8 +137,9 @@ if $remap_format; then
 elif $do_dl; then
    fnout=dl.${base#refs.}.txt
    fnout=$tag_dl.${fnout#dl.}
-   export hook_dl
-   perl -ne 'BEGIN{open("M",".map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;}/\S+\s+(\S+).*?"GET (\S+$ENV{hook_dl}).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs > $fnout
+echo "--<$fnout>--"
+   export QYDL=$suffix_hook_dl
+   perl -ne 'BEGIN{open("M",".map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;}/\S+\s+(\S+).*?"GET (\S+$ENV{QYDL}).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs > $fnout
    rev $fnout | sort | rev > $fnout.rev
 elif $do_ref; then
    >&2 echo "-- mode ref"
