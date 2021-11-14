@@ -24,19 +24,15 @@
 # . autofilter referrer spam and crawlers
 
 set -euo pipefail
-                           # Four main modes.
-                           # Default is to update IP map
-mode_track_dl=false
-mode_track_ref=false
-mode_remap_format=false
+                 # Four main modes. Default is to update IP map
+mode="ipmap"     # "track_dl" "track_ref" "remap_format" are the others.
+
+                 # Input modes. Default is to take access.log
+mode_take="last" # "week" "all" "stdin" are the others.
+                 # "week" grabs access.log.1 up to 7.
+take_n_tail=+1   # by default do everything in selection
 
 debug=false
-                           # Input modes.
-                           # Default is to take access.log
-take_week=false            # Can use this for cron job per-week tallying
-take_all=false
-take_stdin=false
-take_n_tail=+1             # by default do everything in selection
 
 base=refs.last
 suffix_hook_dl=.tar.gz
@@ -53,20 +49,20 @@ fnout=
 while getopts :u:r:q:b:d:l:m:WhADTRI_ opt
 do
     case "$opt" in
+    _) debug=true ;;
     l) take_n_tail=$OPTARG ;;
     b) base=refs.$OPTARG ;;
     m) QY_MAPTRIGGER=$OPTARG ;;
     d) suffix_hook_dl=$OPTARG ;;
-    r) QY_LOGDIR=$OPTARG ;;
-    q) QY_QRYDIR=$OPTARG ;;
-    u) QY_SITENAME=$OPTARG ;;
-    T) mode_remap_format=true ;;
-    _) debug=true ;;
-    I) take_stdin=true ;;
-    W) take_week=true; base=refs.w$(date -d "$QY_WEEKANCHOR" +%U) ;;
-    D) mode_track_dl=true ;;
-    R) mode_track_ref=true ;;
-    A) take_all=true; base=refs.zut ;;
+       r) QY_LOGDIR=$OPTARG ;;
+       q) QY_QRYDIR=$OPTARG ;;
+       u) QY_SITENAME=$OPTARG ;;
+    I) mode_take="stdin" ;;
+    W) mode_take="week"; base=refs.w$(date -d "$QY_WEEKANCHOR" +%U) ;;
+    A) mode_take="all"; base=refs.zut ;;
+       D) mode="track_dl" ;;
+       R) mode="track_ref" ;;
+       T) mode="remap_format" ;;
     h) cat <<EOH
 Default action: using selected input expand IP map on trigger ($QY_MAPTRIGGER)
 Alternative with -D is to log downloads.
@@ -108,18 +104,21 @@ trap "rm -f $source" EXIT
 rm -f $source
 mkfifo $source
 
-list=access.log
-if $take_stdin; then
+if [[ $mode_take == "stdin" ]]; then
    list=-
-elif $take_week; then
+elif [[ $mode_take == "last" ]]; then
+   list=access.log
+elif [[ $mode_take == "week" ]]; then
    list=$(echo access.log.1 access.log.[2-7].gz)
-elif $take_all; then
+elif [[ $mode_take == "all" ]]; then
    list=$(echo access.log*)
+else
+   >&2 echo "-- take mode $mode_take wants weird"
+   false
 fi
 
-
 >&2 echo "-- files $list"
-if ! $take_stdin; then
+if [[ $mode_take != "stdin" ]]; then
    >&2 echo "-- $(zcat -f $list | wc -l) entries"
 fi
 zcat -f $list | tail -n $take_n_tail > $QY_QRYDIR/readfromlogs &
@@ -128,26 +127,25 @@ zcat -f $list | tail -n $take_n_tail > $QY_QRYDIR/readfromlogs &
 cd $QY_QRYDIR
 touch .map
 
-if $mode_remap_format; then
+if [[ $mode == "remap_format" ]]; then
    perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+:\S+\s+(\S+)\s+\S+\s+\S+\s+\[.*?\]\s+"(\S+)\s+(.*?)\s+.*?"\s+(\d+)\s+(\d+)\s+"(.*?)"/&&(print "$1\t" . ($map{$1}?$map{$1}:"<>") . "\t$3\t$4\t$6\t$2\t$5\n")' < readfromlogs
    # parse input:                                               host:port  ip=1    id    id     date      req=2   url=3         code=4  size=5   ref=6
    # our output: IP URL STATUS REFERRER TYPE SIZE 
    #             1  3   4      6        2    5
    # host:port ip clientid userid [date] "REQUESTTYPE URL" CODE objectsize referrer useragent
-elif $mode_track_dl; then
+elif [[ $mode == "track_dl" ]]; then
    fnout=dl.${base#refs.}.txt
    fnout=$tag_dl.${fnout#dl.}
-echo "--<$fnout>--"
    export QYDL=$suffix_hook_dl
    perl -ne 'BEGIN{open("M",".map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;}/\S+\s+(\S+).*?"GET (\S+$ENV{QYDL}).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs > $fnout
    rev $fnout | sort | rev > $fnout.rev
-elif $mode_track_ref; then
+elif [[ $mode == "track_ref" ]]; then
    >&2 echo "-- mode ref"
    fnout=$base.ext
    perl -ne '/".*?".*?(\d+)\s+\S+\s+"(.*?)"/ && print "$1-$2\n";' readfromlogs | sort | uniq -c | sort -n | perl -pe 's/-/     /' > $base.zut
    grep -v $QY_SITENAME $base.zut > $fnout
    # grep -v "\<\(ua\|ru\|kz\)\>" $fnout | grep -v "^  *1\>"
-else
+elif [[ $mode == "ipmap" ]]; then
    # exit 14
    fnout=.add
    >&2 echo "-- hook $QY_MAPTRIGGER (-m <hook>)"
@@ -167,6 +165,9 @@ else
       mv .map .map.$nmap
       mv .mad .map
    fi
+else
+   >&2 echo "-- mode $mode is not a mode, peculiarly"
+   false
 fi
 
 if [[ -n $fnout ]]; then
