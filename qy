@@ -24,14 +24,14 @@
 # . autofilter referrer spam and crawlers
 
 set -euo pipefail
-
-update_map=true            # Four main modes
-do_dl=false
-do_ref=false
-remap_format=false
+                           # Four main modes.
+                           # Default is to update IP map
+mode_track_dl=false
+mode_track_ref=false
+mode_remap_format=false
 
 debug=false
-
+                           # Input modes.
                            # Default is to take access.log
 take_week=false            # Can use this for cron job per-week tallying
 take_all=false
@@ -60,12 +60,12 @@ do
     r) QY_LOGDIR=$OPTARG ;;
     q) QY_QRYDIR=$OPTARG ;;
     u) QY_SITENAME=$OPTARG ;;
-    T) remap_format=true ;;
+    T) mode_remap_format=true ;;
     _) debug=true ;;
     I) take_stdin=true ;;
     W) take_week=true; base=refs.w$(date -d "$QY_WEEKANCHOR" +%U) ;;
-    D) do_dl=true ;;
-    R) do_ref=true ;;
+    D) mode_track_dl=true ;;
+    R) mode_track_ref=true ;;
     A) take_all=true; base=refs.zut ;;
     h) cat <<EOH
 Default action: using selected input expand IP map on trigger ($QY_MAPTRIGGER)
@@ -128,26 +128,26 @@ zcat -f $list | tail -n $take_n_tail > $QY_QRYDIR/readfromlogs &
 cd $QY_QRYDIR
 touch .map
 
-if $remap_format; then
+if $mode_remap_format; then
    perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+:\S+\s+(\S+)\s+\S+\s+\S+\s+\[.*?\]\s+"(\S+)\s+(.*?)\s+.*?"\s+(\d+)\s+(\d+)\s+"(.*?)"/&&(print "$1\t" . ($map{$1}?$map{$1}:"<>") . "\t$3\t$4\t$6\t$2\t$5\n")' < readfromlogs
    # parse input:                                               host:port  ip=1    id    id     date      req=2   url=3         code=4  size=5   ref=6
    # our output: IP URL STATUS REFERRER TYPE SIZE 
    #             1  3   4      6        2    5
    # host:port ip clientid userid [date] "REQUESTTYPE URL" CODE objectsize referrer useragent
-elif $do_dl; then
+elif $mode_track_dl; then
    fnout=dl.${base#refs.}.txt
    fnout=$tag_dl.${fnout#dl.}
 echo "--<$fnout>--"
    export QYDL=$suffix_hook_dl
    perl -ne 'BEGIN{open("M",".map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;}/\S+\s+(\S+).*?"GET (\S+$ENV{QYDL}).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs > $fnout
    rev $fnout | sort | rev > $fnout.rev
-elif $do_ref; then
+elif $mode_track_ref; then
    >&2 echo "-- mode ref"
    fnout=$base.ext
    perl -ne '/".*?".*?(\d+)\s+\S+\s+"(.*?)"/ && print "$1-$2\n";' readfromlogs | sort | uniq -c | sort -n | perl -pe 's/-/     /' > $base.zut
    grep -v $QY_SITENAME $base.zut > $fnout
    # grep -v "\<\(ua\|ru\|kz\)\>" $fnout | grep -v "^  *1\>"
-elif $update_map; then
+else
    # exit 14
    fnout=.add
    >&2 echo "-- hook $QY_MAPTRIGGER (-m <hook>)"
