@@ -8,7 +8,7 @@
 # (or set with -m), add to results cache in $QY_QRYDIR/.map
 # -R :     output a tally of referrer IDs
 # -D :     output a log of downloads
-# Different input selections and (output) modes are possible. See -h / EOH below.
+# Different input selections and (output) modes are possible. See h) / EOH below.
 
 # Naming of log files expected to be
 #     access.log
@@ -18,6 +18,7 @@
 #     ..
 
 # Todo
+# . allow filter-by-field (rather than e.g. grep 404 in everything)
 # . generic set of tally modes / queries. Maybe datamash some queries.
 # . for (new) mappable visitors, sum up what interested them
 # . autofilter referrer spam and crawlers
@@ -33,7 +34,6 @@ debug=false
 
 do_last=true               # Input selection modes
 do_week=false              # Can use this for cron job per-week tallying
-infix=                     # select by log number (see help)
 do_all=false
 read_stdin=false
 n_tail=+1                  # by default do everything in selection
@@ -46,15 +46,15 @@ QY_MAPTRIGGER=${QY_MAPTRIGGER:-/}
 QY_LOGDIR=${QY_LOGDIR:-QY_LOGDIR_unset}
 QY_QRYDIR=${QY_QRYDIR:-QY_QRYDIR_unset}
 QY_SITENAME=${QY_SITENAME:-QY_SITENAME_unset}
+QY_WEEKANCHOR=${QY_WEEKANCHOR:-'last Saturday'}
 
 fnout=
 
-while getopts :u:r:q:b:i:d:l:m:WhADTRI_ opt
+while getopts :u:r:q:b:d:l:m:WhADTRI_ opt
 do
     case "$opt" in
-    i) infix=$OPTARG; base=refs.$OPTARG ;;
     l) n_tail=$OPTARG ;;
-    b) tag_dl=$OPTARG ;;
+    b) base=refs.$OPTARG ;;
     m) QY_MAPTRIGGER=$OPTARG ;;
     d) hook_dl=$OPTARG ;;
     r) QY_LOGDIR=$OPTARG ;;
@@ -63,7 +63,7 @@ do
     T) remap_format=true ;;
     _) debug=true ;;
     I) read_stdin=true ;;
-    W) do_week=true; base=refs.W$(date -d 'last Saturday' +%U) ;;
+    W) do_week=true; base=refs.w$(date -d "$QY_WEEKANCHOR" +%U) ;;
     D) do_dl=true ;;
     R) do_ref=true ;;
     A) do_all=true; do_last=false; base=refs.zut ;;
@@ -77,12 +77,12 @@ Default query file 'access log'
 -m <str>   grep "<str>" in input to add IPs to map (default $QY_MAPTRIGGER)
 -A         query all access.log* files, base becomes MODE.zut
 -W         query last 7 log files (currently hardcoded as access.log.1 access.log.[2-7].gz)
+           Output is indexed by week in year as it was: '$QY_WEEKANCHOR' (env QY_WEEKANCHOR)
+           (hook intended for use in weekly cron jobs)
 -I         read STDIN
--i <NUM>   -i 0: last 10 logs, -i 1: logs 10..19, -i 2: logs 20..29
-           base becomes MODE.<NUM>
 -l <NUM>   query last <NUM> lines in selected input
 
--R         tally referrer URLs (all input, no subselection)
+-R         tally referrer URLs
 -D         query downloads, not referers (default $hook_dl)
 -d <str>   grep "<str>" in input to query downloads
 -b <str>   tag output with <str> (default $tag_dl)
@@ -107,25 +107,14 @@ trap "rm -f $source" EXIT
 
 rm -f $source
 mkfifo $source
-list=access.log
 
+list=access.log
 if $read_stdin; then
    list=-
 elif $do_week; then
    list=$(echo access.log.1 access.log.[2-7].gz)
-elif [[ $infix == 1\. ]]; then
-   list=access.log.1
-elif [[ $infix =~ [2-9]\. ]]; then
-   list=$(echo access.log.$infix*)
-elif [[ $infix == 0 ]]; then
-   list=$(echo access.log access.log.1 access.log.?.*)         # last 10 days
-elif [[ ${#infix} == 1 ]]; then
-   list=$(echo access.log.$infix[0-9]*)              # 10 day period 10..19 or 20..29
-elif [[ ${#infix} == 2 ]]; then
-   list=$(echo access.log.$infix.*)
-elif $do_all; then
-   list=$(echo access.log.*)
 fi
+
 
 >&2 echo "-- files $list"
 if ! $read_stdin; then
