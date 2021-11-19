@@ -3,13 +3,7 @@
 # Moonshine script for access log queries.
 # Expects a set of referrer logs to live in the directory $QY_LOGDIR (or set with -r option).
 # Writes output in $QY_QRYDIR (or set with -q option).
-#     Modes:
-# Default: try to reverse query IP addresses for lines that match $QY_MAPTRIGGER
-# (or set with -m), add to results cache in $QY_QRYDIR/.map
-# -R :     output a tally of referrer IDs
-# -D :     output a log of downloads
-# Different input selections and (output) modes are possible. See h) / EOH below.
-
+# Modes: see -h
 # Naming of log files expected to be
 #     access.log
 #     access.log.1
@@ -18,71 +12,66 @@
 #     ..
 
 # Todo
+# . use of fifo means it cannot read from itself yet (name+pid + double fifo?)
 # . allow filter-by-field (rather than e.g. grep 404 in everything)
 # . generic set of tally modes / queries. Maybe datamash some queries.
+#     -> top pages add number of different hosts
 # . for (new) mappable visitors, sum up what interested them
 # . autofilter referrer spam and crawlers
 
 set -euo pipefail
-                 # Four main modes. Default is to update IP map
-mode="ipmap"     # "track_dl" "track_ref" "remap_format" are the others.
+                 # Five main modes. Default is to update IP map
+mode="map"       # "dl" "ref" "tsv" "copy" are the others.
 
                  # Input modes. Default is to take access.log
-mode_take="last" # "week" "all" "stdin" are the others.
+mode_take="curr" # "week" "all" "stdin" "prev" are the others.
                  # "week" grabs access.log.1 up to 7.
 take_n_tail=+1   # by default do everything in selection
 
 debug=false
 
-base=refs.last
-suffix_hook_dl=.tar.gz
-tag_dl=dl
-
 QY_MAPTRIGGER=${QY_MAPTRIGGER:-/}
+QY_DLPATTERN=${QY_DLPATTERN:-.tar.gz}
 QY_LOGDIR=${QY_LOGDIR:-QY_LOGDIR_unset}
 QY_QRYDIR=${QY_QRYDIR:-QY_QRYDIR_unset}
 QY_SITENAME=${QY_SITENAME:-QY_SITENAME_unset}
 QY_WEEKANCHOR=${QY_WEEKANCHOR:-'last Saturday'}
 
+tag_dl=dl        # Current needs this.
 fnout=
+base=
+list=
+taketag=
 
-while getopts :u:r:q:b:d:l:m:WhADTRI_ opt
+while getopts :u:r:M:q:b:d:t:l:m:h_ opt
 do
     case "$opt" in
     _) debug=true ;;
     l) take_n_tail=$OPTARG ;;
     b) base=refs.$OPTARG ;;
-    m) QY_MAPTRIGGER=$OPTARG ;;
-    d) suffix_hook_dl=$OPTARG ;;
-       r) QY_LOGDIR=$OPTARG ;;
-       q) QY_QRYDIR=$OPTARG ;;
-       u) QY_SITENAME=$OPTARG ;;
-    I) mode_take="stdin" ;;
-    W) mode_take="week"; base=refs.w$(date -d "$QY_WEEKANCHOR" +%U) ;;
-    A) mode_take="all"; base=refs.zut ;;
-       D) mode="track_dl" ;;
-       R) mode="track_ref" ;;
-       T) mode="remap_format" ;;
+    M) QY_MAPTRIGGER=$OPTARG ;;
+    d) QY_DLPATTERN=$OPTARG ;;
+    r) QY_LOGDIR=$OPTARG ;;
+    q) QY_QRYDIR=$OPTARG ;;
+    u) QY_SITENAME=$OPTARG ;;
+    t) mode_take=$OPTARG ;;
+    m) mode=$OPTARG ;;
     h) cat <<EOH
 Default action: using selected input expand IP map on trigger ($QY_MAPTRIGGER)
-Alternative with -D is to log downloads.
-Alternative with -R is to tally referrers.
+-m <mode>  one of "map" (default) "ref" "dl" "copy" "tsv"
+-M <str>   grep "<str>" in input to add IPs to map (default $QY_MAPTRIGGER)
+           "tsv": remap input to tsv: IP MAPPEDIP URL STATUS REFERRER METHOD SIZE 
 
 Input selection:
-Default query file 'access log'
--m <str>   grep "<str>" in input to add IPs to map (default $QY_MAPTRIGGER)
--A         query all access.log* files, base becomes MODE.zut
--W         query last 7 log files (currently hardcoded as access.log.1 access.log.[2-7].gz)
+Default query file 'access log' (-t curr)
+-t <mode>  one of "prev" "curr" (default) "week" "all" "stdin" 
+           "week": query last 7 log files (currently hardcoded as access.log.1 access.log.[2-7].gz)
            Output is indexed by week in year as it was: '$QY_WEEKANCHOR' (env QY_WEEKANCHOR)
            (hook intended for use in weekly cron jobs)
--I         read STDIN
 -l <NUM>   query last <NUM> lines in selected input
 
--R         tally referrer URLs
--D         query downloads, not referers (default $suffix_hook_dl)
--d <str>   grep "<str>" in input to query downloads
--b <str>   tag output with <str> (default $tag_dl)
--T         remap input to tsv: IP MAPPEDIP URL STATUS REFERRER METHOD SIZE 
+-d <str>   grep "<str>" in input to query downloads (default $QY_DLPATTERN env QY_DLPATTERN)
+-b <str>   tag output with <str> (default depends on -t argument)
 
 -q <str>   set place for writing output (default $QY_QRYDIR, env QY_QRYDIR)
 -r <str>   set place for reading logs (default $QY_LOGDIR, env QY_LOGDIR)
@@ -94,6 +83,34 @@ EOH
    esac
 done
 
+if [[ $mode_take == "stdin" ]]; then
+   taketag=stdin
+   list=-
+elif [[ $mode_take == "week" ]]; then
+   taketag=w$(date -d "$QY_WEEKANCHOR" +%U)
+   list=$(echo access.log.1 access.log.[2-7].gz)
+elif [[ $mode_take == "curr" ]]; then
+   taketag=last
+   list=access.log
+elif [[ $mode_take == "prev" ]]; then
+   taketag=$(date -d "yesterday" +%y-%j)
+   list=access.log.1
+elif [[ $mode_take == "all" ]]; then
+   taketag="z"
+   list=$(echo access.log*)
+else
+   echo "Cannot take [$mode_take]"
+   false
+fi
+
+if [[ -z $base ]]; then base=refs.$taketag; fi
+
+known_modes="dl ref copy map tsv"
+if ! grep -q "\<copy\>" <<< "$known_modes"; then
+   echo "Not a know mode [$mode] (choose from $known_modes)"
+   false
+fi
+
 cd $QY_LOGDIR
 
 # just because I wanted one.
@@ -103,19 +120,6 @@ trap "rm -f $source" EXIT
 
 rm -f $source
 mkfifo $source
-
-if [[ $mode_take == "stdin" ]]; then
-   list=-
-elif [[ $mode_take == "last" ]]; then
-   list=access.log
-elif [[ $mode_take == "week" ]]; then
-   list=$(echo access.log.1 access.log.[2-7].gz)
-elif [[ $mode_take == "all" ]]; then
-   list=$(echo access.log*)
-else
-   >&2 echo "-- take mode $mode_take wants weird"
-   false
-fi
 
 >&2 echo "-- files $list"
 if [[ $mode_take != "stdin" ]]; then
@@ -127,25 +131,27 @@ zcat -f $list | tail -n $take_n_tail > $QY_QRYDIR/readfromlogs &
 cd $QY_QRYDIR
 touch .map
 
-if [[ $mode == "remap_format" ]]; then
+if [[ $mode == "copy" ]]; then
+   cat < readfromlogs | gzip > a.${base#refs.}.gz
+elif [[ $mode == "tsv" ]]; then
    perl -ne 'BEGIN{open("M",".map");%map=map{chomp;split}<M>;}/^\S+:\S+\s+(\S+)\s+\S+\s+\S+\s+\[.*?\]\s+"(\S+)\s+(.*?)\s+.*?"\s+(\d+)\s+(\d+)\s+"(.*?)"/&&(print "$1\t" . ($map{$1}?$map{$1}:"<>") . "\t$3\t$4\t$6\t$2\t$5\n")' < readfromlogs
    # parse input:                                               host:port  ip=1    id    id     date      req=2   url=3         code=4  size=5   ref=6
    # our output: IP URL STATUS REFERRER TYPE SIZE 
    #             1  3   4      6        2    5
    # host:port ip clientid userid [date] "REQUESTTYPE URL" CODE objectsize referrer useragent
-elif [[ $mode == "track_dl" ]]; then
+elif [[ $mode == "dl" ]]; then
    fnout=dl.${base#refs.}.txt
    fnout=$tag_dl.${fnout#dl.}
-   export QYDL=$suffix_hook_dl
+   export QYDL=$QY_DLPATTERN
    perl -ne 'BEGIN{open("M",".map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;}/\S+\s+(\S+).*?"GET (\S+$ENV{QYDL}).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs > $fnout
    rev $fnout | sort | rev > $fnout.rev
-elif [[ $mode == "track_ref" ]]; then
+elif [[ $mode == "ref" ]]; then
    >&2 echo "-- mode ref"
    fnout=$base.ext
    perl -ne '/".*?".*?(\d+)\s+\S+\s+"(.*?)"/ && print "$1-$2\n";' readfromlogs | sort | uniq -c | sort -n | perl -pe 's/-/     /' > $base.zut
    grep -v $QY_SITENAME $base.zut > $fnout
    # grep -v "\<\(ua\|ru\|kz\)\>" $fnout | grep -v "^  *1\>"
-elif [[ $mode == "ipmap" ]]; then
+elif [[ $mode == "map" ]]; then
    # exit 14
    fnout=.add
    >&2 echo "-- hook $QY_MAPTRIGGER (-m <hook>)"
@@ -177,5 +183,5 @@ fi
 # notes:
 # "I believe dig +short outputs two lines for you because the domain you query,
 # smtp.mydomain.net is a CNAME for smtp.ggs.mydomain.net, and dig prints the
-# intermediate resolution step.  You can probably rely on the last line from
-# dig's output being the IP you want, though."
+# intermediate resolution step.
+
