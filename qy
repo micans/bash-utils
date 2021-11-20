@@ -59,8 +59,11 @@ do
     h) cat <<EOH
 Default action: using selected input expand IP map on trigger ($QY_MAPTRIGGER)
 -m <mode>  one of "map" (default) "ref" "dl" "copy" "tsv"
--M <str>   grep "<str>" in input to add IPs to map (default $QY_MAPTRIGGER)
            "tsv": remap input to tsv: IP MAPPEDIP URL STATUS REFERRER METHOD SIZE 
+           "ref": tally referrer URLs
+           "dl":  tally downloads
+           "copy": copy input verbatim
+-M <str>   grep "<str>" in input to add IPs to map (default $QY_MAPTRIGGER)
 
 Input selection:
 Default query file 'access log' (-t curr)
@@ -154,7 +157,7 @@ elif [[ $mode == "ref" ]]; then
 elif [[ $mode == "map" ]]; then
    # exit 14
    fnout=.add
-   >&2 echo "-- hook $QY_MAPTRIGGER (-m <hook>)"
+   >&2 echo "-- hook $QY_MAPTRIGGER (-M <hook>)"
    > .add
    grep "$QY_MAPTRIGGER" < readfromlogs | perl -ne 'BEGIN{open(M,"<.map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;close(M)}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
       name=$(dig +short -x $ip)
