@@ -90,7 +90,7 @@ elif [[ $mode_take == "week" ]]; then
    taketag=w$(date -d "$QY_WEEKANCHOR" +%U)
    list=$(echo access.log.1 access.log.[2-7].gz)
 elif [[ $mode_take == "curr" ]]; then
-   taketag=last
+   taketag=curr
    list=access.log
 elif [[ $mode_take == "prev" ]]; then
    taketag=$(date -d "yesterday" +%y-%j)
@@ -148,14 +148,14 @@ elif [[ $mode == "dl" ]]; then
 elif [[ $mode == "ref" ]]; then
    >&2 echo "-- mode ref"
    fnout=$base.ext
-   perl -ne '/".*?".*?(\d+)\s+\S+\s+"(.*?)"/ && print "$1-$2\n";' readfromlogs | sort | uniq -c | sort -n | perl -pe 's/-/     /' > $base.zut
-   grep -v $QY_SITENAME $base.zut > $fnout
+   perl -ne '/".*?".*?(\d+)\s+\S+\s+"(.*?)"/ && print "$1-$2\n";' readfromlogs | sort | uniq -c | sort -n | perl -pe 's/-/     /' > $base.z
+   grep -v $QY_SITENAME $base.z > $fnout
    # grep -v "\<\(ua\|ru\|kz\)\>" $fnout | grep -v "^  *1\>"
 elif [[ $mode == "map" ]]; then
    # exit 14
    fnout=.add
    >&2 echo "-- hook $QY_MAPTRIGGER (-m <hook>)"
-   > $fnout
+   > .add
    grep "$QY_MAPTRIGGER" < readfromlogs | perl -ne 'BEGIN{open(M,"<.map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;close(M)}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
       name=$(dig +short -x $ip)
       name=$(echo $name)            # remove trailing ws
@@ -163,13 +163,14 @@ elif [[ $mode == "map" ]]; then
       name=$(tr ' ' '-' <<< $name)  # occassionally multi-line answer
       echo -e "$ip\t[$name]"
       >&2 echo -e "$ip\t[$name]"
-   done >> $fnout
-   if ! $debug; then
+   done >> .add
+   nadd=$(wc -l < .add)
+   if (( nadd > 0 )); then
+      >&2 echo "-- adding $nadd addresses"
       cat .map .add | sort -u -V > .mad
-      shopt -s nullglob
-      nmap=$(ls .map .map.* | wc -l)
-      mv .map .map.$nmap
-      mv .mad .map
+      j=10; for i in {9..1}; do [[ -f .map.$i.gz ]] && mv -f .map.$i.gz .map.$j.gz; j=$i; done
+      gzip -c .map > .map.1.gz
+      mv -f .mad .map
    fi
 else
    >&2 echo "-- mode $mode is not a mode, peculiarly"
