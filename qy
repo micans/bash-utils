@@ -3,7 +3,7 @@
 # Moonshine script for access log queries.
 # Expects a set of referrer logs to live in the directory $QY_LOGDIR (or set with -r option).
 # Writes output in $QY_QRYDIR (or set with -q option).
-# Modes: see -h
+# Modes: see -h/EOH
 # Naming of log files expected to be
 #     access.log
 #     access.log.1
@@ -171,8 +171,11 @@ elif [[ $mode == "map" ]]; then
    if (( nadd > 0 )); then
       >&2 echo "-- adding $nadd addresses"
       cat .map .add | sort -u -V > .mad
-      j=10; for i in {9..1}; do [[ -f .map.$i.gz ]] && mv -f .map.$i.gz .map.$j.gz; j=$i; done
-      gzip -c .map > .map.1.gz
+      if [[ ! -f .map.1.gz ]] || [[ $(find .map.1.gz -mtime +1 -print) ]]; then
+         >&2 echo "-- upcycling map copies"
+         j=10; for i in {9..1}; do [[ -f .map.$i.gz ]] && mv -f .map.$i.gz .map.$j.gz; j=$i; done
+         gzip -c .map > .map.1.gz
+      fi
       mv -f .mad .map
    fi
 else
