@@ -109,7 +109,7 @@ fi
 if [[ -z $base ]]; then base=refs.$taketag; fi
 
 known_modes="dl ref copy map tsv"
-if ! grep -q "\<copy\>" <<< "$known_modes"; then
+if ! grep -q "\<$mode\>" <<< "$known_modes"; then
    echo "Not a know mode [$mode] (choose from $known_modes)"
    false
 fi
