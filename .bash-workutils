@@ -379,3 +379,7 @@ function lines()
   head -n $(($1+$count-1)) | tail -n $count
 }
 
+function gimme_sum()
+{ echo "$(( $(tr ' ' '+' <<< "$@" ) ))"
+}
+
