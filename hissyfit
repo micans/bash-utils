@@ -150,7 +150,7 @@ $C[100] = $C[99];         # useful to interrogate one beyond and subtract later.
 
 
 my @canvas = ();
-my %map = ( 1 => '.', 2 => '-', 3 => ':', 4 => "+" );
+my %map = ( 1 => '.', 2 => '-', 3 => ':', 4 => "'" );
 
 my $bigbin = ( sort { $b <=> $a } @H )[0];
 my $bigbinid = (grep { $H[$_] == $bigbin } 0..99)[0] + 1;   # 1-based for user.
@@ -158,8 +158,8 @@ my $Ymax = $cumulative ? $ND : $bigbin;
 
 my $NUNIT = $nyunits;                       # this variable needs capitals.
 
-local $" = ' ';
-print STDERR "-- (@D) (@H) (@C) $Ymax\n";
+# local $" = ' ';
+# print STDERR "-- (@D) (@H) (@C) $Ymax\n";
 
 for (my $i=0;$i<100;$i++) {
   my $n = $cumulative ? $C[$i] : $H[$i];
