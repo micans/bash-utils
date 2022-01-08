@@ -173,8 +173,6 @@ for (my $i=0;$i<100;$i++) {
   push @{$canvas[$i]}, (' ') x $Nzilch;
   die "canvas paint error" unless @{$canvas[$i]} == $NUNIT/5;
 }
-my $lc = @canvas;
-die "canvas base error $lc ($lh)" unless @canvas == 100;
 
 
 ##    Canvas done.
