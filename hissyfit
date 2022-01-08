@@ -1,0 +1,164 @@
+#!/usr/bin/perl
+
+# Ascii histogram.
+# 100 bins (this is fixed).
+# optional subselection of data (--min --max)
+# --cumulative 
+# y-axis resolution (--nyunits)
+
+use Getopt::Long;
+use strict;
+use warnings;
+
+my @ARGV_COPY  = @ARGV;
+my $n_args = @ARGV;
+
+my $help  =  0;
+my $cumulative = 0;
+my $progname = 'hissyfit';
+my $nyunits = 100;
+
+my $user_min = undef;
+my $user_max = undef;
+
+sub help {
+   print <<EOH;
+Usage:
+   $progname [options]
+Options:
+--help                  this
+--cumulative            print cumulative histogram
+--min=NUM               use as boundary (selects as well)
+--max=NUM               use as boundary (selects as well)
+EOH
+}
+
+if
+(! GetOptions
+   (  "help"            =>   \$help
+   ,  "cumulative"      =>   \$cumulative
+   ,  "nyunits=i"       =>   \$nyunits
+   ,  "min=f"           =>   \$user_min
+   ,  "max=f"           =>   \$user_max
+   )
+)
+   {  print STDERR "option processing failed\n";
+      exit(1);
+   }
+
+if ($help) {
+   help();
+   exit(0);
+}
+
+die "Need multiple of five for nyunits" unless $nyunits % 5 == 0;
+my @D = ();
+
+while (<>) {
+  chomp;
+  push @D, $_;
+}
+
+@D = sort { $a <=> $b} @D;
+my $dmin  = $D[0];
+my $dmax  = $D[-1];
+
+my $themin = $dmin;
+my $themax = $dmax;
+
+my $out_of_boundary = 0;
+if (defined($user_min)) {
+  my $umin = $user_min;
+  $out_of_boundary++ if $umin > $dmin;
+  $themin = $umin;
+}
+if (defined($user_max)) {
+  my $umax = $user_max;
+  $out_of_boundary++ if $umax < $dmax;
+  $themax = $umax;
+}
+
+my $ND_orig   = @D;
+
+if ($out_of_boundary) {
+  @D = grep { $_ >= $themin && $_ <= $themax } @D;
+}
+my $ND = @D;
+
+
+my $width = ($themax-$themin) / 100;
+
+my @H = ();
+
+my $N = 0;
+my $N_prev = 0;
+my $threshold = $themin + $width;
+my $index = 0;
+
+for my $d (@D) {
+  if ($d >= $threshold) {
+    my $count = $cumulative ? $N : $N - $N_prev;
+    $N_prev = $N;
+    $H[$index] = $count;
+    $index++;
+    last if $index == 100;
+    $threshold  += $width;
+    while ($d >= $threshold) {
+      $H[$index++] = $cumulative ? $count : 0;
+      $threshold  += $width;
+    }
+  }
+  $N++;
+}
+my $npush = 0;
+while ($index < 100) {    # can happen with low number of items.
+  $H[$index] = $H[$index-1];
+  $index++;
+  $npush++;
+}
+$H[99] += ($ND-$N);       # this controls for floating point addition causing boundary issues. 
+
+my $lh = @H;
+die "hist error ($lh)" unless @H == 100;
+
+
+my %map = ( 1 => '.', 2 => '-', 3 => '+', 4 => "'" );
+my @canvas = ();
+
+my $Ymax = $cumulative ? $ND : ( sort { $b <=> $a } @H )[0];
+
+my $NUNIT = $nyunits;                       # this variable needs capitals.
+
+for (my $i=0;$i<100;$i++) {
+  my $n = $H[$i];
+  my $nunit = int($NUNIT*$n/$Ymax);         # support maxinum of $NUNIT steps.
+  my $Nrem  = $nunit % 5;                   # draw 5 steps in one char
+  my $Nfive = ($nunit - $Nrem) / 5;
+  die "sum error" if $Nfive + ($Nrem > 0) > $NUNIT/5;
+  my $Nzilch = $NUNIT/5 - $Nfive - ($Nrem > 0);
+  $canvas[$i] = [ ('|') x $Nfive ];
+  push @{$canvas[$i]}, $map{$Nrem} if $Nrem;
+  push @{$canvas[$i]}, (' ') x $Nzilch;
+  die "canvas paint error" unless @{$canvas[$i]} == $NUNIT/5;
+}
+my $lc = @canvas;
+die "canvas base error $lc ($lh)" unless @canvas == 100;
+
+
+for (my $u=0; $u<$NUNIT/5; $u++) {
+  for (my $v=0; $v<100-$npush;$v++) {
+    print $canvas[$v][$NUNIT/5-$u-1];
+  }
+  print "\n";
+}
+print '____.____^' x 10, "\n";
+
+if ($out_of_boundary) {
+  my $N_out_of_range = $ND_orig - $ND;
+  my $oorpct = sprintf("%.1f", 100 * $N_out_of_range / $ND_orig);
+  print "N=$ND oor=$N_out_of_range/$oorpct% hmin=$themin hmax=$themax dmin=$dmin dmax=$dmax bigbin=$Ymax bin-width=$width\n";
+}
+else {
+  print "N=$ND dmin=$themin dmax=$themax bigbin=$Ymax bin-width=$width\n";
+}
+

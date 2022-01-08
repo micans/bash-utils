@@ -6,6 +6,43 @@ Apparix used to live here but has [its own repository](https://github.com/micans
 now.
 
 
+## Misc scripts
+
+- *bubba* Bsub/wrapper LSF submission script to take some pain away.
+  It prints the constructed bsub command and submits it. Several options
+  including dry run (-T).
+
+- *hissyfit*  Unix terminal ascii histograms for quickly gauging data.
+  It uses 100 bin (currently fixed), optional min/max data subselection,
+  yunits adjustable, optional cumulative histogram.
+
+
+```
+> hissyfit --nyunits=100  --min=0 --max=3 iput
+          |-
+          ||
+         +||
+         |||.
+         ||||
+        +||||
+        |||||
+        |||||'         .+||
+       '||||||       .-||||'
+       |||||||     .'|||||||+
+      '|||||||    -||||||||||
+      |||||||||  -||||||||||||
+      |||||||||'||||||||||||||'
+     ||||||||||||||||||||||||||+
+     |||||||||||||||||||||||||||
+    |||||||||||||||||||||||||||||
+   |||||||||||||||||||||||||||||||
+   ||||||||||||||||||||||||||||||||'-
+ --|||||||||||||||||||||||||||||||||||''++--+-.--.------+++--++---....
+-|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||''+-+---.... .
+____.____^____.____^____.____^____.____^____.____^____.____^____.____^____.____^____.____^____.____^
+N=273410 oor=356/0.1% hmin=0 hmax=3 dmin=0.01409641 dmax=5.863222 bigbin=13464 bin-width=0.03
+```
+
 ## bash-myutils
 
 Small functions that I use in `.bash-myutils`.
