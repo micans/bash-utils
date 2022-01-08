@@ -1,25 +1,25 @@
 #!/usr/bin/perl
 
-# Ascii histogram.
-# 100 bins (this is fixed).
-# optional subselection of data (--min --max)
-# --cumulative 
-# y-axis resolution (--nyunits)
+#  Ascii histogram.
+#  -  y-axis resolution (--nyunits)
+#  -  Optional subselection of data (--min --max)
+#  -  --cumulative 
+#  -  quartiles indicated
+#  -  100 bins (this is fixed for now)
 
 use Getopt::Long;
 use strict;
 use warnings;
 
-my @ARGV_COPY  = @ARGV;
-my $n_args = @ARGV;
+my $progname   = 'hissyfit';
+my @ARGV_COPY  =  @ARGV;
+my $n_args     =  @ARGV;
+my $help       =  0;
 
-my $help  =  0;
-my $cumulative = 0;
-my $progname = 'hissyfit';
-my $nyunits = 100;
-
-my $user_min = undef;
-my $user_max = undef;
+my $cumulative =  0;
+my $nyunits    =  100;
+my $user_min   =  undef;
+my $user_max   =  undef;
 
 sub help {
    print <<EOH;
@@ -46,14 +46,11 @@ if
       exit(1);
    }
 
-if ($help) {
-   help();
-   exit(0);
-}
+if ($help) { help(); exit(0); }
 
 die "Need multiple of five for nyunits" unless $nyunits % 5 == 0;
-my @D = ();
 
+my @D = ();
 while (<>) {
   chomp;
   push @D, $_;
@@ -63,48 +60,55 @@ while (<>) {
 my $dmin  = $D[0];
 my $dmax  = $D[-1];
 
-my $themin = $dmin;
-my $themax = $dmax;
+my $q1 = $D[int(@D/4)];
+my $q2 = $D[int(@D/2)];
+my $q3 = $D[int(3*@D/4)];
+
+my $hmin = $dmin;
+my $hmax = $dmax;
 
 my $out_of_boundary = 0;
 if (defined($user_min)) {
   my $umin = $user_min;
   $out_of_boundary++ if $umin > $dmin;
-  $themin = $umin;
+  $hmin = $umin;
 }
 if (defined($user_max)) {
   my $umax = $user_max;
   $out_of_boundary++ if $umax < $dmax;
-  $themax = $umax;
+  $hmax = $umax;
 }
 
 my $ND_orig   = @D;
 
 if ($out_of_boundary) {
-  @D = grep { $_ >= $themin && $_ <= $themax } @D;
+  @D = grep { $_ >= $hmin && $_ <= $hmax } @D;
 }
 my $ND = @D;
 
 
-my $width = ($themax-$themin) / 100;
+##    This is input done.
+##    Now compute histogram data.
 
-my @H = ();
+my $width = ($hmax-$hmin) / 100;
+
+my @H = ();                         #  histogram data
 
 my $N = 0;
 my $N_prev = 0;
-my $threshold = $themin + $width;
+my $threshold = $hmin + $width;
 my $index = 0;
 
 for my $d (@D) {
   if ($d >= $threshold) {
-    my $count = $cumulative ? $N : $N - $N_prev;
-    $N_prev = $N;
+    my $count  = $N - $N_prev;
+    $N_prev    = $N;
     $H[$index] = $count;
     $index++;
     last if $index == 100;
     $threshold  += $width;
-    while ($d >= $threshold) {
-      $H[$index++] = $cumulative ? $count : 0;
+    while ($d >= $threshold) {   # empty bins may happen.
+      $H[$index++] = 0;
       $threshold  += $width;
     }
   }
@@ -112,7 +116,7 @@ for my $d (@D) {
 }
 my $npush = 0;
 while ($index < 100) {    # can happen with low number of items.
-  $H[$index] = $H[$index-1];
+  $H[$index] = 0;
   $index++;
   $npush++;
 }
@@ -121,18 +125,28 @@ $H[99] += ($ND-$N);       # this controls for floating point addition causing bo
 my $lh = @H;
 die "hist error ($lh)" unless @H == 100;
 
+my @C = ($H[0]);          #  cumulative histogram data
+for (my $i=1;$i<100; $i++) {
+   $C[$i] = $C[$i-1] + $H[$i];
+}
+$C[100] = $C[99];         # useful to interrogate one beyond and subtract later.
 
-my %map = ( 1 => '.', 2 => '-', 3 => '+', 4 => "'" );
+
+##    This is histogram data done.
+##    Now paint the canvas, transposed.
+
+
 my @canvas = ();
+my %map = ( 1 => '.', 2 => '-', 3 => ':', 4 => "+" );
 
 my $Ymax = $cumulative ? $ND : ( sort { $b <=> $a } @H )[0];
 
 my $NUNIT = $nyunits;                       # this variable needs capitals.
 
 for (my $i=0;$i<100;$i++) {
-  my $n = $H[$i];
+  my $n = $cumulative ? $C[$i] : $H[$i];
   my $nunit = int($NUNIT*$n/$Ymax);         # support maxinum of $NUNIT steps.
-  my $Nrem  = $nunit % 5;                   # draw 5 steps in one char
+  my $Nrem  = $nunit % 5;                   # one char represents 5 $NUNITs.
   my $Nfive = ($nunit - $Nrem) / 5;
   die "sum error" if $Nfive + ($Nrem > 0) > $NUNIT/5;
   my $Nzilch = $NUNIT/5 - $Nfive - ($Nrem > 0);
@@ -145,20 +159,50 @@ my $lc = @canvas;
 die "canvas base error $lc ($lh)" unless @canvas == 100;
 
 
+##    Canvas done.
+##    Give it to the nice people.
+
+
 for (my $u=0; $u<$NUNIT/5; $u++) {
-  for (my $v=0; $v<100-$npush;$v++) {
+  for (my $v=0; $v<100;$v++) {
     print $canvas[$v][$NUNIT/5-$u-1];
   }
   print "\n";
 }
-print '____.____^' x 10, "\n";
+
+
+##    Canvas given.
+##    Print some stats, go to some lengths to plot quartile locations.
+
+
+my $sep = '____.____,' x 10;
+my $sep_a = sprintf("%.1f ", $hmin);
+my $sep_z = sprintf(" %.1f", $hmax);
+
+substr($sep, 0, length($sep_a)) = $sep_a;
+substr($sep, length($sep) - length($sep_z), length($sep_z)) = $sep_z;
+
+if ($q1 > $hmin && $q3 < $hmax) {
+
+   my $p1 = (grep { $D[$C[$_]-1] >= $q1 } 1..100)[0]-1;
+   my $p2 = (grep { $D[$C[$_]-1] >= $q2 } 1..100)[0]-1;
+   my $p3 = (grep { $D[$C[$_]-1] >= $q3 } 1..100)[0]-1;
+#my $dl = @D;
+#print STDERR "$C[99] $dl $npush $p1 -> $D[$C[$p1]] $p2 -> $D[$C[$p2]] $p3 -> $D[$C[$p3]]\n";
+
+   substr($sep, $p1, 1) = 'Q';
+   substr($sep, $p2, 1) = 'Q';
+   substr($sep, $p3, 1) = 'Q';
+}
+
+print "$sep\n";
 
 if ($out_of_boundary) {
   my $N_out_of_range = $ND_orig - $ND;
   my $oorpct = sprintf("%.1f", 100 * $N_out_of_range / $ND_orig);
-  print "N=$ND oor=$N_out_of_range/$oorpct% hmin=$themin hmax=$themax dmin=$dmin dmax=$dmax bigbin=$Ymax bin-width=$width\n";
+  print "ND=$ND oor=$N_out_of_range/$oorpct% hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax bigbin=$Ymax bin-width=$width q=$q1/$q2/$q3\n";
 }
 else {
-  print "N=$ND dmin=$themin dmax=$themax bigbin=$Ymax bin-width=$width\n";
+  print "ND=$ND dmin=$dmin dmax=$dmax bigbin=$Ymax bin-width=$width q=$q1/$q2/$q3\n";
 }
 
