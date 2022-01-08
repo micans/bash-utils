@@ -51,6 +51,12 @@ N=273410 oor=356/0.1% hmin=0 hmax=3 dmin=0.01409641 dmax=5.863222 bigbin=13464 b
    things like `/* my little list 1) foo 2) bar */` and `"->)(<-"`. Still I've found it
    helpful over the years. It checks `{}`, `()` and `[]`.
 
+- `wordmer.pl` generate all words of length `k` over some alphabet.
+
+- `tallyho.sh` tally the first `N` sequences of a fastq file, for example to look at index reads.
+   This uses `tally` from [the reaper distribution](https://github.com/micans/reaper).
+
+
 ## bash-myutils
 
 Small functions that I use in `.bash-myutils`.
