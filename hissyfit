@@ -56,6 +56,8 @@ while (<>) {
   push @D, $_;
 }
 
+die "No data" if !@D;
+
 @D = sort { $a <=> $b} @D;
 my $dmin  = $D[0];
 my $dmax  = $D[-1];
@@ -94,36 +96,47 @@ my $width = ($hmax-$hmin) / 100;
 
 my @H = ();                         #  histogram data
 
-my $N = 0;
-my $N_prev = 0;
-my $threshold = $hmin + $width;
+my $N_run = 0;
+my $threshold_1 = $hmin;
+my $threshold_2 = $hmin + $width;
 my $index = 0;
+my $d = 0;
+my $N_assigned = 0;
 
-for my $d (@D) {
-  if ($d >= $threshold) {
-    my $count  = $N - $N_prev;
-    $N_prev    = $N;
-    $H[$index] = $count;
-    $index++;
-    last if $index == 100;
-    $threshold  += $width;
-    while ($d >= $threshold) {   # empty bins may happen.
-      $H[$index++] = 0;
-      $threshold  += $width;
-    }
+while ($d < @D && $index < 100) {
+  my $item = $D[$d];
+  if ($item >= $threshold_1 && $item < $threshold_2) {
+    $N_run++;
+    $d++;
   }
-  $N++;
+  elsif ($item >= $threshold_2) {
+    $H[$index] = $N_run;
+    $N_assigned += $N_run;
+    $N_run = 0;
+    $index++;
+    $threshold_1  = $threshold_2;
+    $threshold_2 += $width;
+  }
 }
-my $npush = 0;
-while ($index < 100) {    # can happen with low number of items.
+
+if ($N_run) {
+   die "run error" if $index == 100;
+   $H[$index++] = $N_run;
+   $N_assigned += $N_run;
+}
+while ($index < 100) {          # can happen under various circumstances, e.g. user boundaries.
   $H[$index] = 0;
   $index++;
-  $npush++;
 }
-$H[99] += ($ND-$N);       # this controls for floating point addition causing boundary issues. 
+$H[99] += ($ND-$N_assigned);    # this controls for floating point addition causing boundary issues. 
 
 my $lh = @H;
 die "hist error ($lh)" unless @H == 100;
+
+
+##    This binned the data in a rather painful way.
+##    Now cumulative data is easy. We need it always, e.g. for quartiles.
+
 
 my @C = ($H[0]);          #  cumulative histogram data
 for (my $i=1;$i<100; $i++) {
@@ -139,9 +152,14 @@ $C[100] = $C[99];         # useful to interrogate one beyond and subtract later.
 my @canvas = ();
 my %map = ( 1 => '.', 2 => '-', 3 => ':', 4 => "+" );
 
-my $Ymax = $cumulative ? $ND : ( sort { $b <=> $a } @H )[0];
+my $bigbin = ( sort { $b <=> $a } @H )[0];
+my $bigbinid = (grep { $H[$_] == $bigbin } 0..99)[0] + 1;   # 1-based for user.
+my $Ymax = $cumulative ? $ND : $bigbin;
 
 my $NUNIT = $nyunits;                       # this variable needs capitals.
+
+local $" = ' ';
+print STDERR "-- (@D) (@H) (@C) $Ymax\n";
 
 for (my $i=0;$i<100;$i++) {
   my $n = $cumulative ? $C[$i] : $H[$i];
@@ -182,13 +200,13 @@ my $sep_z = sprintf(" %.1f", $hmax);
 substr($sep, 0, length($sep_a)) = $sep_a;
 substr($sep, length($sep) - length($sep_z), length($sep_z)) = $sep_z;
 
-if ($q1 > $hmin && $q3 < $hmax) {
+if ($q1 > $hmin && $q3 < $hmax && $ND >= 20) {
 
-   my $p1 = (grep { $D[$C[$_]-1] >= $q1 } 1..100)[0]-1;
-   my $p2 = (grep { $D[$C[$_]-1] >= $q2 } 1..100)[0]-1;
-   my $p3 = (grep { $D[$C[$_]-1] >= $q3 } 1..100)[0]-1;
-#my $dl = @D;
-#print STDERR "$C[99] $dl $npush $p1 -> $D[$C[$p1]] $p2 -> $D[$C[$p2]] $p3 -> $D[$C[$p3]]\n";
+   my $p1 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q1 } 0..99)[0];
+   my $p2 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q2 } 0..99)[0];
+   my $p3 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q3 } 0..99)[0];
+
+# print STDERR "$C[99] $DN $q1,$q2,$q3 $p1,$p2,$p3  $D[$C[$p1]-1],$D[$C[$p2]-1],$D[$C[$p3]-1]\n";
 
    substr($sep, $p1, 1) = 'Q';
    substr($sep, $p2, 1) = 'Q';
@@ -200,9 +218,9 @@ print "$sep\n";
 if ($out_of_boundary) {
   my $N_out_of_range = $ND_orig - $ND;
   my $oorpct = sprintf("%.1f", 100 * $N_out_of_range / $ND_orig);
-  print "ND=$ND oor=$N_out_of_range/$oorpct% hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax bigbin=$Ymax bin-width=$width q=$q1/$q2/$q3\n";
+  print "ND=$ND oor=$N_out_of_range/$oorpct% hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax bigbin=$bigbin\[$bigbinid] bin-width=$width q=$q1/$q2/$q3\n";
 }
 else {
-  print "ND=$ND dmin=$dmin dmax=$dmax bigbin=$Ymax bin-width=$width q=$q1/$q2/$q3\n";
+  print "ND=$ND dmin=$dmin dmax=$dmax bigbin=$bigbin\[$bigbinid] bin-width=$width q=$q1/$q2/$q3\n";
 }
 
