@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 
 #  Ascii histogram.
-#  -  --uc uses Unicode block glyphs u2581-u2588, otherwise retro-style.
+#  -  default Unicode block glyphs u2581-u2588, --plain for retro-style.
 #  -  number of bins (--bins, default 80)
-#  -  y-axis resolution (--nyunits)
+#  -  y-axis scale (--height), resolution is N times this (default N=8).
 #  -  Optional subselection of data (--min --max)
 #  -  --cumulative 
 #  -  quartiles indicated
@@ -19,38 +19,52 @@ my $help       =  0;
 my $debug      =  0;
 
 my $cumulative =  0;
-my $nyunits    =  120;
-my $SUBLEVELS  =  5;      # capitals for constants maybe
+my $height     =  20;
+my $SUBLEVELS  =  8;      # capitals for constants maybe
 my $user_min   =  undef;
 my $user_max   =  undef;
-my $use_uc     =  0;
+my $plain      =  0;
 my $NBINS      =  80;
+my $zilch      =  ' ';
 
 my $staircase  = '▁-▂-▃-▄-▅-▆-▇-█';
+my $stairsep   = '-';
+my $emoji      =  0;
 
 sub help {
    print <<EOH;
 Usage:
    $progname [options]
 Options:
---help                  this
---cumulative            print cumulative histogram
---min=NUM               use as boundary (selects as well)
---max=NUM               use as boundary (selects as well)
---uc                    use unicode block glyphs
+--help            this
+--bins=NUM        use this number of bins (default $NBINS)
+--height=NUM      number of lines (default $height); resolution is N * NUM
+                  where N=8 by default, 5 with --plain, or user-specified with --stairs
+--min=NUM         use as boundary (selects as well)
+--max=NUM         use as boundary (selects as well)
+--plain           revert to plain ascii
+--cumulative      print cumulative histogram
+
+--stairs=x-y[-z]* use these as cursor sublevels (argument will split on '$stairsep' or --sep)
+--sep=X           use X as separator to split stairs (default $stairsep)
+--zilch=S         use S as filler for histogram (default space)
 EOH
 }
 
 if
 (! GetOptions
    (  "help"            =>   \$help
-   ,  "uc"              =>   \$use_uc
+   ,  "plain"           =>   \$plain
    ,  "debug"           =>   \$debug
    ,  "cumulative"      =>   \$cumulative
-   ,  "nyunits=i"       =>   \$nyunits
+   ,  "height=i"        =>   \$height
    ,  "bins=i"          =>   \$NBINS
    ,  "min=f"           =>   \$user_min
    ,  "max=f"           =>   \$user_max
+   ,  "stairs=s"        =>   \$staircase
+   ,  "sep=s"           =>   \$stairsep
+   ,  "zilch=s"         =>   \$zilch
+   ,  "emoji"           =>   \$emoji
    )
 )
    {  print STDERR "option processing failed\n";
@@ -59,11 +73,16 @@ if
 
 if ($help) { help(); exit(0); }
 
-my $magicnumber = $use_uc ? "eight" : "five";
-die "Need multiple of $magicnumber for nyunits\n" unless
-( (!$use_uc && $nyunits % 5 == 0 )
-|| ($use_uc && $nyunits % 8 == 0 )
-) ;
+if ($plain) {
+  $staircase = ".,-,:,',|";
+  $stairsep = ',';
+}
+elsif ($emoji) {
+  $staircase = '😀-🥴-🧐-😳-😎';
+  $zilch ='😰';
+  $NBINS = 20 if $NBINS == 80;
+}
+
 die "Bins in [10,1000] please or edit code\n" unless $NBINS >= 10 && $NBINS <= 1000;
 
 my @D = ();
@@ -85,21 +104,21 @@ my $q3 = $D[int(3*@D/4)];     # ^
 my $hmin = $dmin;
 my $hmax = $dmax;
 
-my $out_of_boundary = 0;
+my $out_of_range = 0;
 if (defined($user_min)) {
   my $umin = $user_min;
-  $out_of_boundary++ if $umin > $dmin;
+  $out_of_range++ if $umin > $dmin;
   $hmin = $umin;
 }
 if (defined($user_max)) {
   my $umax = $user_max;
-  $out_of_boundary++ if $umax < $dmax;
+  $out_of_range++ if $umax < $dmax;
   $hmax = $umax;
 }
 
 my $ND_orig   = @D;
 
-if ($out_of_boundary) {
+if ($out_of_range) {
   @D = grep { $_ >= $hmin && $_ <= $hmax } @D;
 }
 my $ND = @D;
@@ -165,24 +184,22 @@ for (my $i=1;$i<$NBINS; $i++) {
 
 
 ##    This is histogram data done.
-##    Now set some paint parameters, compute a stat.
+##    Now set some paint parameters, compute a few stats.
 
 
 my @canvas = ();
-my %map = ( 1 => '.', 2 => '-', 3 => ':', 4 => "'" );
-my $bigbrick = '|';
+my %map = ();
 
-if ($use_uc) {
-  my @stairs = split("-", $staircase);
-  $SUBLEVELS = 8;
-  $bigbrick = $stairs[7];
-  for (my $j=1;$j<8;$j++) {
-    $map{$j} = $stairs[$j-1];
-  }
+my @stairs = split($stairsep, $staircase);
+$SUBLEVELS = @stairs;
+my $bigbrick = $stairs[$SUBLEVELS-1];
+for (my $j=1;$j<@stairs;$j++) {
+  $map{$j} = $stairs[$j-1];
 }
 
 my $bigbin = ( sort { $b <=> $a } @H )[0];
 my $bigbinid = (grep { $H[$_] == $bigbin } 0..($NBINS-1))[0] + 1;   # 1-based for user.
+my $bigbinmid = $hmin + ($bigbinid-0.5)*$width;
 my $Ymax = $cumulative ? $ND : $bigbin;
 
 
@@ -190,7 +207,7 @@ my $Ymax = $cumulative ? $ND : $bigbin;
 ##    Paint the canvas, transposed.
 
 
-my $NUNIT = $nyunits;                       # this variable needs capitals.
+my $NUNIT = $height * $SUBLEVELS;           # this variable needs capitals.
 
 # local $" = ' ';
 # print STDERR "-- (@D) (@H) (@C) $Ymax\n";
@@ -200,12 +217,12 @@ for (my $i=0;$i<$NBINS;$i++) {
   my $nunit = int($NUNIT*$n/$Ymax);         # support maxinum of $NUNIT steps.
   my $Nrem  = $nunit % $SUBLEVELS;          # one char represents $SUBLEVELS $NUNITs.
   my $Nfull = ($nunit - $Nrem) / $SUBLEVELS;
-  die "sum error\n" if $Nfull + ($Nrem > 0) > $NUNIT/$SUBLEVELS;
+  die "sum error\n" if $Nfull + ($Nrem > 0) > $height;
   my $Nzilch = $NUNIT/$SUBLEVELS - $Nfull - ($Nrem > 0);
   $canvas[$i] = [ ($bigbrick) x $Nfull ];
   push @{$canvas[$i]}, $map{$Nrem} if $Nrem;
-  push @{$canvas[$i]}, (' ') x $Nzilch;
-  die "canvas paint error\n" unless @{$canvas[$i]} == $NUNIT/$SUBLEVELS;
+  push @{$canvas[$i]}, ($zilch) x $Nzilch;
+  die "canvas paint error\n" unless @{$canvas[$i]} == $height;
 }
 
 
@@ -251,15 +268,12 @@ print STDERR "c99=$C[$NBINS-1] nd=$ND q=$q1,$q2,$q3 ql=$p1,$p2,$p3  qlv=$D[$C[$p
 
 print "$sep\n";
 
-if ($out_of_boundary) {
+my $oor = "";
+if ($out_of_range) {
   my $N_out_of_range = $ND_orig - $ND;
-  my $oorpct = sprintf("%.1f", 100 * $N_out_of_range / $ND_orig);
-  print "ND=$ND oor=$N_out_of_range/$oorpct% hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax\n";
-  print "maxbincount=$bigbin\[$bigbinid] binwidth=$width q=$q1/$q2/$q3\n";
-}
-else {
-  print "ND=$ND dmin=$dmin dmax=$dmax\n";
-  print "maxbincount=$bigbin\[$bigbinid] binwidth=$width q=$q1/$q2/$q3\n";
+  $oor = ' oor=' . $N_out_of_range . sprintf("/%.1f", 100 * $N_out_of_range / $ND_orig) . '%';
 }
 
+print "ND=$ND$oor hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax\n";
+print "topbin(i=$bigbinid,n=$bigbin,v=$bigbinmid) bw=$width q=($q1,$q2,$q3)\n";
 
