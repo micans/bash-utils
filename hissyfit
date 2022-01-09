@@ -1,12 +1,12 @@
 #!/usr/bin/perl
 
 #  Ascii histogram.
+#  -  --uc uses Unicode block glyphs u2581-u2588, otherwise retro-style.
+#  -  number of bins (--bins, default 80)
 #  -  y-axis resolution (--nyunits)
 #  -  Optional subselection of data (--min --max)
 #  -  --cumulative 
-#  -  --uc uses Unicode block glyphs u2581-u2588.
 #  -  quartiles indicated
-#  -  100 bins (this is fixed for now)
 
 use Getopt::Long;
 use strict;
@@ -24,6 +24,7 @@ my $SUBLEVELS  =  5;      # capitals for constants maybe
 my $user_min   =  undef;
 my $user_max   =  undef;
 my $use_uc     =  0;
+my $NBINS      =  80;
 
 my $staircase  = '▁-▂-▃-▄-▅-▆-▇-█';
 
@@ -47,6 +48,7 @@ if
    ,  "debug"           =>   \$debug
    ,  "cumulative"      =>   \$cumulative
    ,  "nyunits=i"       =>   \$nyunits
+   ,  "bins=i"          =>   \$NBINS
    ,  "min=f"           =>   \$user_min
    ,  "max=f"           =>   \$user_max
    )
@@ -62,6 +64,7 @@ die "Need multiple of $magicnumber for nyunits\n" unless
 ( (!$use_uc && $nyunits % 5 == 0 )
 || ($use_uc && $nyunits % 8 == 0 )
 ) ;
+die "Bins in [10,1000] please or edit code\n" unless $NBINS >= 10 && $NBINS <= 1000;
 
 my @D = ();
 while (<>) {
@@ -106,7 +109,7 @@ die "No data present in bounds [$hmin, $hmax]\n" if !@D;
 ##    This is input done.
 ##    Now compute histogram data.
 
-my $width = ($hmax-$hmin) / 100;
+my $width = ($hmax-$hmin) / $NBINS;
 
 my @H = ();                         #  histogram data
 
@@ -117,7 +120,7 @@ my $index = 0;
 my $d = 0;
 my $N_assigned = 0;
 
-while ($d < @D && $index < 100) {
+while ($d < @D && $index < $NBINS) {
   my $item = $D[$d];
   if ($item >= $threshold_1 && $item < $threshold_2) {
     $N_run++;
@@ -134,18 +137,18 @@ while ($d < @D && $index < 100) {
 }
 
 if ($N_run) {
-   die "run error\n" if $index == 100;
+   die "run error\n" if $index == $NBINS;
    $H[$index++] = $N_run;
    $N_assigned += $N_run;
 }
-while ($index < 100) {          # can happen under various circumstances, e.g. user boundaries.
+while ($index < $NBINS) {          # can happen under various circumstances, e.g. user boundaries.
   $H[$index] = 0;
   $index++;
 }
-$H[99] += ($ND-$N_assigned);    # this controls for floating point addition causing boundary issues. 
+$H[$NBINS-1] += ($ND-$N_assigned);    # this controls for floating point addition causing boundary issues. 
 
 my $lh = @H;
-die "hist error ($lh)\n" unless @H == 100;
+die "hist error ($lh)\n" unless @H == $NBINS;
 
 local $" = ' ';
 print STDERR "hval(@H)\n" if $debug;
@@ -156,7 +159,7 @@ print STDERR "hval(@H)\n" if $debug;
 
 
 my @C = ($H[0]);          #  cumulative histogram data
-for (my $i=1;$i<100; $i++) {
+for (my $i=1;$i<$NBINS; $i++) {
    $C[$i] = $C[$i-1] + $H[$i];
 }
 
@@ -179,7 +182,7 @@ if ($use_uc) {
 }
 
 my $bigbin = ( sort { $b <=> $a } @H )[0];
-my $bigbinid = (grep { $H[$_] == $bigbin } 0..99)[0] + 1;   # 1-based for user.
+my $bigbinid = (grep { $H[$_] == $bigbin } 0..($NBINS-1))[0] + 1;   # 1-based for user.
 my $Ymax = $cumulative ? $ND : $bigbin;
 
 
@@ -192,7 +195,7 @@ my $NUNIT = $nyunits;                       # this variable needs capitals.
 # local $" = ' ';
 # print STDERR "-- (@D) (@H) (@C) $Ymax\n";
 
-for (my $i=0;$i<100;$i++) {
+for (my $i=0;$i<$NBINS;$i++) {
   my $n = $cumulative ? $C[$i] : $H[$i];
   my $nunit = int($NUNIT*$n/$Ymax);         # support maxinum of $NUNIT steps.
   my $Nrem  = $nunit % $SUBLEVELS;          # one char represents $SUBLEVELS $NUNITs.
@@ -211,7 +214,7 @@ for (my $i=0;$i<100;$i++) {
 
 
 for (my $u=0; $u<$NUNIT/$SUBLEVELS; $u++) {
-  for (my $v=0; $v<100;$v++) {
+  for (my $v=0; $v<$NBINS;$v++) {
     print $canvas[$v][$NUNIT/$SUBLEVELS-$u-1];
   }
   print "\n";
@@ -222,20 +225,24 @@ for (my $u=0; $u<$NUNIT/$SUBLEVELS; $u++) {
 ##    Print some stats, go to some lengths to plot quartile locations.
 
 
-my $sep = '____.____,' x 10;
-my $sep_a = sprintf("%.1f ", $hmin);
-my $sep_z = sprintf(" %.1f", $hmax);
+my $sep = '____.____,' x 100;
+$sep = substr($sep, 0, $NBINS);
 
-substr($sep, 0, length($sep_a)) = $sep_a;
-substr($sep, length($sep) - length($sep_z), length($sep_z)) = $sep_z;
+if ($NBINS >= 80) {
+  my $sep_a = sprintf("%.1f ", $hmin);
+  my $sep_z = sprintf(" %.1f", $hmax);
+
+  substr($sep, 0, length($sep_a)) = $sep_a;
+  substr($sep, length($sep) - length($sep_z), length($sep_z)) = $sep_z;
+}
 
 if ($q1 > $hmin && $q3 < $hmax && $ND >= 20) {
 
-   my $p1 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q1 } 0..99)[0];
-   my $p2 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q2 } 0..99)[0];
-   my $p3 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q3 } 0..99)[0];
+   my $p1 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q1 } 0..($NBINS-1))[0];
+   my $p2 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q2 } 0..($NBINS-1))[0];
+   my $p3 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q3 } 0..($NBINS-1))[0];
 
-print STDERR "c99=$C[99] nd=$ND q=$q1,$q2,$q3 ql=$p1,$p2,$p3  qlv=$D[$C[$p1]-1],$D[$C[$p2]-1],$D[$C[$p3]-1]\n" if $debug;
+print STDERR "c99=$C[$NBINS-1] nd=$ND q=$q1,$q2,$q3 ql=$p1,$p2,$p3  qlv=$D[$C[$p1]-1],$D[$C[$p2]-1],$D[$C[$p3]-1]\n" if $debug;
 
    substr($sep, $p1, 1) = 'Q';
    substr($sep, $p2, 1) = 'Q';
@@ -247,9 +254,11 @@ print "$sep\n";
 if ($out_of_boundary) {
   my $N_out_of_range = $ND_orig - $ND;
   my $oorpct = sprintf("%.1f", 100 * $N_out_of_range / $ND_orig);
-  print "ND=$ND oor=$N_out_of_range/$oorpct% hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax bigbin=$bigbin\[$bigbinid] bin-width=$width q=$q1/$q2/$q3\n";
+  print "ND=$ND oor=$N_out_of_range/$oorpct% hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax\n";
+  print "maxbincount=$bigbin\[$bigbinid] binwidth=$width q=$q1/$q2/$q3\n";
 }
 else {
-  print "ND=$ND dmin=$dmin dmax=$dmax bigbin=$bigbin\[$bigbinid] bin-width=$width q=$q1/$q2/$q3\n";
+  print "ND=$ND dmin=$dmin dmax=$dmax maxbincount=$bigbin\[$bigbinid] binwidth=$width q=$q1/$q2/$q3\n";
 }
+
 
