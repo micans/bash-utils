@@ -13,9 +13,9 @@ now.
   including dry run (-T).
 
 - `hissyfit`  Unix terminal ascii histograms for quickly gauging data.
-  It uses 100 bins (currently fixed), optional min/max data subselection, yunits
-  adjustable, optional cumulative histogram, either pure ASCII output or
-  Unicode block glyphs.
+  Drawn with ASCII characters or Unicode block glyphs (`--uc`).
+  Other options are min/max data subselection, yunits
+  resolution, cumulative tallying, and the number of bins.
 
 ![screenshot](https://github.com/micans/bash-utils/blob/master/img/hissyfit.png)
 
