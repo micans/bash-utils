@@ -4,9 +4,9 @@
 #  -  y-axis resolution (--nyunits)
 #  -  Optional subselection of data (--min --max)
 #  -  --cumulative 
+#  -  --uc uses Unicode block glyphs u2581-u2588.
 #  -  quartiles indicated
 #  -  100 bins (this is fixed for now)
-#  -  does anyone want u2581-u2588?
 
 use Getopt::Long;
 use strict;
@@ -18,9 +18,13 @@ my $n_args     =  @ARGV;
 my $help       =  0;
 
 my $cumulative =  0;
-my $nyunits    =  100;
+my $nyunits    =  120;
+my $SUBLEVELS  =  5;      # capitals for constants maybe
 my $user_min   =  undef;
 my $user_max   =  undef;
+my $use_uc     =  0;
+
+my $staircase  = '▁-▂-▃-▄-▅-▆-▇-█';
 
 sub help {
    print <<EOH;
@@ -31,12 +35,14 @@ Options:
 --cumulative            print cumulative histogram
 --min=NUM               use as boundary (selects as well)
 --max=NUM               use as boundary (selects as well)
+--uc                    use unicode block glyphs
 EOH
 }
 
 if
 (! GetOptions
    (  "help"            =>   \$help
+   ,  "uc"              =>   \$use_uc
    ,  "cumulative"      =>   \$cumulative
    ,  "nyunits=i"       =>   \$nyunits
    ,  "min=f"           =>   \$user_min
@@ -49,7 +55,11 @@ if
 
 if ($help) { help(); exit(0); }
 
-die "Need multiple of five for nyunits" unless $nyunits % 5 == 0;
+my $magicnumber = $use_uc ? "eight" : "five";
+die "Need multiple of $magicnumber for nyunits" unless
+( (!$use_uc && $nyunits % 5 == 0 )
+|| ($use_uc && $nyunits % 8 == 0 )
+) ;
 
 my @D = ();
 while (<>) {
@@ -63,7 +73,7 @@ die "No data" if !@D;
 my $dmin  = $D[0];
 my $dmax  = $D[-1];
 
-my $q1 = $D[int(@D/4)];       # Not going to sweat ties etc.
+my $q1 = $D[int(@D/4)];       # Not going to sweat ties or even off-by-1.
 my $q2 = $D[int(@D/2)];       # What they said.
 my $q3 = $D[int(3*@D/4)];     # ^
 
@@ -144,19 +154,33 @@ my @C = ($H[0]);          #  cumulative histogram data
 for (my $i=1;$i<100; $i++) {
    $C[$i] = $C[$i-1] + $H[$i];
 }
-$C[100] = $C[99];         # useful to interrogate one beyond and subtract later.
 
 
 ##    This is histogram data done.
-##    Now paint the canvas, transposed.
+##    Now set some paint parameters, compute a stat.
 
 
 my @canvas = ();
 my %map = ( 1 => '.', 2 => '-', 3 => ':', 4 => "'" );
+my $bigbrick = '|';
+
+if ($use_uc) {
+  my @stairs = split("-", $staircase);
+  $SUBLEVELS = 8;
+  $bigbrick = $stairs[7];
+  for (my $j=1;$j<8;$j++) {
+    $map{$j} = $stairs[$j-1];
+  }
+}
 
 my $bigbin = ( sort { $b <=> $a } @H )[0];
 my $bigbinid = (grep { $H[$_] == $bigbin } 0..99)[0] + 1;   # 1-based for user.
 my $Ymax = $cumulative ? $ND : $bigbin;
+
+
+##    Parameters set.
+##    Paint the canvas, transposed.
+
 
 my $NUNIT = $nyunits;                       # this variable needs capitals.
 
@@ -166,14 +190,14 @@ my $NUNIT = $nyunits;                       # this variable needs capitals.
 for (my $i=0;$i<100;$i++) {
   my $n = $cumulative ? $C[$i] : $H[$i];
   my $nunit = int($NUNIT*$n/$Ymax);         # support maxinum of $NUNIT steps.
-  my $Nrem  = $nunit % 5;                   # one char represents 5 $NUNITs.
-  my $Nfive = ($nunit - $Nrem) / 5;
-  die "sum error" if $Nfive + ($Nrem > 0) > $NUNIT/5;
-  my $Nzilch = $NUNIT/5 - $Nfive - ($Nrem > 0);
-  $canvas[$i] = [ ('|') x $Nfive ];
+  my $Nrem  = $nunit % $SUBLEVELS;          # one char represents $SUBLEVELS $NUNITs.
+  my $Nsub = ($nunit - $Nrem) / $SUBLEVELS;
+  die "sum error" if $Nsub + ($Nrem > 0) > $NUNIT/$SUBLEVELS;
+  my $Nzilch = $NUNIT/$SUBLEVELS - $Nsub - ($Nrem > 0);
+  $canvas[$i] = [ ($bigbrick) x $Nsub ];
   push @{$canvas[$i]}, $map{$Nrem} if $Nrem;
   push @{$canvas[$i]}, (' ') x $Nzilch;
-  die "canvas paint error" unless @{$canvas[$i]} == $NUNIT/5;
+  die "canvas paint error" unless @{$canvas[$i]} == $NUNIT/$SUBLEVELS;
 }
 
 
@@ -181,9 +205,9 @@ for (my $i=0;$i<100;$i++) {
 ##    Give it to the nice people.
 
 
-for (my $u=0; $u<$NUNIT/5; $u++) {
+for (my $u=0; $u<$NUNIT/$SUBLEVELS; $u++) {
   for (my $v=0; $v<100;$v++) {
-    print $canvas[$v][$NUNIT/5-$u-1];
+    print $canvas[$v][$NUNIT/$SUBLEVELS-$u-1];
   }
   print "\n";
 }
