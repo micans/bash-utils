@@ -13,36 +13,12 @@ now.
   including dry run (-T).
 
 - `hissyfit`  Unix terminal ascii histograms for quickly gauging data.
-  It uses 100 bin (currently fixed), optional min/max data subselection,
-  yunits adjustable, optional cumulative histogram, either pure ASCII output
-  or Unicode block glyphs.
+  It uses 100 bin (currently fixed), optional min/max data subselection, yunits
+  adjustable, optional cumulative histogram, either pure ASCII output or
+  Unicode block glyphs. Below looks a bit rubbish due to, I assume, Github line
+  spacing in code blocks.
 
-
-```
-> hissyfit --nyunits=160 --min=0 --max=3 --uc iput
-          █▄
-          ██
-         ▅██
-         ███▂
-         ████
-        ▄████
-        █████
-        █████▇         ▁▅██
-       ▇██████       ▁▃████▆
-       ███████     ▂▆███████▅
-      ▆███████    ▃██████████▁
-      █████████  ▄████████████
-     ▁█████████▆██████████████▇
-     ██████████████████████████▄
-     ███████████████████████████
-   ▁█████████████████████████████
-   ███████████████████████████████▁
-   ████████████████████████████████▇▃
- ▄▃███████████████████████████████████▇▆▅▅▃▄▅▄▃▃▃▃▄▃▃▄▃▄▅▄▄▄▄▅▄▄▃▄▃▂▂▂
-▄███████████████████████████████████████████████████████████████████████▆▆▅▄▄▄▃▃▂▂▂▂▁▁▁▁▁   ▁
-0.0 .____,_Q__.____,Q___.____Q____.____,____.____,____.____,____.____,____.____,____.____,____._ 3.0
-ND=273410 oor=356/0.1% hmin=0 hmax=3 dmin=0.01409641 dmax=5.863222 bigbin=13464[11] bin-width=0.03 q=0.3414933/0.620431/0.8757837
-```
+![screenshot](https://github.com/micans/bash-utils/blob/master/img/hissyfit.png)
 
 - `merge-files-col.sh` This merges columns of files using `transpose`
   from [the reaper distribution](https://github.com/micans/reaper). It is quite a bit faster and much
