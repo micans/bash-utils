@@ -6,6 +6,7 @@
 #  -  --cumulative 
 #  -  quartiles indicated
 #  -  100 bins (this is fixed for now)
+#  -  does anyone want u2581-u2588?
 
 use Getopt::Long;
 use strict;
@@ -62,9 +63,9 @@ die "No data" if !@D;
 my $dmin  = $D[0];
 my $dmax  = $D[-1];
 
-my $q1 = $D[int(@D/4)];
-my $q2 = $D[int(@D/2)];
-my $q3 = $D[int(3*@D/4)];
+my $q1 = $D[int(@D/4)];       # Not going to sweat ties etc.
+my $q2 = $D[int(@D/2)];       # What they said.
+my $q3 = $D[int(3*@D/4)];     # ^
 
 my $hmin = $dmin;
 my $hmax = $dmax;
@@ -87,6 +88,7 @@ if ($out_of_boundary) {
   @D = grep { $_ >= $hmin && $_ <= $hmax } @D;
 }
 my $ND = @D;
+die "No data present in bounds [$hmin, $hmax]" if !@D;
 
 
 ##    This is input done.
