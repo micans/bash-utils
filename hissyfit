@@ -258,7 +258,8 @@ if ($out_of_boundary) {
   print "maxbincount=$bigbin\[$bigbinid] binwidth=$width q=$q1/$q2/$q3\n";
 }
 else {
-  print "ND=$ND dmin=$dmin dmax=$dmax maxbincount=$bigbin\[$bigbinid] binwidth=$width q=$q1/$q2/$q3\n";
+  print "ND=$ND dmin=$dmin dmax=$dmax\n";
+  print "maxbincount=$bigbin\[$bigbinid] binwidth=$width q=$q1/$q2/$q3\n";
 }
 
 
