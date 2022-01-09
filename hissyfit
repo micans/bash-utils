@@ -56,7 +56,7 @@ if
 if ($help) { help(); exit(0); }
 
 my $magicnumber = $use_uc ? "eight" : "five";
-die "Need multiple of $magicnumber for nyunits" unless
+die "Need multiple of $magicnumber for nyunits\n" unless
 ( (!$use_uc && $nyunits % 5 == 0 )
 || ($use_uc && $nyunits % 8 == 0 )
 ) ;
@@ -67,7 +67,7 @@ while (<>) {
   push @D, $_;
 }
 
-die "No data" if !@D;
+die "No data\n" if !@D;
 
 @D = sort { $a <=> $b} @D;
 my $dmin  = $D[0];
@@ -98,7 +98,7 @@ if ($out_of_boundary) {
   @D = grep { $_ >= $hmin && $_ <= $hmax } @D;
 }
 my $ND = @D;
-die "No data present in bounds [$hmin, $hmax]" if !@D;
+die "No data present in bounds [$hmin, $hmax]\n" if !@D;
 
 
 ##    This is input done.
@@ -127,12 +127,12 @@ while ($d < @D && $index < 100) {
     $N_run = 0;
     $index++;
     $threshold_1  = $threshold_2;
-    $threshold_2 += $width;
+    $threshold_2  = $hmin + $index * $width;
   }
 }
 
 if ($N_run) {
-   die "run error" if $index == 100;
+   die "run error\n" if $index == 100;
    $H[$index++] = $N_run;
    $N_assigned += $N_run;
 }
@@ -143,7 +143,7 @@ while ($index < 100) {          # can happen under various circumstances, e.g. u
 $H[99] += ($ND-$N_assigned);    # this controls for floating point addition causing boundary issues. 
 
 my $lh = @H;
-die "hist error ($lh)" unless @H == 100;
+die "hist error ($lh)\n" unless @H == 100;
 
 
 ##    This binned the data in a rather painful way.
@@ -192,12 +192,12 @@ for (my $i=0;$i<100;$i++) {
   my $nunit = int($NUNIT*$n/$Ymax);         # support maxinum of $NUNIT steps.
   my $Nrem  = $nunit % $SUBLEVELS;          # one char represents $SUBLEVELS $NUNITs.
   my $Nfull = ($nunit - $Nrem) / $SUBLEVELS;
-  die "sum error" if $Nfull + ($Nrem > 0) > $NUNIT/$SUBLEVELS;
+  die "sum error\n" if $Nfull + ($Nrem > 0) > $NUNIT/$SUBLEVELS;
   my $Nzilch = $NUNIT/$SUBLEVELS - $Nfull - ($Nrem > 0);
   $canvas[$i] = [ ($bigbrick) x $Nfull ];
   push @{$canvas[$i]}, $map{$Nrem} if $Nrem;
   push @{$canvas[$i]}, (' ') x $Nzilch;
-  die "canvas paint error" unless @{$canvas[$i]} == $NUNIT/$SUBLEVELS;
+  die "canvas paint error\n" unless @{$canvas[$i]} == $NUNIT/$SUBLEVELS;
 }
 
 
