@@ -148,7 +148,7 @@ my $lh = @H;
 die "hist error ($lh)\n" unless @H == 100;
 
 local $" = ' ';
-print "(@H)\n" if $debug;
+print STDERR "hval(@H)\n" if $debug;
 
 
 ##    This binned the data in a rather painful way.
@@ -235,7 +235,7 @@ if ($q1 > $hmin && $q3 < $hmax && $ND >= 20) {
    my $p2 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q2 } 0..99)[0];
    my $p3 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q3 } 0..99)[0];
 
-# print STDERR "$C[99] $DN $q1,$q2,$q3 $p1,$p2,$p3  $D[$C[$p1]-1],$D[$C[$p2]-1],$D[$C[$p3]-1]\n";
+print STDERR "c99=$C[99] nd=$ND q=$q1,$q2,$q3 ql=$p1,$p2,$p3  qlv=$D[$C[$p1]-1],$D[$C[$p2]-1],$D[$C[$p3]-1]\n" if $debug;
 
    substr($sep, $p1, 1) = 'Q';
    substr($sep, $p2, 1) = 'Q';
