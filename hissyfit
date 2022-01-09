@@ -16,6 +16,7 @@ my $progname   = 'hissyfit';
 my @ARGV_COPY  =  @ARGV;
 my $n_args     =  @ARGV;
 my $help       =  0;
+my $debug      =  0;
 
 my $cumulative =  0;
 my $nyunits    =  120;
@@ -43,6 +44,7 @@ if
 (! GetOptions
    (  "help"            =>   \$help
    ,  "uc"              =>   \$use_uc
+   ,  "debug"           =>   \$debug
    ,  "cumulative"      =>   \$cumulative
    ,  "nyunits=i"       =>   \$nyunits
    ,  "min=f"           =>   \$user_min
@@ -127,7 +129,7 @@ while ($d < @D && $index < 100) {
     $N_run = 0;
     $index++;
     $threshold_1  = $threshold_2;
-    $threshold_2  = $hmin + $index * $width;
+    $threshold_2  = $hmin + ($index+1) * $width;
   }
 }
 
@@ -144,6 +146,9 @@ $H[99] += ($ND-$N_assigned);    # this controls for floating point addition caus
 
 my $lh = @H;
 die "hist error ($lh)\n" unless @H == 100;
+
+local $" = ' ';
+print "(@H)\n" if $debug;
 
 
 ##    This binned the data in a rather painful way.
