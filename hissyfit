@@ -191,10 +191,10 @@ for (my $i=0;$i<100;$i++) {
   my $n = $cumulative ? $C[$i] : $H[$i];
   my $nunit = int($NUNIT*$n/$Ymax);         # support maxinum of $NUNIT steps.
   my $Nrem  = $nunit % $SUBLEVELS;          # one char represents $SUBLEVELS $NUNITs.
-  my $Nsub = ($nunit - $Nrem) / $SUBLEVELS;
-  die "sum error" if $Nsub + ($Nrem > 0) > $NUNIT/$SUBLEVELS;
-  my $Nzilch = $NUNIT/$SUBLEVELS - $Nsub - ($Nrem > 0);
-  $canvas[$i] = [ ($bigbrick) x $Nsub ];
+  my $Nfull = ($nunit - $Nrem) / $SUBLEVELS;
+  die "sum error" if $Nfull + ($Nrem > 0) > $NUNIT/$SUBLEVELS;
+  my $Nzilch = $NUNIT/$SUBLEVELS - $Nfull - ($Nrem > 0);
+  $canvas[$i] = [ ($bigbrick) x $Nfull ];
   push @{$canvas[$i]}, $map{$Nrem} if $Nrem;
   push @{$canvas[$i]}, (' ') x $Nzilch;
   die "canvas paint error" unless @{$canvas[$i]} == $NUNIT/$SUBLEVELS;
