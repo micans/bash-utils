@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -CS
 
 #  Ascii histogram.
 #  -  default Unicode block glyphs u2581-u2588, --plain for retro-style.
@@ -11,6 +11,7 @@
 use Getopt::Long;
 use strict;
 use warnings;
+use utf8;
 
 my $progname   = 'hissyfit';
 my @ARGV_COPY  =  @ARGV;
@@ -30,6 +31,7 @@ my $zilch      =  ' ';
 my $staircase  = '▁-▂-▃-▄-▅-▆-▇-█';
 my $stairsep   = '-';
 my $emoji      =  0;
+my $emosep     =  '🐙';
 
 sub help {
    print <<EOH;
@@ -46,7 +48,7 @@ Options:
 --cumulative      print cumulative histogram
 
 --stairs=x-y[-z]* use these as cursor sublevels (argument will split on '$stairsep' or --sep)
---sep=X           use X as separator to split stairs (default $stairsep)
+--stair-sep=X     use X as separator to split stairs (default $stairsep)
 --zilch=S         use S as filler for histogram (default space)
 EOH
 }
@@ -62,9 +64,10 @@ if
    ,  "min=f"           =>   \$user_min
    ,  "max=f"           =>   \$user_max
    ,  "stairs=s"        =>   \$staircase
-   ,  "sep=s"           =>   \$stairsep
+   ,  "stair-sep=s"     =>   \$stairsep
    ,  "zilch=s"         =>   \$zilch
    ,  "emoji"           =>   \$emoji
+   ,  "emoji_"          =>   \$emosep
    )
 )
    {  print STDERR "option processing failed\n";
@@ -253,6 +256,8 @@ if ($NBINS >= 80) {
   substr($sep, length($sep) - length($sep_z), length($sep_z)) = $sep_z;
 }
 
+$sep = $emosep x $NBINS if $emoji;
+
 if ($q1 > $hmin && $q3 < $hmax && $ND >= 20) {
 
    my $p1 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q1 } 0..($NBINS-1))[0];
@@ -261,9 +266,9 @@ if ($q1 > $hmin && $q3 < $hmax && $ND >= 20) {
 
 print STDERR "c99=$C[$NBINS-1] nd=$ND q=$q1,$q2,$q3 ql=$p1,$p2,$p3  qlv=$D[$C[$p1]-1],$D[$C[$p2]-1],$D[$C[$p3]-1]\n" if $debug;
 
-   substr($sep, $p1, 1) = 'Q';
-   substr($sep, $p2, 1) = 'Q';
-   substr($sep, $p3, 1) = 'Q';
+   substr($sep, $p1, 1) = $emoji ? '🌘' : 'Q';
+   substr($sep, $p2, 1) = $emoji ? '🌗' : 'Q';
+   substr($sep, $p3, 1) = $emoji ? '🌖' : 'Q';
 }
 
 print "$sep\n";
