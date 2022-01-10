@@ -20,7 +20,9 @@ now.
   (`--stairs`) and the number of bins.
 
 ![screenshot](https://github.com/micans/bash-utils/blob/master/img/hf.png)
-![screenshot](https://github.com/micans/bash-utils/blob/master/img/fizzyhit.png)
+
+
+![screenshot](https://github.com/micans/bash-utils/blob/master/img/fh2.png)
 
 - `merge-files-col.sh` This merges columns of files using `transpose`
   from [the reaper distribution](https://github.com/micans/reaper). It is quite a bit faster and much
