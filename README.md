@@ -18,7 +18,7 @@ now.
   (`--height`), cumulative tallying (`--cumulative`), user-specified glyphs
   (`--stairs`) and the number of bins.
 
-![screenshot](https://github.com/micans/bash-utils/blob/master/img/hissyfit.png)
+![screenshot](https://github.com/micans/bash-utils/blob/master/img/hf.png)
 
 - `merge-files-col.sh` This merges columns of files using `transpose`
   from [the reaper distribution](https://github.com/micans/reaper). It is quite a bit faster and much
