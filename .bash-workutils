@@ -383,3 +383,8 @@ function gimme_sum()
 { echo "$(( $(tr ' ' '+' <<< "$@" ) ))"
 }
 
+function myman()
+{  local src=${1?Need roff file argument}
+   groff -t -e -mandoc -Tascii $src | less
+}
+
