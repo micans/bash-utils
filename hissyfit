@@ -81,8 +81,8 @@ if ($plain) {
   $stairsep = ',';
 }
 elsif ($emoji) {
-  $staircase = '😀-🥴-🧐-😳-😎';
-  $zilch ='😰' unless $zilch ne ' ';
+  $staircase = '😳-🥴-🧐-😀-😎';
+  $zilch = '  ' unless $zilch ne ' ';      # 😰
   $NBINS = 20 if $NBINS == 80;
 }
 
