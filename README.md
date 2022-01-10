@@ -12,7 +12,8 @@ now.
   It prints the constructed bsub command and submits it. Several options
   including dry run (-T).
 
-- `hissyfit`  Unix terminal ascii histograms for quickly gauging data.
+- `hissyfit`  Unix terminal ascii histograms for quickly gauging numerical data.
+  Expected input is a stream of numbers, one per line.
   Drawn with Unicode block glyphs by default (use `--plain` to disable).  Other
   options are min and max data subselection (`--min --max`), height/resolution
   (`--height`), cumulative tallying (`--cumulative`), user-specified glyphs
@@ -35,15 +36,25 @@ now.
    This uses `tally` from [the reaper distribution](https://github.com/micans/reaper).
 
 
-## bash-myutils
-
-Small functions that I use in `.bash-myutils`.
-
 ## bash-workutils
 
-Space/time bash functions in `.bash-workutils`. Most of these will lead to a lot
-of disk access, use with care.
+Space/time bash functions in `.bash-workutils` (see further below). Most of
+these will lead to a lot of disk access, use with care.  A bunch of other
+miscellaneous functions have been added. Two worth picking out are
 
+- `funcfile NAME` find in which file function `NAME` is defined.
+- `ls_func FILE` list all functions defined in `FILE`.
+
+The list of functions in `.bash-workutils`:
+
+```
+achoo bj bjl colcount colnames ffn funcfile gimme_sum grab groupify
+howoldami lines ls_bigold ls_count_files ls_file_spread ls_func
+ls_lastfile ls_ls ls_misc ls_mouldy ls_size_any ls_size_suffix myman
+nchar procli public silent tailafter ungroupify
+```
+
+Space time functions in more detail:
 
 ```
 --- ls_bigold
@@ -89,3 +100,14 @@ of disk access, use with care.
   crush the file system with large numbers of files in a single directory.
   Modified from code by Glenn Jackmann on stackoverflow.
 ```
+
+## bash-myutils
+
+More small functions that I use in `.bash-myutils`. These are slightly
+more random than the ones in `.bash-workutils`.
+
+```
+bash_max bash_min countcram cpuhours debug_bash decolon ffncp ffnl fqfa
+helpme nflogcmd set_farm_mem themax themax2 themin themin2 theminmax
+```
+
