@@ -87,7 +87,7 @@ elsif ($emoji) {
   $NBINS = 20 if $NBINS == 80;
 }
 
-die "Bins in [10,1000] please or edit code\n" unless $NBINS >= 10 && $NBINS <= 1000;
+die "Bins in [1,1000] please or edit code\n" unless $NBINS >= 1 && $NBINS <= 1000;
 
 my @D = ();
 while (<>) {
