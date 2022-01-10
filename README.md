@@ -23,7 +23,7 @@ now.
 
 ![screenshot](https://github.com/micans/bash-utils/blob/master/img/hf2.png)
 
-![screenshot](https://github.com/micans/bash-utils/blob/master/img/fh2.png)
+![screenshot](https://github.com/micans/bash-utils/blob/master/img/fh3.png)
 
 - `merge-files-col.sh` This merges columns of files using `transpose`
   from [the reaper distribution](https://github.com/micans/reaper). It is quite a bit faster and much
