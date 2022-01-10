@@ -21,6 +21,7 @@ now.
 
 ![screenshot](https://github.com/micans/bash-utils/blob/master/img/hf.png)
 
+![screenshot](https://github.com/micans/bash-utils/blob/master/img/hf2.png)
 
 ![screenshot](https://github.com/micans/bash-utils/blob/master/img/fh2.png)
 
