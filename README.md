@@ -26,7 +26,8 @@ now.
 
 - `peach.c`  PArEnthesis CHecker. It's not smart about anything and will complain about
    things like `/* my little list 1) foo 2) bar */` and `"->)(<-"`. Still I've found it
-   helpful over the years. It checks `{}`, `()` and `[]`.
+   helpful over the years. It checks `{}`, `()` and `[]`. This is the first C program I wrote,
+   so please be gentle.
 
 - `wordmer.pl` generate all words of length `k` over some alphabet.
 
