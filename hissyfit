@@ -82,7 +82,7 @@ if ($plain) {
 }
 elsif ($emoji) {
   $staircase = '😀-🥴-🧐-😳-😎';
-  $zilch ='😰';
+  $zilch ='😰' unless $zilch ne ' ';
   $NBINS = 20 if $NBINS == 80;
 }
 
@@ -279,6 +279,7 @@ if ($out_of_range) {
   $oor = ' oor=' . $N_out_of_range . sprintf("/%.1f", 100 * $N_out_of_range / $ND_orig) . '%';
 }
 
+my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND_orig);
 print "ND=$ND$oor hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax\n";
-print "topbin(i=$bigbinid,n=$bigbin,v=$bigbinmid) bw=$width q=($q1,$q2,$q3)\n";
+print "topbin(i=$bigbinid,n=$bigbin,p=$bigbinpct,x~$bigbinmid) bw=$width q=($q1,$q2,$q3)\n";
 
