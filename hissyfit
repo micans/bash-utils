@@ -218,7 +218,7 @@ for (my $i=0;$i<$NBINS;$i++) {
   my $Nrem  = $nunit % $SUBLEVELS;          # one char represents $SUBLEVELS $NUNITs.
   my $Nfull = ($nunit - $Nrem) / $SUBLEVELS;
   die "sum error\n" if $Nfull + ($Nrem > 0) > $height;
-  my $Nzilch = $NUNIT/$SUBLEVELS - $Nfull - ($Nrem > 0);
+  my $Nzilch = $height - $Nfull - ($Nrem > 0);
   $canvas[$i] = [ ($bigbrick) x $Nfull ];
   push @{$canvas[$i]}, $map{$Nrem} if $Nrem;
   push @{$canvas[$i]}, ($zilch) x $Nzilch;
@@ -230,9 +230,9 @@ for (my $i=0;$i<$NBINS;$i++) {
 ##    Give it to the nice people.
 
 
-for (my $u=0; $u<$NUNIT/$SUBLEVELS; $u++) {
+for (my $u=0; $u<$height; $u++) {
   for (my $v=0; $v<$NBINS;$v++) {
-    print $canvas[$v][$NUNIT/$SUBLEVELS-$u-1];
+    print $canvas[$v][$height-$u-1];
   }
   print "\n";
 }
