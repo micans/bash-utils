@@ -8,6 +8,8 @@
 #  -  --cumulative 
 #  -  quartiles indicated
 
+#  -  perhaps add optional output <binid> <bincount> <binmiddle>
+
 use Getopt::Long;
 use strict;
 use warnings;

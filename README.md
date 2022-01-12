@@ -15,7 +15,8 @@ now.
 - `hissyfit`  Unix terminal ascii histograms for quickly gauging numerical data.
   Expected input is a stream of numbers, one per line.
   Drawn with Unicode block glyphs by default (use `--plain` to disable).  Other
-  options are min and max data subselection (`--min --max`), height/resolution
+  options are min and max histogram endpoints (`--min --max`, simultaneously acts
+  as data sub-selection), height/resolution
   (`--height`), cumulative tallying (`--cumulative`), user-specified glyphs
   (`--stairs`) and the number of bins.
 
