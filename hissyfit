@@ -1,4 +1,4 @@
-#!/usr/bin/perl -CS
+#!/usr/bin/perl -CAS
 
 #  Ascii histogram.
 #  -  default Unicode block glyphs u2581-u2588, --plain for retro-style.
@@ -6,6 +6,7 @@
 #  -  y-axis scale (--height), resolution is N times this (default N=8).
 #  -  Optional subselection of data (--min --max)
 #  -  --cumulative 
+#  -  --histin if input is already histogram counts
 #  -  quartiles indicated
 
 #  -  perhaps add optional output <binid> <bincount> <binmiddle>
@@ -18,21 +19,23 @@ use utf8;
 my $progname   = 'hissyfit';
 my @ARGV_COPY  =  @ARGV;
 my $n_args     =  @ARGV;
+
 my $help       =  0;
 my $debug      =  0;
-
 my $cumulative =  0;
+my $plain      =  0;
+my $emoji      =  0;
+my $histin     =  0;      # input data is already histogram data
+
 my $height     =  20;
 my $SUBLEVELS  =  8;      # capitals for constants maybe
 my $user_min   =  undef;
 my $user_max   =  undef;
-my $plain      =  0;
 my $NBINS      =  80;
 my $zilch      =  ' ';
 
 my $staircase  = '▁-▂-▃-▄-▅-▆-▇-█';
 my $stairsep   = '-';
-my $emoji      =  0;
 my $emosep     =  '🐙';
 
 sub help {
@@ -48,6 +51,7 @@ Options:
 --max=NUM         use as boundary (selects as well)
 --plain           revert to plain ascii
 --cumulative      print cumulative histogram
+--histin          input is already histogram counts
 
 --stairs=x-y[-z]* use these as cursor sublevels (argument will split on '$stairsep' or --sep)
 --stair-sep=X     use X as separator to split stairs (default $stairsep)
@@ -69,6 +73,7 @@ if
    ,  "stair-sep=s"     =>   \$stairsep
    ,  "zilch=s"         =>   \$zilch
    ,  "emoji"           =>   \$emoji
+   ,  "histin"          =>   \$histin
    ,  "emoji_"          =>   \$emosep
    )
 )
@@ -99,84 +104,106 @@ while (<>) {
 
 die "No data\n" if !@D;
 
-@D = sort { $a <=> $b} @D;
-my $dmin  = $D[0];
-my $dmax  = $D[-1];
+my @H;
+my ($dmin, $dmax, $hmin, $hmax, $q1, $q2, $q3, $out_of_range, $ND_orig, $ND, $width);
 
-my $q1 = $D[int(@D/4)];       # Not going to sweat ties or even off-by-1.
-my $q2 = $D[int(@D/2)];       # What they said.
-my $q3 = $D[int(3*@D/4)];     # ^
 
-my $hmin = $dmin;
-my $hmax = $dmax;
+if ($histin) {
+  @H = @D;
+  $hmin = $dmin = 0;
+  $hmax = $dmax = 100;
+  $hmin    = $user_min if defined($user_min);
+  $hmax    = $user_max if defined($user_max);
+  $NBINS   = @H;
 
-my $out_of_range = 0;
-if (defined($user_min)) {
-  my $umin = $user_min;
-  $out_of_range++ if $umin > $dmin;
-  $hmin = $umin;
+  $ND      = 0;
+  $ND += $_ for @H;
+  $ND_orig = $ND;
+
+  $width   = ($hmax - $hmin) / $NBINS;
+  $q1 = $q2 = $q3 = '-';
+  $out_of_range = 0;
 }
-if (defined($user_max)) {
-  my $umax = $user_max;
-  $out_of_range++ if $umax < $dmax;
-  $hmax = $umax;
-}
+else {                       # Nearly ready to stick this in a subroutine.
+  @D = sort { $a <=> $b} @D;
+  $dmin  = $D[0];
+  $dmax  = $D[-1];
 
-my $ND_orig   = @D;
+  $q1 = $D[int(@D/4)];       # Not going to sweat ties or even off-by-1.
+  $q2 = $D[int(@D/2)];       # What they said.
+  $q3 = $D[int(3*@D/4)];     # ^
 
-if ($out_of_range) {
-  @D = grep { $_ >= $hmin && $_ <= $hmax } @D;
-}
-my $ND = @D;
-die "No data present in bounds [$hmin, $hmax]\n" if !@D;
+  $hmin = $dmin;
+  $hmax = $dmax;
 
-
-##    This is input done.
-##    Now compute histogram data.
-
-my $width = ($hmax-$hmin) / $NBINS;
-
-my @H = ();                         #  histogram data
-
-my $N_run = 0;
-my $threshold_1 = $hmin;
-my $threshold_2 = $hmin + $width;
-my $index = 0;
-my $d = 0;
-my $N_assigned = 0;
-
-while ($d < @D && $index < $NBINS) {
-  my $item = $D[$d];
-  if ($item >= $threshold_1 && $item < $threshold_2) {
-    $N_run++;
-    $d++;
+  $out_of_range = 0;
+  if (defined($user_min)) {
+    my $umin = $user_min;
+    $out_of_range++ if $umin > $dmin;
+    $hmin = $umin;
   }
-  elsif ($item >= $threshold_2) {
-    $H[$index] = $N_run;
-    $N_assigned += $N_run;
-    $N_run = 0;
+  if (defined($user_max)) {
+    my $umax = $user_max;
+    $out_of_range++ if $umax < $dmax;
+    $hmax = $umax;
+  }
+
+  $ND_orig   = @D;
+
+  if ($out_of_range) {
+    @D = grep { $_ >= $hmin && $_ <= $hmax } @D;
+  }
+  $ND = @D;
+  die "No data present in bounds [$hmin, $hmax]\n" if !@D;
+
+
+  ##    This is input done.
+  ##    Now compute histogram data.
+
+  $width = ($hmax-$hmin) / $NBINS;
+
+  @H = ();                         #  histogram data
+
+  my $N_run = 0;
+  my $threshold_1 = $hmin;
+  my $threshold_2 = $hmin + $width;
+  my $index = 0;
+  my $d = 0;
+  my $N_assigned = 0;
+
+  while ($d < @D && $index < $NBINS) {
+    my $item = $D[$d];
+    if ($item >= $threshold_1 && $item < $threshold_2) {
+      $N_run++;
+      $d++;
+    }
+    elsif ($item >= $threshold_2) {
+      $H[$index] = $N_run;
+      $N_assigned += $N_run;
+      $N_run = 0;
+      $index++;
+      $threshold_1  = $threshold_2;
+      $threshold_2  = $hmin + ($index+1) * $width;
+    }
+  }
+
+  if ($N_run) {
+     die "run error\n" if $index == $NBINS;
+     $H[$index++] = $N_run;
+     $N_assigned += $N_run;
+  }
+  while ($index < $NBINS) {          # can happen under various circumstances, e.g. user boundaries.
+    $H[$index] = 0;
     $index++;
-    $threshold_1  = $threshold_2;
-    $threshold_2  = $hmin + ($index+1) * $width;
   }
-}
+  $H[$NBINS-1] += ($ND-$N_assigned);    # this controls for floating point addition causing boundary issues. 
 
-if ($N_run) {
-   die "run error\n" if $index == $NBINS;
-   $H[$index++] = $N_run;
-   $N_assigned += $N_run;
-}
-while ($index < $NBINS) {          # can happen under various circumstances, e.g. user boundaries.
-  $H[$index] = 0;
-  $index++;
-}
-$H[$NBINS-1] += ($ND-$N_assigned);    # this controls for floating point addition causing boundary issues. 
+  my $lh = @H;
+  die "hist error ($lh)\n" unless @H == $NBINS;
 
-my $lh = @H;
-die "hist error ($lh)\n" unless @H == $NBINS;
-
-local $" = ' ';
-print STDERR "hval(@H)\n" if $debug;
+  local $" = ' ';
+  print STDERR "hval(@H)\n" if $debug;
+}
 
 
 ##    This binned the data in a rather painful way.
@@ -261,17 +288,26 @@ if ($NBINS >= 80) {
 
 $sep = $emosep x $NBINS if $emoji;
 
-if ($q1 > $hmin && $q3 < $hmax && $ND >= 20) {
+my $emit_quantiles = $histin || ($q1 > $hmin && $q3 < $hmax);
 
-   my $p1 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q1 } 0..($NBINS-1))[0];
-   my $p2 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q2 } 0..($NBINS-1))[0];
-   my $p3 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q3 } 0..($NBINS-1))[0];
+my $p1 = (grep { $C[$_] >= 0.25 * $ND } 0..($NBINS-1))[0];
+my $p2 = (grep { $C[$_] >= 0.50 * $ND } 0..($NBINS-1))[0];
+my $p3 = (grep { $C[$_] >= 0.75 * $ND } 0..($NBINS-1))[0];
+
+              # data was subselected, but for now we produce quantiles for
+              # full input data always.
+if (!$histin && $emit_quantiles && $ND != $ND_orig) {
+  $p1 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q1 } 0..($NBINS-1))[0];
+  $p2 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q2 } 0..($NBINS-1))[0];
+  $p3 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q3 } 0..($NBINS-1))[0];
+}
 
 print STDERR "c99=$C[$NBINS-1] nd=$ND q=$q1,$q2,$q3 ql=$p1,$p2,$p3  qlv=$D[$C[$p1]-1],$D[$C[$p2]-1],$D[$C[$p3]-1]\n" if $debug;
 
-   substr($sep, $p1, 1) = $emoji ? '🌘' : 'Q';
-   substr($sep, $p2, 1) = $emoji ? '🌗' : 'Q';
-   substr($sep, $p3, 1) = $emoji ? '🌖' : 'Q';
+if ($emit_quantiles) {
+  substr($sep, $p1, 1) = $emoji ? '🌘' : 'Q';
+  substr($sep, $p2, 1) = $emoji ? '🌗' : 'Q';
+  substr($sep, $p3, 1) = $emoji ? '🌖' : 'Q';
 }
 
 print "$sep\n";
@@ -284,5 +320,5 @@ if ($out_of_range) {
 
 my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND_orig);
 print "ND=$ND$oor hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax\n";
-print "topbin(i=$bigbinid,n=$bigbin,p=$bigbinpct,x~$bigbinmid) bw=$width q=($q1,$q2,$q3)\n";
+print "topbin(i=$bigbinid,n=$bigbin,p=$bigbinpct,x~$bigbinmid) bw=$width q=($q1\[$p1],$q2\[$p2],$q3\[$p3])\n";
 
