@@ -12,6 +12,7 @@
 
 #  Thanks to Izaak van Dongen, Vlad Kisilev and Leopold Parts for feature suggestions.
 
+#  -  add mean/sdev?
 #  -  perhaps add optional output <binid> <bincount> <binmiddle>
 
 use Getopt::Long;

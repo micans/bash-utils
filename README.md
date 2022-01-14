@@ -12,19 +12,35 @@ now.
   It prints the constructed bsub command and submits it. Several options
   including dry run (-T).
 
-- `hissyfit`  Unix terminal ascii histograms for quickly gauging numerical data.
-  Expected input is a stream of numbers, one per line.
-  Drawn with Unicode block glyphs by default (use `--plain` to disable).  Other
-  options are min and max histogram endpoints (`--min --max`, simultaneously acts
-  as data sub-selection), height/resolution
-  (`--height`), cumulative tallying (`--cumulative`), user-specified glyphs
-  (`--stairs`) and the number of bins.
+- `hissyfit`  Unix terminal ascii histograms and bar charts for quickly
+  gauging numerical data and count data.
+  For numerical data expected input is a stream of numbers, one per line.
+  Options are min and max
+  histogram endpoints (`--min --max`, simultaneously acts as data sub-selection),
+  height/resolution (`--height`),
+  cumulative tallying (`--cumulative`),
+  user-specified glyphs (`--stairs`)
+  and the number of bins (`--bins`).
+  It is also possible to read input that already specifies the histogram heights (`--histin`).
 
-![screenshot](https://github.com/micans/bash-utils/blob/master/img/hf.png)
+  For bar charts `hissyfit` accepts the output of `uniq -c` (that is, each line has `<count> <label>`
+  to draw bar charts for categorical data (see fourth screenshot below), when given the `--tallyin` option.
+  In this case the output is in the form of horizontal bars with labels in
+  front and counts after.
+  To sort by label (or otherwise), simply use unix `sort` before `uniq -c`, e.g.
+  `sort | uniq -c | hissyfit`.
+  To sort by count, use `sort | uniq -c | sort -n | hissyfit`.
 
-![screenshot](https://github.com/micans/bash-utils/blob/master/img/hf2.png)
+  Histograms and bar charts are drawn with Unicode block glyphs by default (use
+  `--plain` to disable).
 
-![screenshot](https://github.com/micans/bash-utils/blob/master/img/fh3.png)
+![regular histogram, unicode paint](https://github.com/micans/bash-utils/blob/master/img/hf.png)
+
+![regular histogram, ascii paint](https://github.com/micans/bash-utils/blob/master/img/hf2.png)
+
+![regular histogram, emoji paint](https://github.com/micans/bash-utils/blob/master/img/fh3.png)
+
+![horizontal bar chart of categorical data](https://github.com/micans/bash-utils/blob/master/img/hft.png)
 
 - `merge-files-col.sh` This merges columns of files using `transpose`
   from [the reaper distribution](https://github.com/micans/reaper). It is quite a bit faster and much
