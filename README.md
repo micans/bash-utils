@@ -8,7 +8,7 @@ now.
 
 ## Miscellaneous code
 
-- `hissyfit`  Unix terminal ascii histograms and bar charts for quickly
+- `hissyfit`  Unix terminal histograms and bar charts for quickly
   gauging numerical data and count data - see screenshots and link to raw output below.
   No need to fire up R!
   For numerical data expected input is a stream of numbers, one per line.
@@ -37,9 +37,9 @@ now.
    or [here at micans.org](http://micans.org/stijn/haphazard/hissyfit.html).
 
 
-![regular histogram, unicode paint](https://github.com/micans/bash-utils/blob/master/img/hf.png)
+![regular histogram, unicode block paint](https://github.com/micans/bash-utils/blob/master/img/hf.png)
 
-![regular histogram, ascii paint](https://github.com/micans/bash-utils/blob/master/img/hf2.png)
+![regular histogram, simple paint](https://github.com/micans/bash-utils/blob/master/img/hf2.png)
 
 ![regular histogram, emoji paint](https://github.com/micans/bash-utils/blob/master/img/fh3.png)
 
