@@ -8,31 +8,27 @@ now.
 
 ## Miscellaneous code
 
-- `bubba` Bsub/wrapper LSF submission script to take some pain away.
-  It prints the constructed bsub command and submits it. Several options
-  including dry run (-T).
-
 - `hissyfit`  Unix terminal ascii histograms and bar charts for quickly
-  gauging numerical data and count data.
+  gauging numerical data and count data - see screenshots below. No need to fire up R!
   For numerical data expected input is a stream of numbers, one per line.
   Options are min and max
   histogram endpoints (`--min --max`, simultaneously acts as data sub-selection),
-  height/resolution (`--height`),
+  height/resolution (`--height` in lines, resolution is 8 times larger),
   cumulative tallying (`--cumulative`),
-  user-specified glyphs (`--stairs`)
-  and the number of bins (`--bins`).
+  the number of bins (`--bins`),
+  and user-specified glyphs (`--stairs`).
   It is also possible to read input that already specifies the histogram heights (`--histin`).
 
-  For bar charts `hissyfit` accepts the output of `uniq -c` (that is, each line has `<count> <label>`
-  to draw bar charts for categorical data (see fourth screenshot below), when given the `--tallyin` option.
+  For bar charts `hissyfit` accepts the output of `uniq -c` (that is, each line has `<count> <label>`)
+  to draw bar charts for categorical data (see fourth screenshot), when given the `--tallyin` option.
   In this case the output is in the form of horizontal bars with labels in
   front and counts after.
   To sort by label (or otherwise), simply use unix `sort` before `uniq -c`, e.g.
   `sort | uniq -c | hissyfit`.
   To sort by count, use `sort | uniq -c | sort -n | hissyfit`.
 
-  Histograms and bar charts are drawn with Unicode block glyphs by default (use
-  `--plain` to disable).
+  Histograms and bar charts are drawn with Unicode block glyphs by default. Use
+  `--plain` to disable this and use `--stairs` to provide your own glyphs.
 
 ![regular histogram, unicode paint](https://github.com/micans/bash-utils/blob/master/img/hf.png)
 
@@ -55,6 +51,10 @@ now.
 
 - `tallyho.sh` tally the first `N` sequences of a fastq file, for example to look at index reads.
    This uses `tally` from [the reaper distribution](https://github.com/micans/reaper).
+
+- `bubba` Bsub/wrapper LSF submission script to take some pain away.
+  It prints the constructed bsub command and submits it. Several options
+  including dry run (-T).
 
 
 ## bash-workutils
