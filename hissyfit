@@ -308,14 +308,14 @@ for (my $i=0;$i<$NBINS;$i++) {
 
 if ($tallyin) {
   for (my $v=0; $v<$NBINS;$v++) {
-    printf "%20s ", substr($labels[$v], 0, 20);
+    printf "%22s ", ('[' . substr($labels[$v], 0, 20) . ']');
     for (my $u=0; $u<$height; $u++) {
       print $canvas[$v][$u];
     }
     printf " %12d\n", $H[$v];
   }
   my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND);
-  print "total $ND items, most frequent $labels[$bigbinid-1] (p=$bigbinpct)\n";
+  print "total $ND items, most frequent [$labels[$bigbinid-1]] (p=$bigbinpct)\n";
   exit(0);
 }
 
