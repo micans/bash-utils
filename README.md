@@ -12,16 +12,24 @@ now.
   It prints the constructed bsub command and submits it. Several options
   including dry run (-T).
 
-- `hissyfit`  Unix terminal ascii histograms for quickly gauging numerical data.
-  Expected input is a stream of numbers, one per line.
-  Drawn with Unicode block glyphs by default (use `--plain` to disable).  Other
-  options are min and max histogram endpoints (`--min --max`, simultaneously acts
-  as data sub-selection), height/resolution
-  (`--height`), cumulative tallying (`--cumulative`), user-specified glyphs
-  (`--stairs`) and the number of bins.
-  It can also take the output of `uniq -c` to draw bar charts for categorical data
-  (see fourth screenshot below), when given the `--tallyin` option. In this case
-  the output is in the form of horizontal bars with labels in front and counts after.
+- `hissyfit`  Unix terminal ascii histograms and bar charts for quickly
+  gauging numerical data and count data.
+  For numerical data expected input is a stream of numbers, one per line.
+  Options are min and max
+  histogram endpoints (`--min --max`, simultaneously acts as data sub-selection),
+  height/resolution (`--height`),
+  cumulative tallying (`--cumulative`),
+  user-specified glyphs (`--stairs`)
+  and the number of bins (`--bins`).
+  It is also possible to read input that already specifies the histogram heights (`--histin`).
+
+  For bar charts `hissyfit` accepts the output of `uniq -c` (that is, each line has `<count> <label>`
+  to draw bar charts for categorical data (see fourth screenshot below), when given the `--tallyin` option.
+  In this case the output is in the form of horizontal bars with labels in
+  front and counts after.
+
+  Histograms and bar charts are drawn with Unicode block glyphs by default (use
+  `--plain` to disable).
 
 ![regular histogram, unicode paint](https://github.com/micans/bash-utils/blob/master/img/hf.png)
 
