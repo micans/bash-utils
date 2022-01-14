@@ -9,7 +9,8 @@ now.
 ## Miscellaneous code
 
 - `hissyfit`  Unix terminal ascii histograms and bar charts for quickly
-  gauging numerical data and count data - see screenshots below. No need to fire up R!
+  gauging numerical data and count data - see screenshots and link to raw output below.
+  No need to fire up R!
   For numerical data expected input is a stream of numbers, one per line.
   Options are min and max
   histogram endpoints (`--min --max`, simultaneously acts as data sub-selection),
@@ -29,6 +30,12 @@ now.
 
   Histograms and bar charts are drawn with Unicode block glyphs by default. Use
   `--plain` to disable this and use `--stairs` to provide your own glyphs.
+
+   Below are some screenshots; the corresponding raw text (and display) can be seen either
+   [as a github preview](https://htmlpreview.github.io/?https://github.com/micans/bash-utils/blob/master/hissyfit.html),
+   [right in this repo (source)](https://github.com/micans/bash-utils/blob/master/hissifit.html)
+   or [here at micans.org](http://micans.org/stijn/haphazard/hissyfit.html).
+
 
 ![regular histogram, unicode paint](https://github.com/micans/bash-utils/blob/master/img/hf.png)
 
