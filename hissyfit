@@ -1,14 +1,16 @@
 #!/usr/bin/perl -CAS
 
-#  Ascii histogram.
-#  -  default Unicode block glyphs u2581-u2588, --plain for retro-style.
-#  -  number of bins (--bins, default 80)
+#  Ascii histograms and bar charts.
+#  -  Input is a stream of numbers for histograms, uniq -c output for bar charts.
 #  -  y-axis scale (--height), resolution is N times this (default N=8).
+#  -  number of bins (--bins, default 80)
 #  -  Optional subselection of data (--min --max)
 #  -  --cumulative 
 #  -  --histin if input is already histogram counts
-#  -  --tallyin if input is output of uniq (line format: <count> <item>)
 #  -  quartiles indicated
+#  -  default Unicode block glyphs u2581-u2588, --plain for retro-style.
+#
+#  -  bar charts with --tallyin if input is output of uniq (line format: <count> <item>)
 
 #  Thanks to Izaak van Dongen, Vlad Kisilev and Leopold Parts for feature suggestions.
 
@@ -308,8 +310,15 @@ for (my $i=0;$i<$NBINS;$i++) {
 
 
 if ($tallyin) {
+  my $n_trunc = 0;
   for (my $v=0; $v<$NBINS;$v++) {
-    printf "%22s ", ('[' . substr($labels[$v], 0, 20) . ']');
+    my $plabel = substr($labels[$v], 0, 20);
+    my ($lb, $rb) = ('[', ']');
+    if (length($plabel) < length($labels[$v])) {
+      ($lb, $rb) = ('(', ')');
+      $n_trunc++;
+    }
+    printf "%22s ", ( $lb . substr($labels[$v], 0, 20) . $rb );
     for (my $u=0; $u<$height; $u++) {
       print $canvas[$v][$u];
     }
@@ -317,6 +326,7 @@ if ($tallyin) {
   }
   my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND);
   print "total $ND items, most frequent [$labels[$bigbinid-1]] (p=$bigbinpct)\n";
+  print "$n_trunc labels were truncated\n" if $n_trunc;
   exit(0);
 }
 
