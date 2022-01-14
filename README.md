@@ -33,7 +33,7 @@ now.
 
    Below are some screenshots; the corresponding raw text (and display) can be seen either
    [as a github preview](https://htmlpreview.github.io/?https://github.com/micans/bash-utils/blob/master/hissyfit.html),
-   [right in this repo (source)](https://github.com/micans/bash-utils/blob/master/hissifit.html)
+   [right in this repo (source)](https://github.com/micans/bash-utils/blob/master/hissyfit.html)
    or [here at micans.org](http://micans.org/stijn/haphazard/hissyfit.html).
 
 
