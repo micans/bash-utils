@@ -27,6 +27,9 @@ now.
   to draw bar charts for categorical data (see fourth screenshot below), when given the `--tallyin` option.
   In this case the output is in the form of horizontal bars with labels in
   front and counts after.
+  To sort by label (or otherwise), simply use unix `sort` before `uniq -c`, e.g.
+  `sort | uniq -c | hissyfit`.
+  To sort by count, use `sort | uniq -c | sort -n | hissyfit`.
 
   Histograms and bar charts are drawn with Unicode block glyphs by default (use
   `--plain` to disable).
