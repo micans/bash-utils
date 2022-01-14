@@ -7,13 +7,17 @@
 #  -  Optional subselection of data (--min --max)
 #  -  --cumulative 
 #  -  --histin if input is already histogram counts
+#  -  --tallyin if input is output of uniq (line format: <count> <item>)
 #  -  quartiles indicated
+
+#  Thanks to Izaak van Dongen, Vlad Kisilev and Leopold Parts for feature suggestions.
 
 #  -  perhaps add optional output <binid> <bincount> <binmiddle>
 
 use Getopt::Long;
 use strict;
 use warnings;
+use Scalar::Util qw(looks_like_number);
 use utf8;
 
 my $progname   = 'hissyfit';
@@ -26,6 +30,7 @@ my $cumulative =  0;
 my $plain      =  0;
 my $emoji      =  0;
 my $histin     =  0;      # input data is already histogram data
+my $tallyin    =  0;      # input data is output of uniq
 
 my $height     =  20;
 my $SUBLEVELS  =  8;      # capitals for constants maybe
@@ -35,6 +40,7 @@ my $NBINS      =  80;
 my $zilch      =  ' ';
 
 my $staircase  = '▁-▂-▃-▄-▅-▆-▇-█';
+my $stonehenge = '▏-▎-▍-▌-▋-▊-▉-█';
 my $stairsep   = '-';
 my $emosep     =  '🐙';
 
@@ -52,6 +58,7 @@ Options:
 --plain           revert to plain ascii
 --cumulative      print cumulative histogram
 --histin          input is already histogram counts
+--tallyin         input is the output of uniq (line format <count> <item>)
 
 --stairs=x-y[-z]* use these as cursor sublevels (argument will split on '$stairsep' or --sep)
 --stair-sep=X     use X as separator to split stairs (default $stairsep)
@@ -74,6 +81,7 @@ if
    ,  "zilch=s"         =>   \$zilch
    ,  "emoji"           =>   \$emoji
    ,  "histin"          =>   \$histin
+   ,  "tallyin"         =>   \$tallyin
    ,  "emoji_"          =>   \$emosep
    )
 )
@@ -82,23 +90,36 @@ if
    }
 
 if ($help) { help(); exit(0); }
+die "Two many modes (--histin --tallyin)\n" if $tallyin + $histin >= 2;
+
 
 if ($plain) {
   $staircase = ".,-,:,',|";
   $stairsep = ',';
+  $staircase = '-,:,+,=' if $tallyin;
 }
 elsif ($emoji) {
                      # say hi to flushed, woozy, monocle, grinning and sunglasses.
   $staircase = '😳-🥴-🧐-😀-😎';
-  $zilch = '  ' unless $zilch ne ' ';      #  Used to have this guy: 😰
+  $zilch = '  ' unless $zilch ne ' ';      #  Used to have 'anxious face with sweat' 😰
   $NBINS = 20 if $NBINS == 80;
+}
+elsif ($tallyin) {
+  $staircase = $stonehenge;
 }
 
 die "Bins in [1,1000] please or edit code\n" unless $NBINS >= 1 && $NBINS <= 1000;
 
 my @D = ();
+my $n_warn = 0;
 while (<>) {
   chomp;
+  my $d = $_;
+  if (!$tallyin && !looks_like_number($d)) {
+    print STDERR "Skipping non-numerical input [$d]\n" if $n_warn++ < 5;
+    print STDERR "Further warnings suppressed\n" if $n_warn == 5;
+    next;
+  }
   push @D, $_;
 }
 
@@ -107,8 +128,26 @@ die "No data\n" if !@D;
 my @H;
 my ($dmin, $dmax, $hmin, $hmax, $q1, $q2, $q3, $out_of_range, $ND_orig, $ND, $width);
 
+my @labels = ();
 
-if ($histin) {
+if ($tallyin) {
+  my @D2 = ();
+  for my $d (@D) {
+    $d =~ /(\d+)\s+(.*)/ || die "Could not parse tally pair ($d)\n";
+    push @labels, $2;
+    push @D2, $1;
+  }
+  @D = @D2;
+  @H = @D2;
+  $NBINS = @H;
+  $hmin = $dmin = 0;   # this lot is not used in this mode
+  $hmax = $NBINS;      # but it's just as well to set them.
+  $width = 0;          #
+  $ND      = 0;
+  $ND += $_ for @H;
+  $ND_orig = $ND;
+}
+elsif ($histin) {
   @H = @D;
   $hmin = $dmin = 0;
   $hmax = $dmax = 100;
@@ -208,6 +247,7 @@ else {                       # Nearly ready to stick this in a subroutine.
 
 ##    This binned the data in a rather painful way.
 ##    Now cumulative data is easy. We need it always, e.g. for quartiles.
+##    tallyin: no harm, ignored.
 
 
 my @C = ($H[0]);          #  cumulative histogram data
@@ -261,6 +301,20 @@ for (my $i=0;$i<$NBINS;$i++) {
 
 ##    Canvas done.
 ##    Give it to the nice people.
+
+
+if ($tallyin) {
+  for (my $v=0; $v<$NBINS;$v++) {
+    printf "%20s ", substr($labels[$v], 0, 20);
+    for (my $u=0; $u<$height; $u++) {
+      print $canvas[$v][$u];
+    }
+    printf " %12d\n", $H[$v];
+  }
+  my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND);
+  print "total $ND items, most frequent $labels[$bigbinid-1] (p=$bigbinpct)\n";
+  exit(0);
+}
 
 
 for (my $u=0; $u<$height; $u++) {
