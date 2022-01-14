@@ -19,12 +19,17 @@ now.
   as data sub-selection), height/resolution
   (`--height`), cumulative tallying (`--cumulative`), user-specified glyphs
   (`--stairs`) and the number of bins.
+  It can also take the output of `uniq -c` to draw bar charts for categorical data
+  (see fourth screenshot below), when given the `--tallyin` option. In this case
+  the output is in the form of horizontal bars with labels in front and counts after.
 
-![screenshot](https://github.com/micans/bash-utils/blob/master/img/hf.png)
+![regular histogram, unicode paint](https://github.com/micans/bash-utils/blob/master/img/hf.png)
 
-![screenshot](https://github.com/micans/bash-utils/blob/master/img/hf2.png)
+![regular histogram, ascii paint](https://github.com/micans/bash-utils/blob/master/img/hf2.png)
 
-![screenshot](https://github.com/micans/bash-utils/blob/master/img/fh3.png)
+![regular histogram, emoji paint](https://github.com/micans/bash-utils/blob/master/img/fh3.png)
+
+![horizontal bar chart of categorical data](https://github.com/micans/bash-utils/blob/master/img/hft.png)
 
 - `merge-files-col.sh` This merges columns of files using `transpose`
   from [the reaper distribution](https://github.com/micans/reaper). It is quite a bit faster and much
