@@ -31,10 +31,13 @@ now.
   Histograms and bar charts are drawn with Unicode block glyphs by default. Use
   `--plain` to disable this and use `--stairs` to provide your own glyphs.
 
-   Below are some screenshots; the corresponding raw text (and display) can be seen either
-   [as a github preview](https://htmlpreview.github.io/?https://github.com/micans/bash-utils/blob/master/hissyfit.html),
-   [right in this repo (source)](https://github.com/micans/bash-utils/blob/master/hissyfit.html)
-   or [here at micans.org](http://micans.org/stijn/haphazard/hissyfit.html).
+  Sticking the output within `<pre></pre>` tags is a cheap way of getting
+  histograms in HTML.  Below are some screenshots; the corresponding raw text
+  (and display) in `HTML/<pre>` can be seen either [as a github
+  preview](https://htmlpreview.github.io/?https://github.com/micans/bash-utils/blob/master/hissyfit.html),
+  [right in this repo
+  (source)](https://github.com/micans/bash-utils/blob/master/hissyfit.html) or
+  [here at micans.org](http://micans.org/stijn/haphazard/hissyfit.html).
 
 
 ![regular histogram, unicode block paint](https://github.com/micans/bash-utils/blob/master/img/hf.png)
