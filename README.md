@@ -6,7 +6,7 @@ Apparix used to live here but has [its own repository](https://github.com/micans
 now.
 
 
-## Miscellaneous code
+## Unix terminal histograms and bar charts
 
 - `hissyfit`  Unix terminal histograms and bar charts for quickly
   gauging numerical data and count data - see screenshots and link to raw output below.
@@ -33,6 +33,8 @@ now.
   Histograms and bar charts are drawn with Unicode block glyphs by default. Use
   `--plain` to disable this and use `--stairs` to provide your own glyphs.
 
+### Example outputs (in HTML/<pre>)
+
   Sticking the output within `<pre></pre>` tags is a cheap way of getting
   histograms in HTML.  Below are some screenshots; the corresponding raw text
   (and display) in `HTML/<pre>` can be seen either [as a github
@@ -41,10 +43,15 @@ now.
   (source)](https://github.com/micans/bash-utils/blob/master/hissyfit.html) or
   [here at micans.org](http://micans.org/stijn/haphazard/hissyfit.html).
 
+
+### Beyond and more
+
   Hissyfit is just one script. Projects with more code and much greater capabilities are
 - [Jp -  terminal plots from JSON (or CSV) data](https://github.com/sgreben/jp)
 - [Termgraph - basic graphs in the terminal](https://github.com/mkaz/termgraph)
 
+
+### Screenshots
 
 ![regular histogram, unicode block paint](https://github.com/micans/bash-utils/blob/master/img/hf.png)
 
@@ -53,6 +60,9 @@ now.
 ![regular histogram, emoji paint](https://github.com/micans/bash-utils/blob/master/img/fh3.png)
 
 ![horizontal bar chart of categorical data](https://github.com/micans/bash-utils/blob/master/img/hft.png)
+
+
+## Miscellaneous code
 
 - `merge-files-col.sh` This merges columns of files using `transpose`
   from [the reaper distribution](https://github.com/micans/reaper). It is quite a bit faster and much
