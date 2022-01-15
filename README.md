@@ -41,7 +41,7 @@ now.
   (source)](https://github.com/micans/bash-utils/blob/master/hissyfit.html) or
   [here at micans.org](http://micans.org/stijn/haphazard/hissyfit.html).
 
-  Hissyscript is just one script. Projects with more code and much greater capabilities are
+  Hissyfit is just one script. Projects with more code and much greater capabilities are
 - [Jp -  terminal plots from JSON (or CSV) data](https://github.com/sgreben/jp)
 - [Termgraph - basic graphs in the terminal](https://github.com/mkaz/termgraph)
 
