@@ -8,8 +8,10 @@ now.
 
 ## Unix terminal histograms and bar charts
 
-- `hissyfit`  Unix terminal histograms and bar charts for quickly
-  gauging numerical data and count data - see screenshots and link to raw output below.
+  `hissyfit` can be used at the end of Unix pipes (or read from file) to draw
+  terminal histograms and bar charts for quickly gauging numerical data and count
+  data - see screenshots and link to raw output below.
+
   No need to fire up R!
   [It's just one script, get it here.](https://raw.githubusercontent.com/micans/bash-utils/master/hissyfit)
 
