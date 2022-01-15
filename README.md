@@ -33,7 +33,7 @@ now.
   Histograms and bar charts are drawn with Unicode block glyphs by default. Use
   `--plain` to disable this and use `--stairs` to provide your own glyphs.
 
-### Example outputs (in HTML/<pre>)
+### Example outputs (in HTML/\<pre>)
 
   Sticking the output within `<pre></pre>` tags is a cheap way of getting
   histograms in HTML.  Below are some screenshots; the corresponding raw text
