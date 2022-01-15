@@ -51,6 +51,10 @@ now.
   Hissyfit is just one script. Projects with more code and much greater capabilities are
 - [Jp -  terminal plots from JSON (or CSV) data](https://github.com/sgreben/jp)
 - [Termgraph - basic graphs in the terminal](https://github.com/mkaz/termgraph)
+- [YouPlot - plots in the terminal](https://github.com/red-data-tools/YouPlot)
+- [bashplotlib - plots in the terminal](https://github.com/glamp/bashplotlib)
+- [plotext - plot directly in the terminal](https://github.com/piccolomo/plotext)
+- [distribution - character-based graphs in the terminal](https://github.com/wizzat/distribution)
 
 
 ### Screenshots
