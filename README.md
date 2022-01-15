@@ -11,6 +11,8 @@ now.
 - `hissyfit`  Unix terminal histograms and bar charts for quickly
   gauging numerical data and count data - see screenshots and link to raw output below.
   No need to fire up R!
+  [It's just one script, get it here.](https://raw.githubusercontent.com/micans/bash-utils/master/hissyfit)
+
   For numerical data expected input is a stream of numbers, one per line.
   Options are min and max
   histogram endpoints (`--min --max`, simultaneously acts as data sub-selection),
@@ -38,6 +40,10 @@ now.
   [right in this repo
   (source)](https://github.com/micans/bash-utils/blob/master/hissyfit.html) or
   [here at micans.org](http://micans.org/stijn/haphazard/hissyfit.html).
+
+  Hissyscript is just one script. Projects with more code and much greater capabilities are
+- [Jp -  terminal plots from JSON (or CSV) data](https://github.com/sgreben/jp)
+- [Termgraph - basic graphs in the terminal](https://github.com/mkaz/termgraph)
 
 
 ![regular histogram, unicode block paint](https://github.com/micans/bash-utils/blob/master/img/hf.png)
