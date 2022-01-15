@@ -356,7 +356,7 @@ for (my $u=0; $u<$height; $u++) {
 ##    Print some stats, go to some lengths to plot quartile locations.
 
 
-my $sep = '____.____,' x 100;
+my $sep = '____.____,' x int(($NBINS+10)/10);
 $sep = substr($sep, 0, $NBINS);
 
 if ($NBINS >= 80) {
@@ -371,24 +371,26 @@ $sep = $emosep x $NBINS if $emoji;
 
 my $emit_quantiles = $histin || ($q1 > $hmin && $q3 < $hmax);
 
-my $p1 = (grep { $C[$_] >= 0.25 * $ND } 0..($NBINS-1))[0];
-my $p2 = (grep { $C[$_] >= 0.50 * $ND } 0..($NBINS-1))[0];
-my $p3 = (grep { $C[$_] >= 0.75 * $ND } 0..($NBINS-1))[0];
+              # $p[123] are 1-based bin indexes.
+              #
+my $p1 = 1 + (grep { $C[$_] >= 0.25 * $ND } 0..($NBINS-1))[0];
+my $p2 = 1 + (grep { $C[$_] >= 0.50 * $ND } 0..($NBINS-1))[0];
+my $p3 = 1 + (grep { $C[$_] >= 0.75 * $ND } 0..($NBINS-1))[0];
 
               # data was subselected, but for now we produce quantiles for
               # full input data always.
 if (!$histin && $emit_quantiles && $ND != $ND_orig) {
-  $p1 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q1 } 0..($NBINS-1))[0];
-  $p2 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q2 } 0..($NBINS-1))[0];
-  $p3 = (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q3 } 0..($NBINS-1))[0];
+  $p1 = 1 + (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q1 } 0..($NBINS-1))[0];
+  $p2 = 1 + (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q2 } 0..($NBINS-1))[0];
+  $p3 = 1 + (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q3 } 0..($NBINS-1))[0];
 }
 
 print STDERR "c99=$C[$NBINS-1] nd=$ND q=$q1,$q2,$q3 ql=$p1,$p2,$p3  qlv=$D[$C[$p1]-1],$D[$C[$p2]-1],$D[$C[$p3]-1]\n" if $debug;
 
 if ($emit_quantiles) {
-  substr($sep, $p1, 1) = $emoji ? '🌘' : 'Q';
-  substr($sep, $p2, 1) = $emoji ? '🌗' : 'Q';
-  substr($sep, $p3, 1) = $emoji ? '🌖' : 'Q';
+  substr($sep, $p1-1, 1) = $emoji ? '🌘' : 'Q';
+  substr($sep, $p2-1, 1) = $emoji ? '🌗' : 'Q';
+  substr($sep, $p3-1, 1) = $emoji ? '🌖' : 'Q';
 }
 
 print "$sep\n";
