@@ -69,6 +69,19 @@ Options:
 
 Normal output is formed by vertical bars (regular histogram for numerical distributions).
 With --tallyin  horizontal bars are output, preceded by labels, followed by counts.
+
+Legend explanation:
+ND=273410 oor=356/0.1% hmin=0 hmax=3 dmin=0.01409641 dmax=5.863222
+topbin(i=9,n=16880,p=6.2,x~0.31875) bw=0.0375 q=(0.3414933[9],0.620431[16],0.8757837[23])
+ND      Number of Data
+oor     Out of range count/percentage, if --min and --max caused data to be filtered
+hmin    Minimum of data range as represented in histogram
+hmax    Maximum of data range as represented in histogram 
+bw      Bin width: bw = (hmin - hmax) / nbins
+dmin    Smallest data item
+dmax    Largest data item
+topbin  Highest bin. i: index, n: count, p: percentage, x: middle of bin
+q       The three data quartiles with bin index where they occur
 EOH
 }
 
