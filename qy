@@ -143,7 +143,7 @@ elif [[ $mode == "tsv" ]]; then
    #             1  3   4      6        2    5
    # host:port ip clientid userid [date] "REQUESTTYPE URL" CODE objectsize referrer useragent
 elif [[ $mode == "dl" ]]; then
-   fnout=dl.${base#refs.}.txt.rev
+   fnout=dl.${base#refs.}.txt
    fnout=$tag_dl.${fnout#dl.}
    export QYDL=$QY_DLPATTERN
    perl -ne 'BEGIN{open("M",".map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;}/\S+\s+(\S+).*?"GET (\S+$ENV{QYDL}).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs | rev | sort | rev > $fnout
