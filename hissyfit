@@ -39,6 +39,7 @@ my $height     =  20;
 my $SUBLEVELS  =  8;      # capitals for constants maybe
 my $user_min   =  undef;
 my $user_max   =  undef;
+my $user_Ymax  =  undef;
 my $NBINS      =  80;
 my $zilch      =  ' ';
 
@@ -66,6 +67,7 @@ Options:
 --stairs=x-y[-z]* use these as cursor sublevels (argument will split on '$stairsep' or --sep)
 --stair-sep=X     use X as separator to split stairs (default $stairsep)
 --zilch=S         use S as filler for histogram (default space)
+--ymax=NUM        set maximum for y axis; ignored if too small
 
 Normal output is formed by vertical bars (regular histogram for numerical distributions).
 With --tallyin  horizontal bars are output, preceded by labels, followed by counts.
@@ -95,6 +97,7 @@ if
    ,  "bins=i"          =>   \$NBINS
    ,  "min=f"           =>   \$user_min
    ,  "max=f"           =>   \$user_max
+   ,  "ymax=f"          =>   \$user_Ymax
    ,  "stairs=s"        =>   \$staircase
    ,  "stair-sep=s"     =>   \$stairsep
    ,  "zilch=s"         =>   \$zilch
@@ -293,6 +296,10 @@ my $bigbin = ( sort { $b <=> $a } @H )[0];
 my $bigbinid = (grep { $H[$_] == $bigbin } 0..($NBINS-1))[0] + 1;   # 1-based for user.
 my $bigbinmid = $hmin + ($bigbinid-0.5)*$width;
 my $Ymax = $cumulative ? $ND : $bigbin;
+if (defined($user_Ymax)) {
+  if ($Ymax > $user_Ymax) { print STDERR "--ymax value $user_Ymax is lower than data ymax, ignoring\n"; }
+  else { $Ymax = $user_Ymax; }
+}
 
 
 ##    Parameters set.
