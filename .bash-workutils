@@ -356,6 +356,11 @@ n: integer
   grab P1 P2 [F]  print chunks inbetween patterns P1 and P2, inclusive
   nchar S       how many bytes in string S
   lines i n     print n lines from i onwards, first line is 1.
+  groupify		  make directory and below group writable
+  ungroupify		unmake directory and below group writable
+  gimme_sum		  sum of arguments
+  myman					process troff source, read in less
+  perusual			permission chain upwards for argument
 DOC
 }
 
@@ -387,4 +392,17 @@ function myman()
 {  local src=${1?Need roff file argument}
    groff -t -e -mandoc -Tascii $src | less
 }
+
+function perusal()
+{ a=${1?Need file or directory name}
+  b=${a%\/*}
+  list=($a)
+  while [[ $b != $a ]]; do
+    a=$b
+    b=${a%\/*}
+    list+=($b)
+  done
+  ls -ld "${list[@]}"
+}
+
 
