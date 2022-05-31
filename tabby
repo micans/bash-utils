@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# expects STDIN
+# truncate all columns to a certain length, default 8.
+
+set -euo pipefail
+
+num=${1-8}
+nom=$((num+2))
+
+if test -t 0; then
+  echo "I read from STDIN please"
+  false
+fi
+
+# Not sure if column is the best choice.
+sed 's/\([^\t]\{0,'$num'\}\)[^\t]*/\1/g' | column -c 10 -s $'\t' -t
+
