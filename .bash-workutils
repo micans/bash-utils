@@ -405,4 +405,8 @@ function perusal()
   ls -ld "${list[@]}"
 }
 
+function c80()
+{  num=${1-80}
+   cut -b 1-$num
+}
 
