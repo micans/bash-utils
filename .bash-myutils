@@ -119,9 +119,23 @@ function fqfa {
   gzip -dcf ${1:?Need file} | perl -ne '$i=($.+2)/4; print ">$i\n$_" if $. % 4 == 2'
 }
 
+  # Given argument 'tag', glog searches the file named in variable GLOGME
+  # for a section defined by
+  # <tag
+  # ... content ...
+  # >
+  # If tag is not provided, lists all tags found in the file.
+  #
 function glog() {
-  tag=${1:?Need tag}
-  par=$(perl -ne 'print if /^\('$tag'/../^\)/' "${GLOGME:?define-GLOGME-variable}" | tail -n +2 | grep -v "^)$")
+  tag=${1:-__null__}
+  local glogme=${GLOGME:?Define GLOGME variable}
+  if [[ $tag == '__null__' ]]; then
+    echo "---"
+    grep -i "^<[a-z]" "$glogme" | cut -b 2-
+    echo "---"
+    return
+  fi
+  par=$(perl -ne 'print if /^<'$tag'/../^>/' "$glogme")
   if [[ -n $par ]]; then
     echo -e "---\n$par\n---"
   else
