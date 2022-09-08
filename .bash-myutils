@@ -118,3 +118,14 @@ function helpme {
 function fqfa {
   gzip -dcf ${1:?Need file} | perl -ne '$i=($.+2)/4; print ">$i\n$_" if $. % 4 == 2'
 }
+
+function glog() {
+  tag=${1:?Need tag}
+  par=$(perl -ne 'print if /^\('$tag'/../^\)/' "${GLOGME:?define-GLOGME-variable}" | tail -n +2 | grep -v "^)$")
+  if [[ -n $par ]]; then
+    echo -e "---\n$par\n---"
+  else
+    echo "--- Not found ($tag)"
+  fi
+}
+
