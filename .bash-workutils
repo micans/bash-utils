@@ -410,3 +410,17 @@ function c80()
    cut -b 1-$num
 }
 
+function vw () 
+{  IFS= read -r header;
+   echo "$header";
+   sort $@
+}
+
+function rc() {
+  if [[ -n $1 ]]; then
+    echo $1 | tr GCATUgcatu  CGTAAcgtAa  | rev
+  else
+     tr GCATUgcatu  CGTAAcgtAa  | rev
+   fi
+}
+
