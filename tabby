@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# expects STDIN
+# truncate all columns to a certain length, default 8.
+# parse general numeric numbers 5.14656032242654e-272 to look like 5.1e-272
+
+set -euo pipefail
+
+num=${1-8}
+nom=$((num+2))
+
+if test -t 0; then
+  echo "I read from STDIN please"
+  false
+fi
+
+# Not sure if column is the best choice.
+# sed 's/\([^\t]\{0,'$num'\}\)[^\t]*/\1/g' | column -c 10 -s $'\t' -t
+
+perl -F'\t' -lane '$l="";for(@F){if(s/(\d+\.\d)(\d*)(e-\d+)/$1$3/){}else{s/(.*)/substr($_,0,'$num')/e}$l.=$_." "x('$nom'-length($_))}print$l;'
+
