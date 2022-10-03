@@ -159,7 +159,7 @@ elif [[ $mode == "map" ]]; then
    >&2 echo "-- hook $QY_MAPTRIGGER (-M <hook>)"
    > .add
    grep "$QY_MAPTRIGGER" < readfromlogs | perl -ne 'BEGIN{open(M,"<.map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;close(M)}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
-      name=$(dig +short -x $ip)
+      name=$(dig +noidnout +short -x $ip)
       name=$(echo $name)            # remove trailing ws
       name=${name%.}                # remove trailing dot
       name=$(tr ' ' '-' <<< $name)  # occassionally multi-line answer
