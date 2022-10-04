@@ -1,0 +1,172 @@
+#!/usr/bin/perl
+
+# Pick and optionally filter columns from tabular input.
+# Filtering can use a variety of comparison operators.
+# Requires tab separated input.
+
+# See -H (EOH below).
+
+# lexical comparison operators lt le gt ge not (yet) supported.
+
+
+use strict;
+use warnings;
+
+@::target = @ARGV; @ARGV = ();
+
+my $print_header = 1;
+my $filter_or    = 0;
+my $print_rowname = 0;
+my $print_tally  = 0;
+my $print_all    = 0;
+my $excise_cols  = 0;
+
+BEGIN {
+  $::EPSILON = 0; $::EPSILON = $ENV{EPSILON} if defined($ENV{EPSILON});
+  $::ORDER  = 1; $::ORDER  = $ENV{ORDER} if defined($ENV{ORDER});
+}
+
+while (@::target && $::target[0] =~ /^-/) {
+  my $options = shift @::target;
+  $print_header = 1 if $options =~ /h/;
+  $filter_or    = 1 if $options =~ /v/;
+  $print_rowname= 1 if $options =~ /r/;
+  $print_tally  = 1 if $options =~ /t/;
+  $print_all    = 1 if $options =~ /a/;
+  $excise_cols  = 1 if $options =~ /x/;
+  if ($options =~ /H/) {
+print <<EOH;
+Usage: pick [options] <colspec>+ < FILE
+Simple example: pick TAG ID < table.txt
+
+Options: -h do not print header
+         -r print rownames if no column name for rownames exists; in this case _ is the name
+            to select with <op> on rownames.
+         -t print tally column of count of matched column criteria
+         -v OR multiple criteria (default is AND)
+         -a print all input columns (filtering by colspec applies, -t accepted)
+         -x excise specified column(s) from the output
+
+colspec: <COLNAME> or <COLNAME><op><VAL>
+Use <COLNAME><op><VAL> to select rows based on value in column COLNAME; see list below for <op>.
+Quote colspec if it has characters that have special meaning in the shell.
+  =     String identity
+  ~     Substring/regular expression match
+  !     String inequality
+  ==    Numerical identity
+  =+    Aproximate numerical identity wrt VAL +- EPSILON; export variable EPSILON (current value $::EPSILON)
+  =*    Aproximate numerical identity wrt VAL * ORDER, 1/ORDER (current value $::ORDER, not sign aware)
+  !=    Numerical inequality
+  <     Numerical less than
+  >     Numerical greater than
+  <=    Numerical less than or equal
+  >=    Numerical greater than or equal
+EOH
+  exit 0;
+  }
+}
+
+die "Need something (use -H for help)\n" unless @::target;
+
+sub interval_plus {
+  my ($x, $y) = @_;
+  return $x <= $y + $::EPSILON && $x >= $y - $::EPSILON;
+}
+
+sub interval_mul {
+  my ($x, $y) = @_;
+  return abs($x) <= abs($y) * $::ORDER && abs($x) >= abs($y) / $::ORDER;
+}
+
+my %ops = (
+  'eq' => sub { $_[0] eq $_[1] },
+  'ne' => sub { $_[0] ne $_[1] },
+  '==' => sub { $_[0] == $_[1] },
+  '=+' => sub { interval_plus(@_) },
+  '=*' => sub { interval_mul(@_) },
+  '!=' => sub { $_[0] != $_[1] },
+  '~'  => sub { $_[0] =~ /$_[1]/ },
+  '<'  => sub { $_[0] <  $_[1] },
+  '<=' => sub { $_[0] <= $_[1] },
+  '>'  => sub { $_[0] >  $_[1] },
+  '>=' => sub { $_[0] >= $_[1] }
+);
+
+
+my %filter = ();
+my $index = 0;
+for (@::target) {
+  if (s/([!<>=~+*]+)(.*)//) {
+    my ($op, $val) = ($1, $2);
+    $op = 'eq' if $op eq '=';
+    $op = 'ne' if $op eq '!';
+    die "Unrecognised operator [$op]\n" unless defined($ops{$op});
+    $filter{$index} = [$op, $val];
+  }
+  $index++;
+}
+my $n_filter = keys %filter;
+
+
+local $" = "\t";
+
+while (<>) {
+
+  chomp;
+  my @F = split "\t";
+  my $rowname = "";
+
+  if ($. == 1) {
+    $::N = @F;
+    $F[0] = '_' if $F[0] eq '';
+    my %map = map { $F[$_] => $_ } 0..($::N-1);
+    my @missing = grep { !defined($map{$_}) } @::target;
+    die "Field(s) <@missing> not found\n" if @missing;
+    @::select = map { $map{$_} } @::target;
+    @::print  = $::select[0];
+    for (my $n=1; $n<@::select; $n++) {
+      my $item = $::select[$n];
+      if ($item ne $::print[-1]) { push @::print, $item; }
+    }
+    if ($excise_cols) {
+      my %print =  map { ($_, 1) } @::print;
+      @::print  =  grep { !defined($print{$_}) } 0..($::N-1);
+    }
+    if ($print_header) {
+      print $print_all ? "@F" : "@F[@::print]";
+      print $print_tally ? "\tT\n" : "\n";
+    }
+    next;
+  }
+
+  if ($::N+1 == @F) {
+    if ($. == 2) {
+      $::extra_rownames = 1;
+    }
+    elsif (!$::extra_rownames) {
+      die "Row count inconsistency at line $.\n";
+    }
+    $rowname = shift @F;
+  }
+  elsif ($::extra_rownames || $::N != @F) {
+    die "Row count inconsistency at line $.\n";
+  }
+
+  my $nmatch = 0;
+  if ($n_filter) {
+    for my $i (keys %filter) {
+      my ($op, $val) = @{$filter{$i}};
+      $nmatch++ if $ops{$op}->($F[$::select[$i]], $val);
+    }
+    next unless $print_tally || ($filter_or && $nmatch) || $nmatch == $n_filter;
+  }
+
+  print "$rowname\t" if $rowname && $print_rowname;
+  print $print_all ? "@F" : "@F[@::print]";
+  print "\t$nmatch" if $print_tally;
+  print "\n";
+
+}
+
+__DATA__
+# print STDERR "Test $i $F[$::select[$i]] $filter{$i}\n";
