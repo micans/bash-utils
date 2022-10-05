@@ -1,53 +1,67 @@
 #!/usr/bin/perl
 
 # Pick and optionally filter columns from tabular input.
-# Filtering can use a variety of comparison operators.
+# Filter with numerical and string comparison operators and regular expressions.
 # Requires tab separated input.
 
 # See -H (EOH below).
 
-# lexical comparison operators lt le gt ge not (yet) supported.
+# ?  -eps(0.1)-    -ord(2)-
+# ?  numerical comparisons check field is numeric
+# -  concatenate columns, add new, or rename, insert constant  A=/chr/,A  new2=C,B
+# -  accept non-header tables, _1 _2 _3 ...
+# -  Not to be done: column expressions ... A + (C > 0 ? D : E)
 
 
 use strict;
 use warnings;
 
-@::target = @ARGV; @ARGV = ();
+@::spec = @ARGV; @ARGV = ();
+@::out_name  = ();
+@::filter = ();
 
-my $print_header = 1;
-my $filter_or    = 0;
-my $print_rowname = 0;
-my $print_tally  = 0;
-my $print_all    = 0;
-my $excise_cols  = 0;
+my $B_print_header = 1;
+my $B_filter_or    = 0;
+my $B_print_rowname = 0;
+my $B_print_tally  = 0;
+my $B_print_all    = 0;
+my $B_excise_cols  = 0;
+my $B_add_row_column = 0;
 
 BEGIN {
-  $::EPSILON = 0; $::EPSILON = $ENV{EPSILON} if defined($ENV{EPSILON});
-  $::ORDER  = 1; $::ORDER  = $ENV{ORDER} if defined($ENV{ORDER});
+  $::EPSILON = 0.0001; $::EPSILON = $ENV{EPSILON} if defined($ENV{EPSILON});
+  $::OOM     = 2; $::OOM     = $ENV{OOM} if defined($ENV{OOM});
 }
 
-while (@::target && $::target[0] =~ /^-/) {
-  my $options = shift @::target;
-  $print_header = 1 if $options =~ /h/;
-  $filter_or    = 1 if $options =~ /v/;
-  $print_rowname= 1 if $options =~ /r/;
-  $print_tally  = 1 if $options =~ /t/;
-  $print_all    = 1 if $options =~ /a/;
-  $excise_cols  = 1 if $options =~ /x/;
+while (@::spec && $::spec[0] =~ /^-/) {
+
+  my $options = shift @::spec;
+  $B_print_header = 0 if $options =~ /h/;
+  $B_filter_or    = 1 if $options =~ /v/;
+  $B_print_rowname= 1 if $options =~ /r/;
+  $B_print_tally  = 1 if $options =~ /t/;
+  $B_print_all    = 1 if $options =~ /a/;
+  $B_excise_cols  = 1 if $options =~ /x/;
+  $B_add_row_column =1 if $options =~ /R/;
+
   if ($options =~ /H/) {
 print <<EOH;
 Usage: pick [options] <colspec>+ < FILE
 Simple example: pick TAG ID < table.txt
 
 Options: -h do not print header
-         -r print rownames if no column name for rownames exists; in this case _ is the name
-            to select with <op> on rownames.
+         -r print rownames if no column name for rownames exists;
+            in this case _ is the name to select with <op> on rownames.
+         -R add _ column if no row name field exists in the header;
+            an empty field is recognised and mapped to _ automatically.
          -t print tally column of count of matched column criteria
          -v OR multiple criteria (default is AND)
          -a print all input columns (filtering by colspec applies, -t accepted)
          -x excise specified column(s) from the output
 
-colspec: <COLNAME> or <COLNAME><op><VAL>
+    colspec: <COLNAME> or <COLNAME><op><VAL>
+    The first form selects columns for printing, the second form filters rows.
+
 Use <COLNAME><op><VAL> to select rows based on value in column COLNAME; see list below for <op>.
 Quote colspec if it has characters that have special meaning in the shell.
   =     String identity
@@ -55,18 +69,20 @@ Quote colspec if it has characters that have special meaning in the shell.
   !     String inequality
   ==    Numerical identity
   =+    Aproximate numerical identity wrt VAL +- EPSILON; export variable EPSILON (current value $::EPSILON)
-  =*    Aproximate numerical identity wrt VAL * ORDER, 1/ORDER (current value $::ORDER, not sign aware)
+  =*    Aproximate numerical identity wrt VAL * OOM, 1/OOM (current value $::OOM, not sign aware)
   !=    Numerical inequality
   <     Numerical less than
   >     Numerical greater than
   <=    Numerical less than or equal
   >=    Numerical greater than or equal
+  /OP/  Where OP is one of ( eq ne lt le ge gt ) synonyms for ( == != < <= >= > )
+  ~OP~  Where OP is one of ( eq ne lt le ge gt ) string comparisons; eq is the same as =, ne the same as !
 EOH
   exit 0;
   }
 }
 
-die "Need something (use -H for help)\n" unless @::target;
+die "Need something (use -H for help)\n" unless @::spec || $B_print_all;
 
 sub interval_plus {
   my ($x, $y) = @_;
@@ -75,37 +91,48 @@ sub interval_plus {
 
 sub interval_mul {
   my ($x, $y) = @_;
-  return abs($x) <= abs($y) * $::ORDER && abs($x) >= abs($y) / $::ORDER;
+  return abs($x) <= abs($y) * $::OOM && abs($x) >= abs($y) / $::OOM;
 }
 
 my %ops = (
-  'eq' => sub { $_[0] eq $_[1] },
-  'ne' => sub { $_[0] ne $_[1] },
-  '==' => sub { $_[0] == $_[1] },
+  '~'  => sub { $_[0] =~ /$_[1]/ },
   '=+' => sub { interval_plus(@_) },
   '=*' => sub { interval_mul(@_) },
+
+  '==' => sub { $_[0] == $_[1] },
   '!=' => sub { $_[0] != $_[1] },
-  '~'  => sub { $_[0] =~ /$_[1]/ },
   '<'  => sub { $_[0] <  $_[1] },
   '<=' => sub { $_[0] <= $_[1] },
   '>'  => sub { $_[0] >  $_[1] },
-  '>=' => sub { $_[0] >= $_[1] }
+  '>=' => sub { $_[0] >= $_[1] },
+
+  '/eq/' => sub { $_[0] == $_[1] },
+  '/ne/' => sub { $_[0] != $_[1] },
+  '/lt/' => sub { $_[0] <  $_[1] },
+  '/le/' => sub { $_[0] <= $_[1] },
+  '/ge/' => sub { $_[0] >= $_[1] },
+  '/gt/' => sub { $_[0] >  $_[1] },
+
+  '~eq~' => sub { $_[0] eq $_[1] },
+  '~ne~' => sub { $_[0] ne $_[1] },
+  '~lt~' => sub { $_[0] lt $_[1] },
+  '~le~' => sub { $_[0] le $_[1] },
+  '~ge~' => sub { $_[0] ge $_[1] },
+  '~gt~' => sub { $_[0] gt $_[1] }
 );
 
-
-my %filter = ();
-my $index = 0;
-for (@::target) {
-  if (s/([!<>=~+*]+)(.*)//) {
+for my $colname (@::spec) {
+  if ($colname =~ s/([\/~](?:[lg][et]|eq|ne)[\/~]|[!<>=~+*]+)(.*)//) {
     my ($op, $val) = ($1, $2);
-    $op = 'eq' if $op eq '=';
-    $op = 'ne' if $op eq '!';
+    $op = '~eq~' if $op eq '=';
+    $op = '~ne~' if $op eq '!';
     die "Unrecognised operator [$op]\n" unless defined($ops{$op});
-    $filter{$index} = [$op, $val];
+    push @::filter, [$op, $val, $colname];
   }
-  $index++;
+  else {
+    push @::out_name, $colname;
+  }
 }
-my $n_filter = keys %filter;
 
 
 local $" = "\t";
@@ -117,24 +144,30 @@ while (<>) {
   my $rowname = "";
 
   if ($. == 1) {
+
+    if ($F[0] eq '') { $F[0] = '_'; }
+    elsif ($B_add_row_column) { unshift @F, '_' }
+
     $::N = @F;
-    $F[0] = '_' if $F[0] eq '';
-    my %map = map { $F[$_] => $_ } 0..($::N-1);
-    my @missing = grep { !defined($map{$_}) } @::target;
+
+    %::name_to_idx = map { $F[$_] => $_ } 0..($::N-1);
+    my @filter_names = map { $_->[2] } @::filter;
+
+    my @missing = grep { !defined($::name_to_idx{$_}) } (@filter_names, @::out_name);
     die "Field(s) <@missing> not found\n" if @missing;
-    @::select = map { $map{$_} } @::target;
-    @::print  = $::select[0];
-    for (my $n=1; $n<@::select; $n++) {
-      my $item = $::select[$n];
-      if ($item ne $::print[-1]) { push @::print, $item; }
+
+    @::out_idx = map { $::name_to_idx{$_} } @::out_name;
+    for my $f (@::filter) {
+      $f->[2] = $::name_to_idx{$f->[2]};
     }
-    if ($excise_cols) {
-      my %print =  map { ($_, 1) } @::print;
-      @::print  =  grep { !defined($print{$_}) } 0..($::N-1);
+
+    if ($B_excise_cols) {
+      my %print =  map { ($_, 1) } @::out_idx;
+      @::out_idx  =  grep { !defined($print{$_}) } 0..($::N-1);
     }
-    if ($print_header) {
-      print $print_all ? "@F" : "@F[@::print]";
-      print $print_tally ? "\tT\n" : "\n";
+    if ($B_print_header) {
+      print $B_print_all ? "@F" : "@F[@::out_idx]";
+      print $B_print_tally ? "\tT\n" : "\n";
     }
     next;
   }
@@ -153,20 +186,19 @@ while (<>) {
   }
 
   my $nmatch = 0;
-  if ($n_filter) {
-    for my $i (keys %filter) {
-      my ($op, $val) = @{$filter{$i}};
-      $nmatch++ if $ops{$op}->($F[$::select[$i]], $val);
+  if (@::filter) {
+    for my $f (@::filter) {
+      my ($op, $val, $colid) = @$f;
+      $nmatch++ if $ops{$op}->($F[$colid], $val);
     }
-    next unless $print_tally || ($filter_or && $nmatch) || $nmatch == $n_filter;
+    next unless $B_print_tally || ($B_filter_or && $nmatch) || $nmatch == @::filter;
   }
 
-  print "$rowname\t" if $rowname && $print_rowname;
-  print $print_all ? "@F" : "@F[@::print]";
-  print "\t$nmatch" if $print_tally;
+  print "$rowname\t" if $rowname && $B_print_rowname;
+  print $B_print_all ? "@F" : "@F[@::out_idx]";
+  print "\t$nmatch" if $B_print_tally;
   print "\n";
 
 }
 
 __DATA__
-# print STDERR "Test $i $F[$::select[$i]] $filter{$i}\n";
