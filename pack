@@ -106,7 +106,7 @@ meaning in the shell.
   ~eq|ne|lt|le|ge|gt~  string   comparison (equal, not equal, less then, less than or equal etc)
 
 <COMPUTE> is a concatenation of parts of the form (1) ^<string> (2) :<handle>
-  (3) /<op> . <string> will be url-decoded. <handle> is a column name, or column
+  (3) ,<op> . <string> will be url-decoded. <handle> is a column name, or column
   index with -k (headerless input) <op> is one of
     
     / add sub mul div
@@ -115,11 +115,11 @@ meaning in the shell.
     uc lc               (consume two   leave one)       upper case, lower case
 
   If the very first part starts with [a-z] it is inferred to be a handle
-  (leading : not needed).  <COMPUTE> is a stack, so zut::foo:bar/add^str/cat
+  (leading : not needed).  <COMPUTE> is a stack, so zut::foo:bar,add^str,cat
   creates a new column called zut by adding columns foo and bar and then
   concatenating 'str'. The default operation is concatenation; if no operators
   are left the remainder of the stack is concatenated. Thus the above is
-  equivalent to zut::foo:bar/add^str. To just prefix a column: zut::^foo:zut
+  equivalent to zut::foo:bar,add^str. To just prefix a column: zut::^foo:zut
   To concatenate two columns: zut::foo:bar .
 
     handle str1 str2 ed  =>  handle =~ s/str1/str2/
