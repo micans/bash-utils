@@ -8,15 +8,11 @@
 
 # See -H (EOH below).
 
-# Test: interaction of anonymous rownames with other modes.
-
 # s o m e   i d e a s
-# !  meaningful constants for codes and offets (output_spic)
-# ?  per-column A/ep/0.1    B/ep/0.2
+# ?  per-column A/ep/4/0.1    B/ep/5/0.2 -> make spic third argument a map then.
 # ?  numerical comparisons check field is numeric
 # ?  ord .. sprintf ..
 # X  conditional mutation for generating art
-
 
 use strict;
 use warnings;
@@ -26,7 +22,6 @@ use warnings;
 @::output_spic  = ();
 @::filter = ();
 @::filter_handles = ();
-
 
 my $B_print_header = 1;
 my $B_filter_or    = 0;
@@ -73,12 +68,12 @@ Simple example: pick TAG ID < table.txt
 
 Options:
   -i in-place: all columns are output, NAME::<COMPUTE> replaces NAME if it exists
-  -k headerless input, use 1 2 .. for column names (headless chic(k)en, -k field)
+  -k headerless input, use 1 2 .. for column names
   -a print all input columns (filtering by colspec applies, -t accepted)
   -h do not print header
   -t print final tally column of count of matched column filters
   -v OR multiple criteria (default is AND)
-  -x excise specified column(s) from the output
+  -x excise specified column(s) from the output (works with -i)
   -r print rownames if no column name for rownames exists;
     in this case _ is the name to select with <op> on rownames.
   -R add _ column if no row name field exists in the header;
@@ -89,8 +84,8 @@ Options:
 
 <colspec>
   (1) <COLNAME>                     output selection or exclusion
-  (2) <COLNAME><op><VAL>            filter criterion
-  (3) <COLNAME><op>:<COLNAME2>      filter criterion
+  (2) <COLNAME><op><VAL>            filter criterion (value)
+  (3) <COLNAME><op>:<COLNAME2>      filter criterion (column)
   (4) <OUTNAME>::<COMPUTE>          create column from <COMPUTE>
 
 The first form selects columns for printing, the second form filters rows based
@@ -114,7 +109,8 @@ meaning in the shell.
   (3) /<op> . <string> will be url-decoded. <handle> is a column name, or column
   index with -k (headerless input) <op> is one of
     
-    add sub mul div cat (consume two   leave one)
+    / add sub mul div
+    \ mod cat           (consume two   leave one)
     ed edg              (consume three leave one)       edit, edit global
     uc lc               (consume two   leave one)       upper case, lower case
 
@@ -123,7 +119,8 @@ meaning in the shell.
   creates a new column called zut by adding columns foo and bar and then
   concatenating 'str'. The default operation is concatenation; if no operators
   are left the remainder of the stack is concatenated. Thus the above is
-  equivalent to zut::foo:bar/add^str.
+  equivalent to zut::foo:bar/add^str. To just prefix a column: zut::^foo:zut
+  To concatenate two columns: zut::foo:bar .
 
     handle str1 str2 ed  =>  handle =~ s/str1/str2/
     handle str1 str2 edg =>  handle =~ s/str1/str2/g
@@ -134,6 +131,7 @@ EOH
 
 die "-a -x do not combine\n" if $B_printall && $B_excise;
 die "-r -k do not combine\n" if $B_print_rowname && $B_headless;
+$B_print_header = 0 if $B_headless;
 
 die "Need something (use -H for help)\n" unless @::spec || $B_printall;
 
@@ -195,13 +193,13 @@ sub dump_spic {
 }
 
 my %stackopnarg =
-   ( add => 2, mul => 2, div => 2, cat => 2, sub => 2,
+   ( add => 2, mul => 2, div => 2, cat => 2, sub => 2, mod => 2,
      ed  => 3, edg => 3,
      uc  => 1, lc => 1
    );
 sub parse_stack {
   my $spec = shift;
-  my @detailed = ();
+  my @oppair = ();
   my $p = 0;
   $spec = ":$spec" if substr($spec, 0, 1) !~ /[\/^:]/;
   my $l = length($spec);
@@ -209,13 +207,13 @@ sub parse_stack {
   while ($spec =~ /([,^:])([^,^:]+)/g) {
     my ($type, $what) = ($1, $2);
     $what = wrangle_handle($what) if $type eq ':';
-    push @detailed, [$type, $what];
+    push @oppair, [$type, $what];
     $p = pos($spec);
     die "Not supported [$what]\n" if $type eq ',' && !defined($stackopnarg{$what});
     push @::output_spic_handles, $what if $type eq ':';
   }
   die "Parse error in spec [$spec] near position $p\n" unless $p == $l;
-  return \@detailed;
+  return \@oppair;
 }
 
 
@@ -228,6 +226,8 @@ sub wrangle_header {
   @::NUMBERS = 0..($::N-1);
 
   my %name_to_idx = $B_headless ? () : map { $::HEADER[$_] => $_ } @::NUMBERS;
+  #
+  # With repeated columns, this will pick the last as the target e.g. for -i.
 
   if ($B_headless) {
     die "Number of fields $::N does not support index $::headless_largest_k\n" if $::headless_largest_k > $::N; 
@@ -259,7 +259,24 @@ print STDERR "<< map $spic->[0] to $spic->[1]\n" if $B_debug;
     }
   }
 
-  if ($B_printall || $B_excise) {
+  if ($B_inplace) {
+    @::new_spic  =  map { [ $B_headless ? "dummy$_" : $::HEADER[$_], $_, 'EDIT_INPLACE', [ ':', $_ ] ] } @::NUMBERS;
+    dump_spic("inplace before");
+    for my $spic (@::output_spic) {
+      if (defined($spic->[1]) && $spic->[2] eq 'COMPUTE_SPEC') {
+        $::new_spic[$spic->[1]] = $spic;
+      }
+      elsif (defined($spic->[1]) && $spic->[2] eq 'JUST_HANDLE') {
+        $::new_spic[$spic->[1]][2] = 'JUST_HANDLE';
+      }
+      else {
+        push @::new_spic, $spic;
+      }
+    }
+    @::output_spic = grep { $_->[2] ne 'JUST_HANDLE' || !$B_excise } @::new_spic;
+    dump_spic("inplace after");
+  }
+  elsif ($B_printall || $B_excise) {
     my %picknums = map { ($_, 1) } @::NUMBERS;
     if ($B_excise) {
       my %xnums = map { ($_->[3][1], 1) } grep { $_->[2] eq 'JUST_HANDLE' } @::output_spic;
@@ -269,37 +286,16 @@ print STDERR "<< map $spic->[0] to $spic->[1]\n" if $B_debug;
     unshift @::output_spic, (map { [ $B_headless ? "dummy$_" : $::HEADER[$_], $_, 'EDIT_ALLXCISE', [ ':', $_ ] ] } grep { defined($picknums{$_}) } @::NUMBERS);
     dump_spic("all/excise");
   }
-  elsif ($B_inplace) {
-    @::new_spic  =  map { [ $B_headless ? "dummy$_" : $::HEADER[$_], $_, 'EDIT_INPLACE', [ ':', $_ ] ] } @::NUMBERS;
-    dump_spic("inplace before");
-    for my $spic (@::output_spic) {
-      if (defined($spic->[1]) && $spic->[2] eq 'COMPUTE_SPEC') {
-        $::new_spic[$spic->[1]] = $spic;
-      }
-      else {
-        push @::new_spic, $spic;
-      }
-    }
-    @::output_spic = @::new_spic;
-    dump_spic("inplace after");
-  }
-
-  if ($B_print_header && !$B_headless) {
-    local $, = "\t";
-    print map { $_->[0] } @::output_spic;
-    add_tally("T") if $B_print_tally;
-    print "\n";
-  }
 }
 
 # spic: [ name, colid, CODE, parse ]
 
 for my $spec (@::spec) {
   if ($spec =~ /(.*?)::(.*)/) {
-    my ($newname, $stack) = ($1, $2);
-    my $parse = parse_stack($stack);
-    my @debug = map { "($_->[0] $_->[1])" } @$parse;
-    push @::output_spic, [$newname, $B_headless ? wrangle_handle($newname) : undef, 'COMPUTE_SPEC', @$parse];
+    my ($newname, $compute) = ($1, $2);
+    my $stack = parse_stack($compute);
+    my @debug = map { "($_->[0] $_->[1])" } @$stack;
+    push @::output_spic, [$newname, $B_headless ? wrangle_handle($newname) : undef, 'COMPUTE_SPEC', @$stack];
   }
   elsif ($spec =~ /(.*?)([\/~](?:eq|ne|lt|le|ge|gt|ep|om)[\/~]|[=~]{1}|\/=|\/~)(.*)/) {
     my ($handle, $op, $val) = ($1, $2, $3);
@@ -337,6 +333,12 @@ while (<>) {
   if ($. == 1) {
     @::HEADER = @F;
     wrangle_header();       # fixme @::HEADER not meaningful if $B_headless
+    if ($B_print_header) {
+      local $, = "\t";
+      print map { $_->[0] } @::output_spic;
+      add_tally("T") if $B_print_tally;
+      print "\n";
+    }
     next unless $B_headless;
   }
 
@@ -362,7 +364,6 @@ while (<>) {
   print "$rowname\t" if $rowname && $B_print_rowname;
   my @outputs = ();
   for my $spic (@::output_spic) {
-    my $speck = "";
     my @stack = ();
     for (my $i=3; $i<@$spic;$i++) {
       my ($type, $what) = @{$spic->[$i]};
@@ -381,6 +382,7 @@ while (<>) {
         elsif ($what eq 'mul') { $stack[-2] *= $stack[-1] }
         elsif ($what eq 'sub') { $stack[-2] -= $stack[-1] }
         elsif ($what eq 'div') { $stack[-2] /= $stack[-1] }
+        elsif ($what eq 'mod') { $stack[-2] %= $stack[-1] }
            pop @stack;
         }
         elsif ($n_wanted == 1) {
