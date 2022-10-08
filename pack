@@ -9,6 +9,7 @@
 # See -H (EOH below).
 
 # s o m e   i d e a s
+# -  wrangle_handle is a bit complicated across inplace and normal mode.
 # ?  per-column A/ep/4/0.1    B/ep/5/0.2 -> make spic third argument a map then.
 # ?  numerical comparisons check field is numeric
 # ?  ord .. sprintf ..
@@ -171,13 +172,18 @@ my %ops = (
 $::headless_largest_k = 0;
 
 sub wrangle_handle {
-  my $name = shift;
+  my ($name, $is_compute) = @_;        # NAME::COMPUTE can create new columns
   return $name unless $B_headless;
-  die "Not a valid column index [$name]\n" unless $name =~ /^(\d+)$/;
-  my $k = $1; die "Need positive index [$k]\n" unless $k > 0;
-  $::headless_largest_k = $k if $k > $::headless_largest_k;
-  $k -= 1;
-  return $k;
+  if ($name =~ /^(\d+)$/) {
+     my $k = $1; die "Need positive index [$k]\n" unless $k > 0;
+     $::headless_largest_k = $k if $k > $::headless_largest_k;
+     $k -= 1;
+     return $k;
+  }
+  elsif (!$is_compute) {
+     die "Not a valid column index [$name]\n"
+  }
+  return undef;
 }
 
 sub dump_spic {
@@ -241,6 +247,7 @@ sub wrangle_header {
     }
   }
 
+  dump_spic("before name idx update");
   { for my $spic (@::output_spic) {                   # hv unify/add checks with B_headless
       if (defined($name_to_idx{$spic->[0]})) {
         $spic->[1] = $name_to_idx{$spic->[0]};
@@ -295,7 +302,8 @@ for my $spec (@::spec) {
     my ($newname, $compute) = ($1, $2);
     my $stack = parse_stack($compute);
     my @debug = map { "($_->[0] $_->[1])" } @$stack;
-    push @::output_spic, [$newname, $B_headless ? wrangle_handle($newname) : undef, 'COMPUTE_SPEC', @$stack];
+    push @::output_spic, [$newname, $B_headless ? wrangle_handle($newname, 1) : undef, 'COMPUTE_SPEC', @$stack];
+    # push @::output_spic, [$newname, undef, 'COMPUTE_SPEC', @$stack];
   }
   elsif ($spec =~ /(.*?)([\/~](?:eq|ne|lt|le|ge|gt|ep|om)[\/~]|[=~]{1}|\/=|\/~)(.*)/) {
     my ($handle, $op, $val) = ($1, $2, $3);
@@ -303,17 +311,17 @@ for my $spec (@::spec) {
     my $indirection = 0;
     if ($val =~ s/^://) {
       push @::filter_handles, $val;
-      $val = wrangle_handle($val);
+      $val = wrangle_handle($val, 0);
       $indirection = 1;
     }
     else {
       $val =~ s/^\^//;        # so that user can specify '^:str'
     }
-    push @::filter, [$op, $indirection, $val, wrangle_handle($handle)];
+    push @::filter, [$op, $indirection, $val, wrangle_handle($handle, 0)];
     push @::filter_handles, $handle;
   }
   else {
-    my ($newname, $handle) = ($spec, wrangle_handle($spec));
+    my ($newname, $handle) = ($spec, wrangle_handle($spec, 0));
     push @::output_spic_handles, $handle;
     push @::output_spic, [$newname, undef, 'JUST_HANDLE', [':', $handle]];
   }
