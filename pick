@@ -1,32 +1,39 @@
 #!/usr/bin/perl
 
-# Pick and optionally filter columns from tabular input.
+# Pick and optionally filter columns from tabular input
+# Pick either by column name or index
 # Filter with numerical and string comparison operators and regular expressions.
+# Combine columns with string and algebraic operations
 # Requires tab separated input.
 
 # See -H (EOH below).
 
-# ?  -eps(0.1)-    -ord(2)-
+# s o m e   i d e a s
+# -  wrangle_handle is a bit complicated across inplace and normal mode.
+# ?  per-column A/ep/4/0.1    B/ep/5/0.2 -> make spic third argument a map then.
 # ?  numerical comparisons check field is numeric
-# -  concatenate columns, add new, or rename, insert constant  A=/chr/,A  new2=C,B
-# -  accept non-header tables, _1 _2 _3 ...
-# -  Not to be done: column expressions ... A + (C > 0 ? D : E)
-
+# ?  ord .. sprintf ..
+# X  conditional mutation for generating art
 
 use strict;
 use warnings;
 
 @::spec = @ARGV; @ARGV = ();
-@::out_name  = ();
+@::output_spic_handles  = ();
+@::output_spic  = ();
 @::filter = ();
+@::filter_handles = ();
 
 my $B_print_header = 1;
 my $B_filter_or    = 0;
-my $B_print_rowname = 0;
+my $B_print_rowname = 0;    # cannot combine with $B_headless.
 my $B_print_tally  = 0;
-my $B_print_all    = 0;
-my $B_excise_cols  = 0;
+my $B_printall     = 0;
+my $B_inplace      = 0;
+my $B_excise       = 0;     # print all except unadorned columns listed, cannot combine with $B_printall
 my $B_add_row_column = 0;
+my $B_headless     = 0;
+my $B_debug        = 0;
 
 BEGIN {
   $::EPSILON = 0.0001; $::EPSILON = $ENV{EPSILON} if defined($ENV{EPSILON});
@@ -40,49 +47,104 @@ while (@::spec && $::spec[0] =~ /^-/) {
   $B_filter_or    = 1 if $options =~ /v/;
   $B_print_rowname= 1 if $options =~ /r/;
   $B_print_tally  = 1 if $options =~ /t/;
-  $B_print_all    = 1 if $options =~ /a/;
-  $B_excise_cols  = 1 if $options =~ /x/;
+  $B_printall     = 1 if $options =~ /a/;
+  $B_excise       = 1 if $options =~ /x/;
   $B_add_row_column =1 if $options =~ /R/;
+  $B_headless     = 1 if $options =~ /k/;
+  $B_debug        = 1 if $options =~ /d/;
+  $B_inplace      = 1 if $options =~ /i/;
 
+  if ($options =~ /z/) {
+    my @trickylist = split "", q{<>!;$&`"'|(){}[]?*^-_+=@~/\#.,};
+    my @trickyenc  = map { sprintf("%02X", ord($_)) } @trickylist;
+    my $t1 = join "  ", @trickylist;
+    my $t2 = join " ",  @trickyenc;
+    print "$t1\n$t2\n";
+    exit 0;
+  }
   if ($options =~ /H/) {
 print <<EOH;
 Usage: pick [options] <colspec>+ < FILE
 Simple example: pick TAG ID < table.txt
 
-Options: -h do not print header
-         -r print rownames if no column name for rownames exists;
-            in this case _ is the name to select with <op> on rownames.
-         -R add _ column if no row name field exists in the header;
-            an empty field is recognised and mapped to _ automatically.
-         -t print tally column of count of matched column criteria
-         -v OR multiple criteria (default is AND)
-         -a print all input columns (filtering by colspec applies, -t accepted)
-         -x excise specified column(s) from the output
+  - Pick and optionally filter columns from tabular input.
+  - Pick either by column name or index.
+  - Filter with numerical and string comparison operators and regular expressions.
+  - Combine columns with string and algebraic operations
+  - Requires tab separated input.
 
-    colspec: <COLNAME> or <COLNAME><op><VAL>
-    The first form selects columns for printing, the second form filters rows.
+<colspec>
+  (1) <COLNAME>                     output selection or exclusion
+  (2) <COLNAME><op>[^]<VAL>         filter criterion (value)
+  (3) <COLNAME><op>:<COLNAME2>      filter criterion (column)
+  (4) <OUTNAME>::<COMPUTE>          create column from <COMPUTE>
 
-Use <COLNAME><op><VAL> to select rows based on value in column COLNAME; see list below for <op>.
-Quote colspec if it has characters that have special meaning in the shell.
-  =     String identity
-  ~     Substring/regular expression match
-  !     String inequality
-  ==    Numerical identity
-  =+    Aproximate numerical identity wrt VAL +- EPSILON; export variable EPSILON (current value $::EPSILON)
-  =*    Aproximate numerical identity wrt VAL * OOM, 1/OOM (current value $::OOM, not sign aware)
-  !=    Numerical inequality
-  <     Numerical less than
-  >     Numerical greater than
-  <=    Numerical less than or equal
-  >=    Numerical greater than or equal
-  /OP/  Where OP is one of ( eq ne lt le ge gt ) synonyms for ( == != < <= >= > )
-  ~OP~  Where OP is one of ( eq ne lt le ge gt ) string comparisons; eq is the same as =, ne the same as !
+Options:
+  -i in-place: all columns are output, NAME::<COMPUTE> replaces NAME if it exists
+  -k headerless input, use 1 2 .. for column names
+  -a print all input columns (filtering by colspec applies, -t accepted)
+  -h do not print header
+  -t print final tally column of count of matched column filters
+  -v OR multiple criteria (default is AND)
+  -x excise specified column(s) from the output (works with -i)
+  -r print rownames if no column name for rownames exists;
+    in this case _ is the name to select with <op> on rownames.
+  -R add _ column if no row name field exists in the header;
+    NOTE an empty field is recognised and mapped to _ automatically.
+  -z print miscellaneous information, e.g. url encoding hex codes
+
+  -at is useful for inspecting/checking filters
+
+<colspec>
+The first form selects columns for printing, the second form filters rows based
+on comparison of column COLNAME to a value, the third form filters row based on
+comparison of two columns, the fourth form allows combining/computation of
+columns and constants in a newly formed column (replace existing column with -i).
+
+<COLNAME><op>[^]<VAL>
+<COLNAME><op>:<COLNAME>
+selects rows based on value in column COLNAME; see list below for <op>.  Quote
+colspec if it has characters that have special meaning in the shell.
+Colon introduces a column name; to specify a VAL that starts with a colon
+use ^:str, otherwise ^ can be omitted.
+  =     String identity accept
+  /=    String identity reject
+  ~     Substring/regular expression match accept
+  /~    Substring/regular expression match reject
+  /ep/  Aproximate numerical identity wrt VAL +- EPSILON; export variable EPSILON (current value $::EPSILON)
+  /om/  Aproximate numerical identity wrt VAL * OOM, VAL / OOM (current value $::OOM, not sign aware)
+  /eq|ne|lt|le|ge|gt/ numerical comparison (equal, not equal, less then, less than or equal etc)
+  ~eq|ne|lt|le|ge|gt~  string   comparison (equal, not equal, less then, less than or equal etc)
+
+<COMPUTE> is a concatenation of parts of the form (1) ^<string> (2) :<handle>
+  (3) ,<op> . <string> will be url-decoded. <handle> is a column name, or column
+  index with -k (headerless input) <op> is one of
+    
+    / add sub mul div
+    \\ mod cat           (consume two   leave one)
+    ed edg              (consume three leave one)       edit, edit global
+    uc lc rot13         (consume two   leave one)       upper case, lower case, rot13
+
+  If the very first part starts with [a-z] it is inferred to be a handle
+  (leading : not needed).  <COMPUTE> is a stack, so zut::foo:bar,add^str,cat
+  creates a new column called zut by adding columns foo and bar and then
+  concatenating 'str'. The default operation is concatenation; if no operators
+  are left the remainder of the stack is concatenated. Thus the above is
+  equivalent to zut::foo:bar,add^str. To just prefix a column: zut::^foo:zut
+  To concatenate two columns: zut::foo:bar .
+
+    handle str1 str2 ed  =>  handle =~ s/str1/str2/
+    handle str1 str2 edg =>  handle =~ s/str1/str2/g
 EOH
   exit 0;
   }
 }
 
-die "Need something (use -H for help)\n" unless @::spec || $B_print_all;
+die "-a -x do not combine\n" if $B_printall && $B_excise;
+die "-r -k do not combine\n" if $B_print_rowname && $B_headless;
+$B_print_header = 0 if $B_headless;
+
+die "Need something (use -H for help)\n" unless @::spec || $B_printall;
 
 sub interval_plus {
   my ($x, $y) = @_;
@@ -95,16 +157,12 @@ sub interval_mul {
 }
 
 my %ops = (
-  '~'  => sub { $_[0] =~ /$_[1]/ },
-  '=+' => sub { interval_plus(@_) },
-  '=*' => sub { interval_mul(@_) },
-
-  '==' => sub { $_[0] == $_[1] },
-  '!=' => sub { $_[0] != $_[1] },
-  '<'  => sub { $_[0] <  $_[1] },
-  '<=' => sub { $_[0] <= $_[1] },
-  '>'  => sub { $_[0] >  $_[1] },
-  '>=' => sub { $_[0] >= $_[1] },
+  '~'    => sub { $_[0] =~ /$_[1]/ },
+  '/~'   => sub { $_[0] !~ /$_[1]/ },
+  '='    => sub { $_[0] eq $_[1] },
+  '/='   => sub { $_[0] ne $_[1] },
+  '/ep/' => sub { interval_plus(@_) },
+  '/om/' => sub { interval_mul(@_) },
 
   '/eq/' => sub { $_[0] == $_[1] },
   '/ne/' => sub { $_[0] != $_[1] },
@@ -121,21 +179,171 @@ my %ops = (
   '~gt~' => sub { $_[0] gt $_[1] }
 );
 
-for my $colname (@::spec) {
-  if ($colname =~ s/([\/~](?:[lg][et]|eq|ne)[\/~]|[!<>=~+*]+)(.*)//) {
-    my ($op, $val) = ($1, $2);
-    $op = '~eq~' if $op eq '=';
-    $op = '~ne~' if $op eq '!';
-    die "Unrecognised operator [$op]\n" unless defined($ops{$op});
-    push @::filter, [$op, $val, $colname];
+$::headless_largest_k = 0;
+
+sub wrangle_handle {
+  my ($name, $is_compute) = @_;        # NAME::COMPUTE can create new columns
+  return $name unless $B_headless;
+
+  ## in headless mode now 
+  if ($name =~ /^(\d+)$/) {
+     my $k = $1; die "Need positive index [$k]\n" unless $k > 0;
+     $::headless_largest_k = $k if $k > $::headless_largest_k;
+     $k -= 1;
+     return $k;
   }
-  else {
-    push @::out_name, $colname;
+  ## for headless mode + is_compute spec, the handle is a dummy and not needed.
+  elsif (!$is_compute) {
+     die "Not a valid column index [$name]\n"
+  }
+  return undef;
+}
+
+sub dump_spic {
+  return unless $B_debug;
+  my $msg = shift;
+  print STDERR "=== $msg ===\n";
+  for my $s (@::output_spic) {
+    my ($handle, $colid, $misc) = ($s->[0], $s->[1], $s->[2]);
+    $colid = '__X__' unless defined($colid);
+    my $str = join '--', map { "[$_->[0],$_->[1]]" } $s->[3];
+    print STDERR "[$handle][$colid][$misc] $str\n";
   }
 }
 
+my %stackopnarg =
+   ( add => 2, mul => 2, div => 2, cat => 2, sub => 2, mod => 2,
+     ed  => 3, edg => 3,
+     uc  => 1, lc => 1, rot13 => 1
+   );
+sub parse_stack {
+  my $spec = shift;
+  my @oppair = ();
+  my $p = 0;
+  $spec = ":$spec" if substr($spec, 0, 1) !~ /[\/^:]/;
+  my $l = length($spec);
 
-local $" = "\t";
+  while ($spec =~ /([,^:])([^,^:]+)/g) {
+    my ($type, $what) = ($1, $2);
+    $what = wrangle_handle($what, 0) if $type eq ':';
+    push @oppair, [$type, $what];
+    $p = pos($spec);
+    die "Not supported [$what]\n" if $type eq ',' && !defined($stackopnarg{$what});
+    push @::output_spic_handles, $what if $type eq ':';
+  }
+  die "Parse error in spec [$spec] near position $p\n" unless $p == $l;
+  return \@oppair;
+}
+
+
+sub wrangle_header {
+
+  if ($::HEADER[0] eq '') { $::HEADER[0] = '_'; }
+  elsif ($B_add_row_column) { unshift @::HEADER, '_' }
+
+  $::N = @::HEADER;
+  @::NUMBERS = 0..($::N-1);
+
+  my %name_to_idx = $B_headless ? () : map { $::HEADER[$_] => $_ } @::NUMBERS;
+  #
+  # With repeated columns, this will pick the last as the target e.g. for -i.
+
+  if ($B_headless) {
+    die "Number of fields $::N does not support index $::headless_largest_k\n" if $::headless_largest_k > $::N; 
+  }
+  else {
+    my @missing = grep { !defined($name_to_idx{$_}) } (@::filter_handles, @::output_spic_handles);
+    die "Field(s) <@missing> not found\n" if @missing;
+    for my $f (@::filter) {
+      $f->[3] = $name_to_idx{$f->[3]};                # k-- happens in wrangle_handle for B_headless
+      $f->[2] = $name_to_idx{$f->[2]} if $f->[1];     # indirection on filter.
+    }
+  }
+
+  dump_spic("before name idx update");
+  { for my $spic (@::output_spic) {                   # hv unify/add checks with B_headless
+      if (defined($name_to_idx{$spic->[0]})) {
+        $spic->[1] = $name_to_idx{$spic->[0]};
+print STDERR "<< map $spic->[0] to $spic->[1]\n" if $B_debug;
+      }
+      for (my $i=3; $i<@$spic;$i++) {
+        my ($type, $what) = @{$spic->[$i]};
+        if (!$B_headless && $type eq ':') {
+          die "No handle [$what]\n" unless defined($name_to_idx{$what});
+          $spic->[$i][1] = $name_to_idx{$what};
+        }
+        elsif ($type eq '^') {    # url-decoding
+          $spic->[$i][1] =~ s/%([A-Fa-f\d]{2})/chr hex $1/eg;
+        }
+      }
+    }
+  }
+
+  if ($B_inplace) {
+    @::new_spic  =  map { [ $B_headless ? "dummy$_" : $::HEADER[$_], $_, 'EDIT_INPLACE', [ ':', $_ ] ] } @::NUMBERS;
+    dump_spic("inplace before");
+    for my $spic (@::output_spic) {
+      if (defined($spic->[1]) && $spic->[2] eq 'COMPUTE_SPEC') {
+        $::new_spic[$spic->[1]] = $spic;
+      }
+      elsif (defined($spic->[1]) && $spic->[2] eq 'JUST_HANDLE') {
+        $::new_spic[$spic->[1]][2] = 'JUST_HANDLE';
+      }
+      else {
+        push @::new_spic, $spic;
+      }
+    }
+    @::output_spic = grep { $_->[2] ne 'JUST_HANDLE' || !$B_excise } @::new_spic;
+    dump_spic("inplace after");
+  }
+  elsif ($B_printall || $B_excise) {
+    my %picknums = map { ($_, 1) } @::NUMBERS;
+    if ($B_excise) {
+      my %xnums = map { ($_->[3][1], 1) } grep { $_->[2] eq 'JUST_HANDLE' } @::output_spic;
+      %picknums = map { ($_, 1) } grep { !defined($xnums{$_}) } @::NUMBERS;
+      @::output_spic = grep { $_->[2] ne 'JUST_HANDLE' } @::output_spic;
+    }
+    unshift @::output_spic, (map { [ $B_headless ? "dummy$_" : $::HEADER[$_], $_, 'EDIT_ALLXCISE', [ ':', $_ ] ] } grep { defined($picknums{$_}) } @::NUMBERS);
+    dump_spic("all/excise");
+  }
+}
+
+# spic: [ name, colid, CODE, parse ]
+
+for my $spec (@::spec) {
+  if ($spec =~ /(.*?)::(.*)/) {
+    my ($newname, $compute) = ($1, $2);
+    my $stack = parse_stack($compute);
+    my @debug = map { "($_->[0] $_->[1])" } @$stack;
+    push @::output_spic, [$newname, $B_headless ? wrangle_handle($newname, 1) : undef, 'COMPUTE_SPEC', @$stack];
+    # push @::output_spic, [$newname, undef, 'COMPUTE_SPEC', @$stack];
+  }
+  elsif ($spec =~ /(.*?)([\/~](?:eq|ne|lt|le|ge|gt|ep|om)[\/~]|[=~]{1}|\/=|\/~)(.*)/) {
+    my ($handle, $op, $val) = ($1, $2, $3);
+    die "Unrecognised operator [$op]\n" unless defined($ops{$op});
+    my $indirection = 0;
+    if ($val =~ s/^://) {
+      push @::filter_handles, $val;
+      $val = wrangle_handle($val, 0);
+      $indirection = 1;
+    }
+    else {
+      $val =~ s/^\^//;        # so that user can specify '^:str'
+    }
+    push @::filter, [$op, $indirection, $val, wrangle_handle($handle, 0)];
+    push @::filter_handles, $handle;
+  }
+  else {
+    my ($newname, $handle) = ($spec, wrangle_handle($spec, 0));
+    push @::output_spic_handles, $handle;
+    push @::output_spic, [$newname, undef, 'JUST_HANDLE', [':', $handle]];
+  }
+}
+dump_spic("arg parse");
+
+sub add_tally {
+  print "\t" if @::output_spic; print $_[0];
+}
 
 while (<>) {
 
@@ -144,41 +352,20 @@ while (<>) {
   my $rowname = "";
 
   if ($. == 1) {
-
-    if ($F[0] eq '') { $F[0] = '_'; }
-    elsif ($B_add_row_column) { unshift @F, '_' }
-
-    $::N = @F;
-
-    %::name_to_idx = map { $F[$_] => $_ } 0..($::N-1);
-    my @filter_names = map { $_->[2] } @::filter;
-
-    my @missing = grep { !defined($::name_to_idx{$_}) } (@filter_names, @::out_name);
-    die "Field(s) <@missing> not found\n" if @missing;
-
-    @::out_idx = map { $::name_to_idx{$_} } @::out_name;
-    for my $f (@::filter) {
-      $f->[2] = $::name_to_idx{$f->[2]};
-    }
-
-    if ($B_excise_cols) {
-      my %print =  map { ($_, 1) } @::out_idx;
-      @::out_idx  =  grep { !defined($print{$_}) } 0..($::N-1);
-    }
+    @::HEADER = @F;
+    wrangle_header();       # fixme @::HEADER not meaningful if $B_headless
     if ($B_print_header) {
-      print $B_print_all ? "@F" : "@F[@::out_idx]";
-      print $B_print_tally ? "\tT\n" : "\n";
+      local $, = "\t";
+      print map { $_->[0] } @::output_spic;
+      add_tally("T") if $B_print_tally;
+      print "\n";
     }
-    next;
+    next unless $B_headless;
   }
 
-  if ($::N+1 == @F) {
-    if ($. == 2) {
-      $::extra_rownames = 1;
-    }
-    elsif (!$::extra_rownames) {
-      die "Row count inconsistency at line $.\n";
-    }
+  if (!$B_headless && $::N+1 == @F) {
+    if ($. == 2)                { $::extra_rownames = 1; }
+    elsif (!$::extra_rownames)  { die "Row count inconsistency at line $.\n"; }
     $rowname = shift @F;
   }
   elsif ($::extra_rownames || $::N != @F) {
@@ -188,17 +375,55 @@ while (<>) {
   my $nmatch = 0;
   if (@::filter) {
     for my $f (@::filter) {
-      my ($op, $val, $colid) = @$f;
+      my ($op, $indirection, $val, $colid) = @$f;
+      $val = $F[$val] if $indirection;
       $nmatch++ if $ops{$op}->($F[$colid], $val);
     }
     next unless $B_print_tally || ($B_filter_or && $nmatch) || $nmatch == @::filter;
   }
 
   print "$rowname\t" if $rowname && $B_print_rowname;
-  print $B_print_all ? "@F" : "@F[@::out_idx]";
-  print "\t$nmatch" if $B_print_tally;
+  my @outputs = ();
+  for my $spic (@::output_spic) {
+    my @stack = ();
+    for (my $i=3; $i<@$spic;$i++) {
+      my ($type, $what) = @{$spic->[$i]};
+      if ($type eq ':') {
+        push @stack, $F[$what];
+      }
+      elsif ($type eq '^') {
+        push @stack, $what;
+      }
+      elsif ($type eq ',') {
+        my $n_wanted = $stackopnarg{$what};
+        die "Stack underflow ($spic->[0])\n" unless @stack >= $n_wanted;
+        if ($n_wanted == 2) {
+           if ($what eq 'add') { $stack[-2] += $stack[-1] }
+        elsif ($what eq 'cat') { $stack[-2] .= $stack[-1] }
+        elsif ($what eq 'mul') { $stack[-2] *= $stack[-1] }
+        elsif ($what eq 'sub') { $stack[-2] -= $stack[-1] }
+        elsif ($what eq 'div') { $stack[-2] /= $stack[-1] }
+        elsif ($what eq 'mod') { $stack[-2] %= $stack[-1] }
+           pop @stack;
+        }
+        elsif ($n_wanted == 1) {
+           if ($what eq 'uc') {  $stack[-1] = uc($stack[-1]) }
+        elsif ($what eq 'lc') {  $stack[-1] = lc($stack[-1]) }
+        elsif ($what eq 'rot13') {  $stack[-1] =~ tr/N-ZA-Mn-za-m/A-Za-z/ }
+        }
+        else {
+           if ($what eq 'ed')  { $stack[-3] =~ s/$stack[-2]/$stack[-1]/ }
+        elsif ($what eq 'edg') { $stack[-3] =~ s/$stack[-2]/$stack[-1]/g }
+           pop @stack; pop @stack;
+        }
+      }
+    }
+    push @outputs, (join "", @stack);
+  }
+  local $" = "\t";
+  print "@outputs";
+  add_tally($nmatch) if $B_print_tally;
   print "\n";
-
 }
 
-__DATA__
+
