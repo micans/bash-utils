@@ -67,6 +67,18 @@ print <<EOH;
 Usage: pick [options] <colspec>+ < FILE
 Simple example: pick TAG ID < table.txt
 
+  - Pick and optionally filter columns from tabular input.
+  - Pick either by column name or index.
+  - Filter with numerical and string comparison operators and regular expressions.
+  - Combine columns with string and algebraic operations
+  - Requires tab separated input.
+
+<colspec>
+  (1) <COLNAME>                     output selection or exclusion
+  (2) <COLNAME><op>[^]<VAL>         filter criterion (value)
+  (3) <COLNAME><op>:<COLNAME2>      filter criterion (column)
+  (4) <OUTNAME>::<COMPUTE>          create column from <COMPUTE>
+
 Options:
   -i in-place: all columns are output, NAME::<COMPUTE> replaces NAME if it exists
   -k headerless input, use 1 2 .. for column names
@@ -84,19 +96,17 @@ Options:
   -at is useful for inspecting/checking filters
 
 <colspec>
-  (1) <COLNAME>                     output selection or exclusion
-  (2) <COLNAME><op><VAL>            filter criterion (value)
-  (3) <COLNAME><op>:<COLNAME2>      filter criterion (column)
-  (4) <OUTNAME>::<COMPUTE>          create column from <COMPUTE>
-
 The first form selects columns for printing, the second form filters rows based
 on comparison of column COLNAME to a value, the third form filters row based on
 comparison of two columns, the fourth form allows combining/computation of
 columns and constants in a newly formed column (replace existing column with -i).
 
-Use <COLNAME><op><VAL> to select rows based on value in column COLNAME; see
-list below for <op>.  Quote colspec if it has characters that have special
-meaning in the shell.
+<COLNAME><op>[^]<VAL>
+<COLNAME><op>:<COLNAME>
+selects rows based on value in column COLNAME; see list below for <op>.  Quote
+colspec if it has characters that have special meaning in the shell.
+Colon introduces a column name; to specify a VAL that starts with a colon
+use ^:str, otherwise ^ can be omitted.
   =     String identity accept
   /=    String identity reject
   ~     Substring/regular expression match accept
@@ -111,9 +121,9 @@ meaning in the shell.
   index with -k (headerless input) <op> is one of
     
     / add sub mul div
-    \ mod cat           (consume two   leave one)
+    \\ mod cat           (consume two   leave one)
     ed edg              (consume three leave one)       edit, edit global
-    uc lc               (consume two   leave one)       upper case, lower case
+    uc lc rot13         (consume two   leave one)       upper case, lower case, rot13
 
   If the very first part starts with [a-z] it is inferred to be a handle
   (leading : not needed).  <COMPUTE> is a stack, so zut::foo:bar,add^str,cat
@@ -174,12 +184,15 @@ $::headless_largest_k = 0;
 sub wrangle_handle {
   my ($name, $is_compute) = @_;        # NAME::COMPUTE can create new columns
   return $name unless $B_headless;
+
+  ## in headless mode now 
   if ($name =~ /^(\d+)$/) {
      my $k = $1; die "Need positive index [$k]\n" unless $k > 0;
      $::headless_largest_k = $k if $k > $::headless_largest_k;
      $k -= 1;
      return $k;
   }
+  ## for headless mode + is_compute spec, the handle is a dummy and not needed.
   elsif (!$is_compute) {
      die "Not a valid column index [$name]\n"
   }
@@ -201,7 +214,7 @@ sub dump_spic {
 my %stackopnarg =
    ( add => 2, mul => 2, div => 2, cat => 2, sub => 2, mod => 2,
      ed  => 3, edg => 3,
-     uc  => 1, lc => 1
+     uc  => 1, lc => 1, rot13 => 1
    );
 sub parse_stack {
   my $spec = shift;
@@ -212,7 +225,7 @@ sub parse_stack {
 
   while ($spec =~ /([,^:])([^,^:]+)/g) {
     my ($type, $what) = ($1, $2);
-    $what = wrangle_handle($what) if $type eq ':';
+    $what = wrangle_handle($what, 0) if $type eq ':';
     push @oppair, [$type, $what];
     $p = pos($spec);
     die "Not supported [$what]\n" if $type eq ',' && !defined($stackopnarg{$what});
@@ -396,6 +409,7 @@ while (<>) {
         elsif ($n_wanted == 1) {
            if ($what eq 'uc') {  $stack[-1] = uc($stack[-1]) }
         elsif ($what eq 'lc') {  $stack[-1] = lc($stack[-1]) }
+        elsif ($what eq 'rot13') {  $stack[-1] =~ tr/N-ZA-Mn-za-m/A-Za-z/ }
         }
         else {
            if ($what eq 'ed')  { $stack[-3] =~ s/$stack[-2]/$stack[-1]/ }
