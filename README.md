@@ -5,11 +5,12 @@
 Apparix used to live here but has [its own repository](https://github.com/micans/apparix)
 now.
 
-## While streaming tabular data filter its rows, select, combine and update
-  columns, compute new columns with `pick`. It supports algebraic operations as
-  well as string operations and regular expresions in both filter conditions and
-  computation. I've made several versions over the years, this one is the first
-  that seems passable.
+## Stream compute on rows/columns in tabular data.
+
+  Filter rows, select, combine and update columns, compute new columns with `pick`.
+  It supports algebraic operations as well as string operations and regular
+  expresions in both filter conditions and computation. I've made several
+  versions over the years, this is the first one that is fun to use.
 
 ## Unix terminal histograms and bar charts
 
