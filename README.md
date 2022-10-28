@@ -11,16 +11,22 @@ now.
   `pick`.  It supports algebraic operations as well as string operations and
   regular expressions in both filter conditions and computation. I've made
   several versions over the years, this is the first one that is fun to use
-  with an implementation not bordering on hideous.
+  with an implementation not bordering on hideous, although the commit history
+  of pick reveals a fairly hideous detour.
 
   A useful feature is that column operations and row clauses are expressed in column names
   for tables with a header line or indexes otherwise. Row filtering can refer
-  to derived colums, derived colums can utilise earlier derived columns, and derived
-  columnsn can be included in the output.
+  to derived columns, derived columns can utilise earlier derived columns, and derived
+  columns can be included in the output.
 
   The interface is via a tiny command-line format to describe column selection,
   row filtering, and derived column computation. It was designed to avoid shell
-  meta character as much as possible.
+  meta characters as much as possible.
+
+  I add whatever functionality seems useful. Hence it is currently possible to encrypt your
+  data with rot13 or reverse complement DNA/RNA. The documentation is output when given `-H` -
+  `-h` is the option to prevent output of column names.
+
 
 ## Unix terminal histograms and bar charts
 
