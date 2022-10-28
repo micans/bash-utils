@@ -186,9 +186,15 @@ my %ops = (
   '/ge/' => sub { $_[0] >= $_[1] },
   '/gt/' => sub { $_[0] >  $_[1] },
 
-  '/all/' => sub  { local $" = ']['; my @y = @_; my $x = ($y[0] & $y[1]); my $z = (5 & -2.9); print "[@y][$x][$z]\n"; $_[1] == ($_[0] & $_[1]) },
-  '/any/'  => sub { $_[0] & $_[1] },
-  '/none/' => sub { ! ($_[0] & $_[1]) },
+     # I have observed perl behaving weirdly with bit operators; perhaps because it thought both operands a string.
+     # E.g. perl -e '$x = "13" & "4"; $y = "13" + "4"; print "$x $y\n";'
+     # yields 0 17
+     # But other weirdness still unexplained ('(' and '$' popping up in error messages) and
+     # only observed from file reads, not replicated on command line. Anyway absint is nice.
+     #
+  '/all/' => sub  { $_[1] == (abs(int($_[0])) & abs(int($_[1]))) },
+  '/any/'  => sub { abs(int($_[0])) & abs(int($_[1])) },
+  '/none/' => sub { ! (abs(int($_[0])) & abs(int($_[1]))) },
 
   '~eq~' => sub { $_[0] eq $_[1] },
   '~ne~' => sub { $_[0] ne $_[1] },
@@ -318,7 +324,6 @@ print STDERR "-- output columns @::output --\n" if $B_debug;
   for my $filt (@::filter) {
 
     my ($op, $indirection, $val, $name) = @$filt;
-print STDERR "-- filter @$filt --\n" if $B_debug;
 
     die "Handle $name in filter does not reference a known entity\n" unless defined($::handle_map{$name});
     $filt->[3] = $::handle_map{$name};
@@ -326,6 +331,8 @@ print STDERR "-- filter @$filt --\n" if $B_debug;
        die "Handle $val in filter does not reference a known entity\n" unless defined($::handle_map{$val});
        $filt->[2] = $::handle_map{$val};
     }
+print STDERR "-- filter @$filt --\n" if $B_debug;
+
   }
 }
 
@@ -417,14 +424,12 @@ while (<>) {
   do_compute(\@F);         # this pushes compute onto @F if present.
 
   my $nmatch = 0;
-  if (@::filter) {
-    for my $filt (@::filter) {
-      my ($op, $indirection, $val, $colid) = @$filt;
-      $val = $F[$val] if $indirection;
-      $nmatch++ if $ops{$op}->($F[$colid], $val);
-    }
-    next unless $B_print_tally || ($B_filter_or && $nmatch) || $nmatch == @::filter;
+  for my $filt (@::filter) {
+    my ($op, $indirection, $val, $colid) = @$filt;
+    $val = $F[$val] if $indirection;
+    $nmatch++ if $ops{$op}->($F[$colid], $val);
   }
+  next unless $B_print_tally || ($B_filter_or && $nmatch) || $nmatch == @::filter;
 
   print "$rowname\t" if $rowname && $B_print_rowname;
   my @outputs = map { $F[$_] } @::output;
