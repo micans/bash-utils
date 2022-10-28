@@ -1,28 +1,33 @@
 #!/usr/bin/perl
 
-# Pick and optionally filter columns from tabular input
+# Pick and optionally filter columns from tabular input, add derived columns
 # Pick either by column name or index
 # Filter with numerical and string comparison operators and regular expressions.
-# Combine columns with string and algebraic operations
+# Filter on either existing columns or derived columns.
+# Compute derived columns with string and algebraic operations.
 # Requires tab separated input.
 
 # See -H (EOH below).
 
+# TODO: tests after the latest rewrite
+
 # s o m e   i d e a s
-# -  wrangle_handle is a bit complicated across inplace and normal mode.
-# ?  per-column A/ep/4/0.1    B/ep/5/0.2 -> make spic third argument a map then.
+# -  operators to validate column type (integer, regex) .. half-exists already.
+# -  bit - and or, notand, notor
 # ?  numerical comparisons check field is numeric
 # ?  ord .. sprintf ..
-# X  conditional mutation for generating art
+# ?  per-column A/ep/4/0.1    B/ep/5/0.2
+# ?  or COMPUTED can take operator to set epsilon and oom as side effect.
 
 use strict;
 use warnings;
 
 @::spec = @ARGV; @ARGV = ();
-@::output_spic_handles  = ();
-@::output_spic  = ();
-@::filter = ();
-@::filter_handles = ();
+@::output  = ();
+@::compute = ();
+@::filter  = ();
+
+%::handle_map = ();
 
 my $B_print_header = 1;
 my $B_filter_or    = 0;
@@ -34,6 +39,7 @@ my $B_excise       = 0;     # print all except unadorned columns listed, cannot 
 my $B_add_row_column = 0;
 my $B_headless     = 0;
 my $B_debug        = 0;
+my $M_comment      = 0;       # 0 oblivious, 1 strip, 2 pass
 
 BEGIN {
   $::EPSILON = 0.0001; $::EPSILON = $ENV{EPSILON} if defined($ENV{EPSILON});
@@ -53,9 +59,11 @@ while (@::spec && $::spec[0] =~ /^-/) {
   $B_headless     = 1 if $options =~ /k/;
   $B_debug        = 1 if $options =~ /d/;
   $B_inplace      = 1 if $options =~ /i/;
+  $M_comment      = 1 if $options =~ /c/;
+  $M_comment      = 2 if $options =~ /C/;
 
   if ($options =~ /z/) {
-    my @trickylist = split "", q{<>!;$&`"'|(){}[]?*^-_+=@~/\#.,};
+    my @trickylist = split "", q{ <>!;$&`"'|(){}[]?*^-_+=@~/\#.,};
     my @trickyenc  = map { sprintf("%02X", ord($_)) } @trickylist;
     my $t1 = join "  ", @trickylist;
     my $t2 = join " ",  @trickyenc;
@@ -74,10 +82,10 @@ Simple example: pick TAG ID < table.txt
   - Requires tab separated input.
 
 <colspec>
-  (1) <COLNAME>                     output selection or exclusion
-  (2) <COLNAME><op>[^]<VAL>         filter criterion (value)
-  (3) <COLNAME><op>:<COLNAME2>      filter criterion (column)
-  (4) <OUTNAME>::<COMPUTE>          create column from <COMPUTE>
+  (1) <HANDLE>                 either column name or variable name for output
+  (2) @<HANDLE><op><VAL>       filter criterion compare handle to constant value
+  (3) @<HANDLE><op>:<HANDLE2>  filter criterion compare handle to other handle
+  (4) <VARNAME>::<COMPUTE>     put <COMPUTE> in <VARNAME>
 
 Options:
   -i in-place: all columns are output, NAME::<COMPUTE> replaces NAME if it exists
@@ -91,22 +99,23 @@ Options:
     in this case _ is the name to select with <op> on rownames.
   -R add _ column if no row name field exists in the header;
     NOTE an empty field is recognised and mapped to _ automatically.
+  -c strip lines starting with #
+  -C pass lines with starting with # unchanged
   -z print miscellaneous information, e.g. url encoding hex codes
 
   -at is useful for inspecting/checking filters
 
 <colspec>
-The first form selects columns for printing, the second form filters rows based
-on comparison of column COLNAME to a value, the third form filters row based on
-comparison of two columns, the fourth form allows combining/computation of
-columns and constants in a newly formed column (replace existing column with -i).
+HANDLE identifies either a column by name, or a derived value as in form (4).
+Form (1) -- just a handle -- selects it for output.
+Form (2) creates a filter comparing a handle to a constant value. 
+Form (3) creates a filter comparing a handle to another handle.
+Form (4) creates a derived value, see below for <COMPUTE> specification.
 
-<COLNAME><op>[^]<VAL>
-<COLNAME><op>:<COLNAME>
-selects rows based on value in column COLNAME; see list below for <op>.  Quote
-colspec if it has characters that have special meaning in the shell.
-Colon introduces a column name; to specify a VAL that starts with a colon
-use ^:str, otherwise ^ can be omitted.
+@<COLNAME><op>[^]<VAL>
+@<COLNAME><op>:<COLNAME>
+selects rows based on <VAL> or value in column <COLNAME>; see list below for <op>.
+Colon introduces a column name; <VAL> is url-decoded.
   =     String identity accept
   /=    String identity reject
   ~     Substring/regular expression match accept
@@ -146,6 +155,7 @@ $B_print_header = 0 if $B_headless;
 
 die "Need something (use -H for help)\n" unless @::spec || $B_printall;
 
+
 sub interval_plus {
   my ($x, $y) = @_;
   return $x <= $y + $::EPSILON && $x >= $y - $::EPSILON;
@@ -156,6 +166,8 @@ sub interval_mul {
   return abs($x) <= abs($y) * $::OOM && abs($x) >= abs($y) / $::OOM;
 }
 
+            # $_[0] is $F[$i]
+            # $_[1] is VAL or :VAL
 my %ops = (
   '~'    => sub { $_[0] =~ /$_[1]/ },
   '/~'   => sub { $_[0] !~ /$_[1]/ },
@@ -171,6 +183,10 @@ my %ops = (
   '/ge/' => sub { $_[0] >= $_[1] },
   '/gt/' => sub { $_[0] >  $_[1] },
 
+  '/all/' => sub  { local $" = ']['; my @y = @_; my $x = ($y[0] & $y[1]); my $z = (5 & -2.9); print "[@y][$x][$z]\n"; $_[1] == ($_[0] & $_[1]) },
+  '/any/'  => sub { $_[0] & $_[1] },
+  '/none/' => sub { ! ($_[0] & $_[1]) },
+
   '~eq~' => sub { $_[0] eq $_[1] },
   '~ne~' => sub { $_[0] ne $_[1] },
   '~lt~' => sub { $_[0] lt $_[1] },
@@ -179,60 +195,62 @@ my %ops = (
   '~gt~' => sub { $_[0] gt $_[1] }
 );
 
-$::headless_largest_k = 0;
-
-sub wrangle_handle {
-  my ($name, $is_compute) = @_;        # NAME::COMPUTE can create new columns
-  return $name unless $B_headless;
-
-  ## in headless mode now 
-  if ($name =~ /^(\d+)$/) {
-     my $k = $1; die "Need positive index [$k]\n" unless $k > 0;
-     $::headless_largest_k = $k if $k > $::headless_largest_k;
-     $k -= 1;
-     return $k;
-  }
-  ## for headless mode + is_compute spec, the handle is a dummy and not needed.
-  elsif (!$is_compute) {
-     die "Not a valid column index [$name]\n"
-  }
-  return undef;
-}
-
-sub dump_spic {
-  return unless $B_debug;
-  my $msg = shift;
-  print STDERR "=== $msg ===\n";
-  for my $s (@::output_spic) {
-    my ($handle, $colid, $misc) = ($s->[0], $s->[1], $s->[2]);
-    $colid = '__X__' unless defined($colid);
-    my $str = join '--', map { "[$_->[0],$_->[1]]" } $s->[3];
-    print STDERR "[$handle][$colid][$misc] $str\n";
-  }
-}
-
 my %stackopnarg =
    ( add => 2, mul => 2, div => 2, cat => 2, sub => 2, mod => 2,
      ed  => 3, edg => 3,
      uc  => 1, lc => 1, rot13 => 1
    );
+
 sub parse_stack {
   my $spec = shift;
   my @oppair = ();
   my $p = 0;
-  $spec = ":$spec" if substr($spec, 0, 1) !~ /[\/^:]/;
+  $spec = ":$spec" if substr($spec, 0, 1) !~ /[\/^:]/;      # fixme what's the f slash for?
   my $l = length($spec);
 
   while ($spec =~ /([,^:])([^,^:]+)/g) {
     my ($type, $what) = ($1, $2);
-    $what = wrangle_handle($what, 0) if $type eq ':';
+    $what = urldecode($what) if $type eq '^';
     push @oppair, [$type, $what];
     $p = pos($spec);
     die "Not supported [$what]\n" if $type eq ',' && !defined($stackopnarg{$what});
-    push @::output_spic_handles, $what if $type eq ':';
   }
   die "Parse error in spec [$spec] near position $p\n" unless $p == $l;
   return \@oppair;
+}
+
+sub urldecode {
+   my $val = shift;
+   $val =~ s/%([A-Fa-f\d]{2})/chr hex $1/eg;
+   return $val;
+}
+
+
+for my $spec (@::spec) {
+  if ($spec =~ /(.*?)::(.*)/) {
+    my ($handle, $compute) = ($1, $2);
+    my $stack = parse_stack($compute);
+    push @::compute, [$handle, $stack];
+  }
+  elsif ($spec =~ /^@(.*?)([\/~](?:[a-z]{2,4})[\/~]|[=~]{1}|\/=|\/~)(.*)/) {
+    my ($handle, $op, $val) = ($1, $2, $3);
+    die "Unrecognised operator [$op]\n" unless defined($ops{$op});
+    my $indirection = 0;
+    if ($val =~ s/^://) {
+      $indirection = 1;
+    }
+    else {
+      $val = urldecode($val);
+    }
+    push @::filter, [$op, $indirection, $val, $handle];
+  }
+  else {
+    push @::output, $spec;
+  }
+}
+
+sub add_tally {
+  print "\t" if @::output; print $_[0];
 }
 
 
@@ -242,154 +260,78 @@ sub wrangle_header {
   elsif ($B_add_row_column) { unshift @::HEADER, '_' }
 
   $::N = @::HEADER;
-  @::NUMBERS = 0..($::N-1);
+  my %input_header = map { ($_, 1) } @::HEADER;
 
-  my %name_to_idx = $B_headless ? () : map { $::HEADER[$_] => $_ } @::NUMBERS;
-  #
-  # With repeated columns, this will pick the last as the target e.g. for -i.
-
-  if ($B_headless) {
-    die "Number of fields $::N does not support index $::headless_largest_k\n" if $::headless_largest_k > $::N; 
-  }
-  else {
-    my @missing = grep { !defined($name_to_idx{$_}) } (@::filter_handles, @::output_spic_handles);
-    die "Field(s) <@missing> not found\n" if @missing;
-    for my $f (@::filter) {
-      $f->[3] = $name_to_idx{$f->[3]};                # k-- happens in wrangle_handle for B_headless
-      $f->[2] = $name_to_idx{$f->[2]} if $f->[1];     # indirection on filter.
-    }
+  for (my $i=0; $i<@::HEADER; $i++) {
+    my $name = $::HEADER[$i];
+    die "Name $name defined more than once\n" if defined($::handle_map{$name});
+    $::handle_map{$name} = $i;   
   }
 
-  dump_spic("before name idx update");
-  { for my $spic (@::output_spic) {                   # hv unify/add checks with B_headless
-      if (defined($name_to_idx{$spic->[0]})) {
-        $spic->[1] = $name_to_idx{$spic->[0]};
-print STDERR "<< map $spic->[0] to $spic->[1]\n" if $B_debug;
-      }
-      for (my $i=3; $i<@$spic;$i++) {
-        my ($type, $what) = @{$spic->[$i]};
-        if (!$B_headless && $type eq ':') {
-          die "No handle [$what]\n" unless defined($name_to_idx{$what});
-          $spic->[$i][1] = $name_to_idx{$what};
-        }
-        elsif ($type eq '^') {    # url-decoding
-          $spic->[$i][1] =~ s/%([A-Fa-f\d]{2})/chr hex $1/eg;
-        }
-      }
-    }
+  for (my $i=0; $i<@::output; $i++) {
+    my $name = $::output[$i];
+    die "Handle $name in output does not reference a known entity\n" unless defined($::handle_map{$name});
   }
 
-  if ($B_inplace) {
-    @::new_spic  =  map { [ $B_headless ? "dummy$_" : $::HEADER[$_], $_, 'EDIT_INPLACE', [ ':', $_ ] ] } @::NUMBERS;
-    dump_spic("inplace before");
-    for my $spic (@::output_spic) {
-      if (defined($spic->[1]) && $spic->[2] eq 'COMPUTE_SPEC') {
-        $::new_spic[$spic->[1]] = $spic;
-      }
-      elsif (defined($spic->[1]) && $spic->[2] eq 'JUST_HANDLE') {
-        $::new_spic[$spic->[1]][2] = 'JUST_HANDLE';
-      }
-      else {
-        push @::new_spic, $spic;
-      }
-    }
-    @::output_spic = grep { $_->[2] ne 'JUST_HANDLE' || !$B_excise } @::new_spic;
-    dump_spic("inplace after");
+  if ($B_excise) {
+    my %excise = map { ($_, 1) } @::output;
+    @::output = grep { !defined($excise{$_}) } @::HEADER;
   }
-  elsif ($B_printall || $B_excise) {
-    my %picknums = map { ($_, 1) } @::NUMBERS;
-    if ($B_excise) {
-      my %xnums = map { ($_->[3][1], 1) } grep { $_->[2] eq 'JUST_HANDLE' } @::output_spic;
-      %picknums = map { ($_, 1) } grep { !defined($xnums{$_}) } @::NUMBERS;
-      @::output_spic = grep { $_->[2] ne 'JUST_HANDLE' } @::output_spic;
-    }
-    unshift @::output_spic, (map { [ $B_headless ? "dummy$_" : $::HEADER[$_], $_, 'EDIT_ALLXCISE', [ ':', $_ ] ] } grep { defined($picknums{$_}) } @::NUMBERS);
-    dump_spic("all/excise");
-  }
-}
-
-# spic: [ name, colid, CODE, parse ]
-
-for my $spec (@::spec) {
-  if ($spec =~ /(.*?)::(.*)/) {
-    my ($newname, $compute) = ($1, $2);
-    my $stack = parse_stack($compute);
-    my @debug = map { "($_->[0] $_->[1])" } @$stack;
-    push @::output_spic, [$newname, $B_headless ? wrangle_handle($newname, 1) : undef, 'COMPUTE_SPEC', @$stack];
-    # push @::output_spic, [$newname, undef, 'COMPUTE_SPEC', @$stack];
-  }
-  elsif ($spec =~ /(.*?)([\/~](?:eq|ne|lt|le|ge|gt|ep|om)[\/~]|[=~]{1}|\/=|\/~)(.*)/) {
-    my ($handle, $op, $val) = ($1, $2, $3);
-    die "Unrecognised operator [$op]\n" unless defined($ops{$op});
-    my $indirection = 0;
-    if ($val =~ s/^://) {
-      push @::filter_handles, $val;
-      $val = wrangle_handle($val, 0);
-      $indirection = 1;
-    }
-    else {
-      $val =~ s/^\^//;        # so that user can specify '^:str'
-    }
-    push @::filter, [$op, $indirection, $val, wrangle_handle($handle, 0)];
-    push @::filter_handles, $handle;
-  }
-  else {
-    my ($newname, $handle) = ($spec, wrangle_handle($spec, 0));
-    push @::output_spic_handles, $handle;
-    push @::output_spic, [$newname, undef, 'JUST_HANDLE', [':', $handle]];
-  }
-}
-dump_spic("arg parse");
-
-sub add_tally {
-  print "\t" if @::output_spic; print $_[0];
-}
-
-while (<>) {
-
-  chomp;
-  my @F = split "\t";
-  my $rowname = "";
-
-  if ($. == 1) {
-    @::HEADER = @F;
-    wrangle_header();       # fixme @::HEADER not meaningful if $B_headless
-    if ($B_print_header) {
-      local $, = "\t";
-      print map { $_->[0] } @::output_spic;
-      add_tally("T") if $B_print_tally;
-      print "\n";
-    }
-    next unless $B_headless;
+  elsif ($B_printall) {
+    @::output = @::HEADER;
   }
 
-  if (!$B_headless && $::N+1 == @F) {
-    if ($. == 2)                { $::extra_rownames = 1; }
-    elsif (!$::extra_rownames)  { die "Row count inconsistency at line $.\n"; }
-    $rowname = shift @F;
-  }
-  elsif ($::extra_rownames || $::N != @F) {
-    die "Row count inconsistency at line $.\n";
-  }
-
-  my $nmatch = 0;
-  if (@::filter) {
-    for my $f (@::filter) {
-      my ($op, $indirection, $val, $colid) = @$f;
-      $val = $F[$val] if $indirection;
-      $nmatch++ if $ops{$op}->($F[$colid], $val);
-    }
-    next unless $B_print_tally || ($B_filter_or && $nmatch) || $nmatch == @::filter;
-  }
-
-  print "$rowname\t" if $rowname && $B_print_rowname;
-  my @outputs = ();
-  for my $spic (@::output_spic) {
-    my @stack = ();
-    for (my $i=3; $i<@$spic;$i++) {
-      my ($type, $what) = @{$spic->[$i]};
+  for (my $i=0; $i<@::compute; $i++) {
+    my $j = $::N + $i;
+    my ($name, $compute) = @{$::compute[$i]};
+    die "Name $name defined more than once\n" if defined($::handle_map{$name}) && !$B_inplace;
+    for my $comp (@$compute) {
+      my ($type, $what) = @$comp;
       if ($type eq ':') {
-        push @stack, $F[$what];
+         die "Handle $what in compute $name does not reference a known entity\n" unless defined($::handle_map{$what});
+         $comp->[1] = $::handle_map{$what};
+      }
+    }
+    $::handle_map{$name} = $j;
+    push @::HEADER, $name;
+  }
+
+  for (my $i=0; $i<@::output; $i++) {
+    my $name = $::output[$i];
+    die "Handle $name in output does not reference a known entity\n" unless defined($::handle_map{$name});
+    $::output[$i] = $::handle_map{$name};
+  }
+
+print STDERR "-- output columns @::output --\n" if $B_debug;
+
+  for my $filt (@::filter) {
+
+    my ($op, $indirection, $val, $name) = @$filt;
+print STDERR "-- filter @$filt --\n" if $B_debug;
+
+    die "Handle $name in filter does not reference a known entity\n" unless defined($::handle_map{$name});
+    $filt->[3] = $::handle_map{$name};
+    if ($indirection) {
+       die "Handle $val in filter does not reference a known entity\n" unless defined($::handle_map{$val});
+       $filt->[2] = $::handle_map{$val};
+    }
+  }
+}
+
+
+sub do_compute {
+
+  my $F = shift;
+
+  for my $spic (@::compute) {
+
+    my ($handle, $compute) = @$spic;
+    my @stack = ();
+    for my $comp (@$compute) {
+      my ($type, $what) = @$comp;
+
+      if ($type eq ':') {
+        push @stack, $F->[$what];
       }
       elsif ($type eq '^') {
         push @stack, $what;
@@ -418,8 +360,61 @@ while (<>) {
         }
       }
     }
-    push @outputs, (join "", @stack);
+    push @$F, (join "", @stack);
   }
+  die "Cp error\n" unless @::HEADER == @$F;
+}
+
+
+while (<>) {
+
+  chomp;
+  my @F = split "\t";
+  my $rowname = "";
+
+  if ($. == 1) {
+    @::HEADER = $B_headless ? (1..@F) : @F;
+    wrangle_header();
+    if ($B_print_header) {
+      local $, = "\t";
+      print map { $::HEADER[$_] } @::output;
+      add_tally("T") if $B_print_tally;
+      print "\n";
+    }
+    next unless $B_headless;
+  }
+
+  if (/^#/) {
+    if ($M_comment) {
+       print "$_\n" if $M_comment == 2;
+       next;
+    }
+  }
+
+  if (!$B_headless && $::N+1 == @F) {
+    if ($. == 2)                { $::extra_rownames = 1; }
+    elsif (!$::extra_rownames)  { die "Row count inconsistency at line $.\n"; }
+    $rowname = shift @F;
+  }
+  elsif ($::extra_rownames || $::N != @F) {
+    die "Row count inconsistency at line $.\n";
+  }
+
+  do_compute(\@F);         # this pushes compute onto @F if present.
+
+  my $nmatch = 0;
+  if (@::filter) {
+    for my $filt (@::filter) {
+      my ($op, $indirection, $val, $colid) = @$filt;
+      $val = $F[$val] if $indirection;
+      $nmatch++ if $ops{$op}->($F[$colid], $val);
+    }
+    next unless $B_print_tally || ($B_filter_or && $nmatch) || $nmatch == @::filter;
+  }
+
+  print "$rowname\t" if $rowname && $B_print_rowname;
+  my @outputs = map { $F[$_] } @::output;
+
   local $" = "\t";
   print "@outputs";
   add_tally($nmatch) if $B_print_tally;

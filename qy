@@ -29,6 +29,7 @@ mode_take="curr" # "week" "all" "stdin" "prev" are the others.
 take_n_tail=+1   # by default do everything in selection
 
 debug=false
+sayso=true
 
 QY_MAPTRIGGER=${QY_MAPTRIGGER:-/}
 QY_DLPATTERN=${QY_DLPATTERN:-.tar.gz}
@@ -43,7 +44,13 @@ base=
 list=
 taketag=
 
-while getopts :u:r:M:q:b:d:t:l:m:h_ opt
+function loglog() {
+   if $sayso; then
+      >&2 echo "$1"
+   fi
+}
+
+while getopts :u:r:M:q:b:d:t:l:m:hx_ opt
 do
     case "$opt" in
     _) debug=true ;;
@@ -56,6 +63,7 @@ do
     u) QY_SITENAME=$OPTARG ;;
     t) mode_take=$OPTARG ;;
     m) mode=$OPTARG ;;
+    x) sayso=false ;;
     h) cat <<EOH
 Default action: using selected input expand IP map on trigger ($QY_MAPTRIGGER)
 -m <mode>  one of "map" (default) "ref" "dl" "copy" "tsv"
@@ -124,9 +132,9 @@ trap "rm -f $source" EXIT
 rm -f $source
 mkfifo $source
 
->&2 echo "-- files $list"
+loglog "-- files $list"
 if [[ $mode_take != "stdin" ]]; then
-   >&2 echo "-- $(zcat -f $list | wc -l) entries"
+   loglog "-- $(zcat -f $list | wc -l) entries"
 fi
 zcat -f $list | tail -n $take_n_tail > $QY_QRYDIR/readfromlogs &
 # zcat -f $list > $QY_QRYDIR/readfromlogs &
@@ -146,39 +154,42 @@ elif [[ $mode == "dl" ]]; then
    fnout=dl.${base#refs.}.txt
    fnout=$tag_dl.${fnout#dl.}
    export QYDL=$QY_DLPATTERN
-   perl -ne 'BEGIN{open("M",".map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;}/\S+\s+(\S+).*?"GET (\S+$ENV{QYDL}).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs | rev | sort | rev > $fnout
+   perl -ne 'BEGIN{open("M",".map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;}/\S+\s+(\S+).*?"GET (\S+$ENV{QYDL}).*?"/ && print "$2\t$1\t$map{$1}\n";' readfromlogs > $fnout
+   rev $fnout | sort | rev > $fnout.rev
 elif [[ $mode == "ref" ]]; then
-   >&2 echo "-- mode ref"
+   loglog "-- mode ref"
    fnout=$base.ext
    perl -ne '/".*?".*?(\d+)\s+\S+\s+"(.*?)"/ && print "$1-$2\n";' readfromlogs | sort | uniq -c | sort -n | perl -pe 's/-/     /' > $base.z
+#echo "--"
    grep -v $QY_SITENAME $base.z > $fnout
+#echo "--"
    # grep -v "\<\(ua\|ru\|kz\)\>" $fnout | grep -v "^  *1\>"
 elif [[ $mode == "map" ]]; then
    # exit 14
    fnout=.add
-   >&2 echo "-- hook $QY_MAPTRIGGER (-M <hook>)"
+   loglog "-- hook $QY_MAPTRIGGER (-M <hook>)"
    > .add
    grep "$QY_MAPTRIGGER" < readfromlogs | perl -ne 'BEGIN{open(M,"<.map");%map=map{/^(\S+)\s+(\S+)/?($1,$2):()}<M>;close(M)}/^\S+\s+(\S+)/;($1&&defined($map{$1})&&next)||print"$1\n";' | sort -u | while read ip; do
-      name=$(dig +noidnout +short -x $ip)
+      name=$(dig +short -x $ip)
       name=$(echo $name)            # remove trailing ws
       name=${name%.}                # remove trailing dot
       name=$(tr ' ' '-' <<< $name)  # occassionally multi-line answer
       echo -e "$ip\t[$name]"
-      >&2 echo -e "$ip\t[$name]"
+      loglog "$ip\t[$name]"
    done >> .add
    nadd=$(wc -l < .add)
    if (( nadd > 0 )); then
       >&2 echo "-- adding $nadd addresses"
       cat .map .add | sort -u -V > .mad
       if [[ ! -f .map.1.gz ]] || [[ $(find .map.1.gz -mtime +1 -print) ]]; then
-         >&2 echo "-- upcycling map copies"
+         loglog "-- upcycling map copies"
          j=10; for i in {9..1}; do [[ -f .map.$i.gz ]] && mv -f .map.$i.gz .map.$j.gz; j=$i; done
          gzip -c .map > .map.1.gz
       fi
       mv -f .mad .map
    fi
 else
-   >&2 echo "-- mode $mode is not a mode, peculiarly"
+   loglog "-- mode $mode is not a mode, peculiarly"
    false
 fi
 
