@@ -7,15 +7,20 @@ now.
 
 ## Stream compute on rows/columns in tabular data.
 
-  Filter rows, select and update columns, combine and compute new columns with `pick`.
-  It supports algebraic operations as well as string operations and regular
-  expressions in both filter conditions and computation. I've made several
-  versions over the years, this is the first one that is fun to use. There are
-  undoubtedly similar and more mature solutions around.
+  Filter rows, select and update columns, combine and compute new columns with
+  `pick`.  It supports algebraic operations as well as string operations and
+  regular expressions in both filter conditions and computation. I've made
+  several versions over the years, this is the first one that is fun to use
+  with an implementation not bordering on hideous.
 
-  A useful feature is that column operations/conditions are expressed in column names
-  for tables with a header line or indexes otherwise.
+  A useful feature is that column operations and row clauses are expressed in column names
+  for tables with a header line or indexes otherwise. Row filtering can refer
+  to derived colums, derived colums can utilise earlier derived columns, and derived
+  columnsn can be included in the output.
 
+  The interface is via a tiny command-line format to describe column selection,
+  row filtering, and derived column computation. It was designed to avoid shell
+  meta character as much as possible.
 
 ## Unix terminal histograms and bar charts
 

@@ -12,6 +12,7 @@
 # TODO: tests after the latest rewrite
 
 # s o m e   i d e a s
+# -  make $. == 2 logic depend on first non-comment line instead.
 # -  operators to validate column type (integer, regex) .. half-exists already.
 # -  bit - and or, notand, notor
 # ?  numerical comparisons check field is numeric
@@ -291,7 +292,6 @@ sub wrangle_header {
   #
 
   for (my $i=0; $i<@::compute; $i++) {
-    my $j = $::N + $i;
     my ($name, $compute) = @{$::compute[$i]};
     die "Name $name defined more than once\n" if defined($::handle_map{$name}) && !$B_inplace;
     for my $comp (@$compute) {
@@ -301,8 +301,8 @@ sub wrangle_header {
          $comp->[1] = $::handle_map{$what};
       }
     }
-    $::handle_map{$name} = $j;
-    push @::HEADER, $name;
+    $::HEADER[$::N+$i] = $name;        # only needed to print the new header.
+    $::handle_map{$name} = $::N+$i;
   }
 
   #
@@ -413,7 +413,7 @@ while (<>) {
   }
 
   if (!$B_headless && $::N+1 == @F) {
-    if ($. == 2)                { $::extra_rownames = 1; }
+    if ($. == 2)                { $::extra_rownames = 1; }        # does not work if comments are present.
     elsif (!$::extra_rownames)  { die "Row count inconsistency at line $.\n"; }
     $rowname = shift @F;
   }
