@@ -268,11 +268,6 @@ sub wrangle_header {
     $::handle_map{$name} = $i;   
   }
 
-  for (my $i=0; $i<@::output; $i++) {
-    my $name = $::output[$i];
-    die "Handle $name in output does not reference a known entity\n" unless defined($::handle_map{$name});
-  }
-
   if ($B_excise) {
     my %excise = map { ($_, 1) } @::output;
     @::output = grep { !defined($excise{$_}) } @::HEADER;
