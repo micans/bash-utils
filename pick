@@ -75,32 +75,33 @@ print <<EOH;
 Usage: pick [options] <colspec>+ < FILE
 Simple example: pick TAG ID < table.txt
 
-  - Pick and optionally filter columns from tabular input.
+  - Pick and optionally filter columns and derived columns from tabular input.
   - Pick either by column name or index.
-  - Filter with numerical and string comparison operators and regular expressions.
   - Combine columns with string and algebraic operations
+  - Filter with numerical and string comparison operators and regular expressions.
   - Requires tab separated input.
 
 <colspec>
-  (1) <HANDLE>                 either column name or variable name for output
+  (1) <HANDLE>                 either column name or derived compute name for output
   (2) @<HANDLE><op><VAL>       filter criterion compare handle to constant value
   (3) @<HANDLE><op>:<HANDLE2>  filter criterion compare handle to other handle
-  (4) <VARNAME>::<COMPUTE>     put <COMPUTE> in <VARNAME>
+  (4) <HANDLE>::<COMPUTE>      put <COMPUTE> in <HANDLE>
+  See below further below.
 
 Options:
-  -i in-place: all columns are output, NAME::<COMPUTE> replaces NAME if it exists
+  -i in-place: all columns are output, <NAME>::<COMPUTE> replaces <NAME> if it exists
   -k headerless input, use 1 2 .. for column names
   -a print all input columns (filtering by colspec applies, -t accepted)
   -h do not print header
   -t print final tally column of count of matched column filters
   -v OR multiple criteria (default is AND)
-  -x excise specified column(s) from the output (works with -i)
+  -x take complement of selected input column(s) (works with -i)
   -r print rownames if no column name for rownames exists;
     in this case _ is the name to select with <op> on rownames.
   -R add _ column if no row name field exists in the header;
     NOTE an empty field is recognised and mapped to _ automatically.
   -c strip lines starting with #
-  -C pass lines with starting with # unchanged
+  -C pass lines starting with # unchanged
   -z print miscellaneous information, e.g. url encoding hex codes
 
   -at is useful for inspecting/checking filters
@@ -126,13 +127,14 @@ Colon introduces a column name; <VAL> is url-decoded.
   ~eq|ne|lt|le|ge|gt~  string   comparison (equal, not equal, less then, less than or equal etc)
 
 <COMPUTE> is a concatenation of parts of the form (1) ^<string> (2) :<handle>
-  (3) ,<op> . <string> will be url-decoded. <handle> is a column name, or column
-  index with -k (headerless input) <op> is one of
+  (3) ,<op> . <string> will be url-decoded. <handle> referes to a column name
+  or an earlier computed derived column, or column index with -k (headerless input).
+  <op> is one of
     
-    / add sub mul div
+    / add sub mul div get
     \\ mod cat           (consume two   leave one)
     ed edg              (consume three leave one)       edit, edit global
-    uc lc rot13         (consume two   leave one)       upper case, lower case, rot13
+    uc lc rot13 len rc  (consume one   leave one)       upper case, lower case, rot13, length, revcompl
 
   If the very first part starts with [a-z] it is inferred to be a handle
   (leading : not needed).  <COMPUTE> is a stack, so zut::foo:bar,add^str,cat
@@ -142,6 +144,7 @@ Colon introduces a column name; <VAL> is url-decoded.
   equivalent to zut::foo:bar,add^str. To just prefix a column: zut::^foo:zut
   To concatenate two columns: zut::foo:bar .
 
+    handle str1 get      =>  handle =~ s/str1/$1/
     handle str1 str2 ed  =>  handle =~ s/str1/str2/
     handle str1 str2 edg =>  handle =~ s/str1/str2/g
 EOH
@@ -196,9 +199,9 @@ my %ops = (
 );
 
 my %stackopnarg =
-   ( add => 2, mul => 2, div => 2, cat => 2, sub => 2, mod => 2,
+   ( add => 2, mul => 2, div => 2, cat => 2, sub => 2, mod => 2, get => 2,
      ed  => 3, edg => 3,
-     uc  => 1, lc => 1, rot13 => 1
+     uc  => 1, lc => 1, rot13 => 1, len => 1, rc => 1
    );
 
 sub parse_stack {
@@ -268,13 +271,18 @@ sub wrangle_header {
     $::handle_map{$name} = $i;   
   }
 
-  if ($B_excise) {
+  if ($B_excise) {         # note excise we end up with input order.
     my %excise = map { ($_, 1) } @::output;
     @::output = grep { !defined($excise{$_}) } @::HEADER;
   }
   elsif ($B_printall) {
     @::output = @::HEADER;
   }
+
+  #
+  ##  Add derived column names to @::HEADER
+  ##  In derived column specs replace names by offsets into field array.
+  #
 
   for (my $i=0; $i<@::compute; $i++) {
     my $j = $::N + $i;
@@ -291,6 +299,10 @@ sub wrangle_header {
     push @::HEADER, $name;
   }
 
+  #
+  ##  In output list replace names by offsets into field array.
+  #
+
   for (my $i=0; $i<@::output; $i++) {
     my $name = $::output[$i];
     die "Handle $name in output does not reference a known entity\n" unless defined($::handle_map{$name});
@@ -298,6 +310,10 @@ sub wrangle_header {
   }
 
 print STDERR "-- output columns @::output --\n" if $B_debug;
+
+  #
+  ##  In filter list replace names by offsets into field array.
+  #
 
   for my $filt (@::filter) {
 
@@ -341,12 +357,15 @@ sub do_compute {
         elsif ($what eq 'sub') { $stack[-2] -= $stack[-1] }
         elsif ($what eq 'div') { $stack[-2] /= $stack[-1] }
         elsif ($what eq 'mod') { $stack[-2] %= $stack[-1] }
+        elsif ($what eq 'get') { my $item = $stack[-2] =~ /$stack[-1]/ ? (defined ($1) ? $1 : $&) : ""; $stack[-2] = $item; }
            pop @stack;
         }
         elsif ($n_wanted == 1) {
            if ($what eq 'uc') {  $stack[-1] = uc($stack[-1]) }
         elsif ($what eq 'lc') {  $stack[-1] = lc($stack[-1]) }
         elsif ($what eq 'rot13') {  $stack[-1] =~ tr/N-ZA-Mn-za-m/A-Za-z/ }
+        elsif ($what eq 'len') {  $stack[-1] = length($stack[-1]) }
+        elsif ($what eq 'rc') {  my $x = $stack[-1]; $x =~ tr/acgtACGT/tgcaTGCA/; $stack[-1] = reverse($x) }
         }
         else {
            if ($what eq 'ed')  { $stack[-3] =~ s/$stack[-2]/$stack[-1]/ }
