@@ -3,7 +3,7 @@
 Some of the scripts here are to aid data inspection in the command line, avoiding
 the need to fire up R or Python. These are primarily `pick` (for selecting/combining/transforming/filtering
 tabular data) and `hissifit` (terminal histograms). Also useful is `transpose` from
-[github.com/reaper](https://github.com/reaper) for fast and low-memory transposition
+[github.com/micans/reaper](https://github.com/micans/reaper) for fast and low-memory transposition
 of (large) tabular data.
 
 **List of highly useful software**
