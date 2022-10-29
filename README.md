@@ -1,5 +1,15 @@
 # bash-utils
 
+Some of the scripts here are to aid data inspection in the command line, avoiding
+the need to fire up R or Python. These are primarily `pick` (for selecting/combining/transforming/filtering
+tabular data) and `hissifit` (terminal histograms). Also useful is `transpose` from
+[github.com/reaper](https://github.com/reaper) for fast and low-memory transposition
+of (large) tabular data.
+
+**List of highly useful software**
+[GNU datamash](https://www.gnu.org/software/datamash/).
+
+
 ## Command line directory bookmarks
 
 Apparix used to live here but has [its own repository](https://github.com/micans/apparix)
@@ -19,13 +29,9 @@ now.
   to derived columns, derived columns can utilise earlier derived columns, and derived
   columns can be included in the output.
 
-  The interface is via a tiny command-line format to describe column selection,
+  The interface is a tiny command-line format to describe column selection,
   row filtering, and derived column computation. It was designed to avoid shell
   meta characters as much as possible.
-
-  I add whatever functionality seems useful. Hence it is currently possible to encrypt your
-  data with rot13 or reverse complement DNA/RNA. The documentation is output when given `-H` -
-  `-h` is the option to prevent output of column names.
 
 ```
    # pick columns foo bar from data.txt.
@@ -33,16 +39,20 @@ now.
 pick foo bar < data.txt
 
    # pick columns foo bar tim with rows where bar fields compare
-   # lexiographically between a inclusive and c exclusive and tim fields are
+   # lexicographically between a inclusive and c exclusive and tim fields are
    # larger than zero.
    #
 pick foo bar tim @bar~ge~a @bar~le~c @tim/gt/0 < data.txt
 
-   # as above, also output doodle which is column yam with column bob subracted
+   # as above, also output doodle which is column yam with column bob subtracted
    # and column zut added, filter on doodle fields larger than -2.
    #
 pick foo bar tim doodle doodle::yam:bob,sub:zut,add @bar~ge~a @bar~le~c @tim/gt/0 @doodle/gt/-2 < data.txt
 ```
+
+  I add whatever functionality seems useful. Hence it is currently possible to encrypt your
+  data with rot13 or reverse complement DNA/RNA. The documentation is output when given `-H` -
+  `-h` is the option to prevent output of column names.
 
 
 ## Unix terminal histograms and bar charts
