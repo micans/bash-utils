@@ -2,7 +2,7 @@
 
 Some of the scripts here are to aid data inspection in the command line, avoiding
 the need to fire up R or Python. These are primarily `pick` (for selecting/combining/transforming/filtering
-tabular data) and `hissifit` (terminal histograms). Also useful is `transpose` from
+tabular data) and `hissyfit` (terminal histograms). Also useful is `transpose` from
 [github.com/micans/reaper](https://github.com/micans/reaper) for fast and low-memory transposition
 of (large) tabular data.
 
@@ -31,7 +31,8 @@ now.
 
   The interface is a tiny command-line format to describe column selection,
   row filtering, and derived column computation. It was designed to avoid shell
-  meta characters as much as possible.
+  meta characters as much as possible. Derived columns are computed in a tiny
+  stack language that accepts column names, constant values, and operators.
 
 ```
    # pick columns foo bar from data.txt.
