@@ -27,6 +27,23 @@ now.
   data with rot13 or reverse complement DNA/RNA. The documentation is output when given `-H` -
   `-h` is the option to prevent output of column names.
 
+```
+   # pick columns foo bar from data.txt.
+   #
+pick foo bar < data.txt
+
+   # pick columns foo bar tim with rows where bar fields compare
+   # lexiographically between a inclusive and c exclusive and tim fields are
+   # larger than zero.
+   #
+pick foo bar tim @bar~ge~a @bar~le~c @tim/gt/0 < data.txt
+
+   # as above, also output doodle which is column yam with column bob subracted
+   # and column zut added, filter on doodle fields larger than -2.
+   #
+pick foo bar tim doodle doodle::yam:bob,sub:zut,add @bar~ge~a @bar~le~c @tim/gt/0 @doodle/gt/-2 < data.txt
+```
+
 
 ## Unix terminal histograms and bar charts
 
