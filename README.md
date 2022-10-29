@@ -42,12 +42,12 @@ pick foo bar < data.txt
    # lexicographically between a inclusive and c exclusive and tim fields are
    # larger than zero.
    #
-pick foo bar tim @bar~ge~a @bar~le~c @tim/gt/0 < data.txt
+pick foo bar tim @bar~ge~a @bar~lt~c @tim/gt/0 < data.txt
 
    # as above, also output doodle which is column yam with column bob subtracted
    # and column zut added, filter on doodle fields larger than -2.
    #
-pick foo bar tim doodle doodle::yam:bob,sub:zut,add @bar~ge~a @bar~le~c @tim/gt/0 @doodle/gt/-2 < data.txt
+pick foo bar tim doodle doodle::yam:bob,sub:zut,add @bar~ge~a @bar~lt~c @tim/gt/0 @doodle/gt/-2 < data.txt
 ```
 
   I add whatever functionality seems useful. Hence it is currently possible to encrypt your
