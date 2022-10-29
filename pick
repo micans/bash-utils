@@ -194,11 +194,19 @@ my %ops = (
   '/ge/' => sub { $_[0] >= $_[1] },
   '/gt/' => sub { $_[0] >  $_[1] },
 
-     # I have observed perl behaving weirdly with bit operators; perhaps because it thought both operands a string.
+     # Perl behaves weirdly with bit operators in very specific cases; perhaps
+     # because it thought both operands a string and one is negative.
      # E.g. perl -e '$x = "13" & "4"; $y = "13" + "4"; print "$x $y\n";'
      # yields 0 17
-     # But other weirdness still unexplained ('(' and '$' popping up in error messages) and
-     # only observed from file reads, not replicated on command line. Anyway absint is nice.
+     # perl -e '$x = "-1" & "4"; $y = "-1" + "4"; print "$x $y\n";'
+     # yields $ 3
+     # This is to do with when/how perl sees something as a number or string. A
+     # possible scenario is that perl considers fields resulting from string
+     # splits as strings until treated as a number, but that the combination of
+     # a bitwise operator and a negative-number-as-string does not lead to this
+     # string-to-number promotion. "-1" & 4 and -1 & "4" both avoid the problem
+     # - conceivably in both cases there is an operand that forces number
+     # promotion.  Thus, absint.
      #
   '/all/' => sub  { $_[1] == (abs(int($_[0])) & abs(int($_[1]))) },
   '/any/'  => sub { abs(int($_[0])) & abs(int($_[1])) },
