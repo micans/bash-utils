@@ -12,13 +12,10 @@
 # TODO: tests after the latest rewrite
 
 # s o m e   i d e a s
-# -  make $. == 2 logic depend on first non-comment line instead.
 # -  operators to validate column type (integer, regex) .. half-exists already.
-# -  bit - and or, notand, notor
 # ?  numerical comparisons check field is numeric
 # ?  ord .. sprintf ..
 # ?  per-column A/ep/4/0.1    B/ep/5/0.2
-# ?  or COMPUTED can take operator to set epsilon and oom as side effect.
 
 use strict;
 use warnings;
@@ -291,6 +288,7 @@ sub wrangle_header {
     @::output = ((grep { !defined($excise{$_}) } @::HEADER), (grep { !defined($inheader{$_}) } @::output));
   }
   elsif ($B_printall) {
+    print STDERR "-- Supplied output columns @::output are ignored\n" if @::output;
     @::output = @::HEADER;
   }
 
@@ -394,6 +392,7 @@ sub do_compute {
   die "Cp error\n" unless @::HEADER == @$F;
 }
 
+my $Nrows = 0;    # includes header.
 
 while (<>) {
 
@@ -410,18 +409,22 @@ while (<>) {
       add_tally("T") if $B_print_tally;
       print "\n";
     }
+    $Nrows++;
     next unless $B_headless;
   }
-
-  if (/^#/) {
+  elsif (/^#/) {
     if ($M_comment) {
        print "$_\n" if $M_comment == 2;
        next;
     }
   }
+  else {
+    $Nrows++;
+  }
 
   if (!$B_headless && $::N+1 == @F) {
-    if ($. == 2)                { $::extra_rownames = 1; }        # does not work if comments are present.
+    print STDERR "-- adjusting for header row count discrepancy ($::N)\n" if $B_debug && $Nrows == 2;
+    if ($Nrows == 2)            { $::extra_rownames = 1; }
     elsif (!$::extra_rownames)  { die "Row count inconsistency at line $.\n"; }
     $rowname = shift @F;
   }
