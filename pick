@@ -128,8 +128,8 @@ Colon introduces a column name; <VAL> is url-decoded.
   /~    Substring/regular expression match reject
   /ep/  Aproximate numerical identity wrt VAL +- EPSILON; export variable EPSILON (current value $::EPSILON)
   /om/  Aproximate numerical identity wrt VAL * OOM, VAL / OOM (current value $::OOM, not sign aware)
-  /eq|ne|lt|le|ge|gt/ numerical comparison (equal, not equal, less then, less than or equal etc)
-  ~eq|ne|lt|le|ge|gt~  string   comparison (equal, not equal, less then, less than or equal etc)
+  /eq|ne|lt|le|ge|gt/ numerical comparison (equal, not equal, less than, less than or equal etc)
+  ~eq|ne|lt|le|ge|gt~  string   comparison (equal, not equal, less than, less than or equal etc)
 
 <COMPUTE> is a concatenation of parts of the form (1) ^<string> (2) :<handle>
   (3) ,<op> . <string> will be url-decoded. <handle> referes to a column name
@@ -149,9 +149,9 @@ Colon introduces a column name; <VAL> is url-decoded.
   equivalent to zut::foo:bar,add^str. To just prefix a column: zut::^foo:zut
   To concatenate two columns: zut::foo:bar .
 
-    handle str1 get      =>  handle =~ s/str1/$1/
-    handle str1 str2 ed  =>  handle =~ s/str1/str2/
-    handle str1 str2 edg =>  handle =~ s/str1/str2/g
+    handle str1 get      =>  handle =~ s/str1/MATCH/    # MATCH refers to () if present in str1, matched part otherwise.
+    handle str1 str2 ed  =>  handle =~ s/str1/str2/     # str1 accepts most/all perl regular expression syntax.
+    handle str1 str2 edg =>  handle =~ s/str1/str2/g    # str1 accepts most/all perl regular expression syntax.
 EOH
   exit 0;
   }
