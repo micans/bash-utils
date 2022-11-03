@@ -13,6 +13,7 @@
 
 # s o m e   i d e a s
 # -  operators to validate column type (integer, regex) .. half-exists already.
+# -  neatify/split output array into named instance and offset instance.
 # ?  numerical comparisons check field is numeric
 # ?  ord .. sprintf ..
 # ?  per-column A/ep/4/0.1    B/ep/5/0.2
@@ -158,9 +159,9 @@ Colon introduces a column name; <VAL> is url-decoded.
   equivalent to zut::foo:bar,add^str. To just prefix a column: zut::^foo:zut
   To concatenate two columns: zut::foo:bar .
 
-    handle str1 get      =>  handle =~ s/str1/MATCH/    # MATCH refers to () if present in str1, matched part otherwise.
-    handle str1 str2 ed  =>  handle =~ s/str1/str2/     # str1 accepts most/all perl regular expression syntax.
-    handle str1 str2 edg =>  handle =~ s/str1/str2/g    # str1 accepts most/all perl regular expression syntax.
+   :handle^str1,get      =>  handle =~ s/str1/MATCH/    # MATCH refers to () if present in str1, matched part otherwise.
+   :handle^str1^str2,ed  =>  handle =~ s/str1/str2/     # str1 accepts most/all perl regular expression syntax.
+   :handle^str1^str2,edg =>  handle =~ s/str1/str2/g    # str1 accepts most/all perl regular expression syntax.
 EOH
   exit 0;
   }
@@ -332,6 +333,7 @@ sub wrangle_header {
 
   #
   ##  In output list replace names by offsets into field array.
+  ##  Fixme - perhaps neater to not overwrite and have two data structures.
   #
 
   for (my $i=0; $i<@::output; $i++) {
