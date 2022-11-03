@@ -31,7 +31,7 @@ use warnings;
 my $CMT = '#';
 
 my $B_print_header = 1;
-my $B_filter_or    = 0;
+my $B_filter_and   = 1;
 my $B_print_rowname = 0;    # cannot combine with $B_headless.
 my $B_print_tally  = 0;
 my $B_printall     = 0;
@@ -40,6 +40,7 @@ my $B_excise       = 0;     # print all except unadorned columns listed, cannot 
 my $B_add_row_column = 0;
 my $B_headless     = 0;
 my $B_debug        = 0;
+my $B_force        = 0;
 my $M_comment      = 0;       # 0 oblivious, 1 strip, 2 pass
 
 BEGIN {
@@ -61,8 +62,9 @@ my $help_options=qq{Options:
     NOTE an empty field is recognised and mapped to _ automatically.
   -c strip lines starting with #
   -C pass lines starting with # unchanged
+  -f force output (overrides identical output columns)
   -z print miscellaneous information, e.g. url encoding hex codes
-  -/<str> treat <str> at beginning of line as comment line, e.g.
+  -/<str> treat <str> at beginning of line as comment line, e.g. -/@ for sam files
 
   -at is useful for inspecting/checking filters
   options can be combined, use e.g. -kc/@ for headerless input,
@@ -73,7 +75,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
 
   my $options = shift @::spec;
   $B_print_header = 0 if $options =~ /h/;
-  $B_filter_or    = 1 if $options =~ /v/;
+  $B_filter_and   = 0 if $options =~ /v/;
   $B_print_rowname= 1 if $options =~ /r/;
   $B_print_tally  = 1 if $options =~ /t/;
   $B_printall     = 1 if $options =~ /a/;
@@ -81,6 +83,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
   $B_add_row_column =1 if $options =~ /R/;
   $B_headless     = 1 if $options =~ /k/;
   $B_debug        = 1 if $options =~ /d/;
+  $B_force        = 1 if $options =~ /f/;
   $B_inplace      = 1 if $options =~ /i/;
   $M_comment      = 1 if $options =~ /c/;
   $M_comment      = 2 if $options =~ /C/;
@@ -294,7 +297,7 @@ sub wrangle_header {
   elsif ($B_add_row_column) { unshift @::HEADER, '_' }
 
   $::N = @::HEADER;
-  my %input_header = map { ($_, 1) } @::HEADER;
+  my %inheader = map { ($_, 1) } @::HEADER;
 
   for (my $i=0; $i<@::HEADER; $i++) {
     my $name = $::HEADER[$i];
@@ -304,12 +307,17 @@ sub wrangle_header {
 
   if ($B_excise) {         # note excise we end up with input order.
     my %excise = map { ($_, 1) } @::output_nm;
-    my %inheader = map { ($_, 1) } @::HEADER;
     @::output_nm = ((grep { !defined($excise{$_}) } @::HEADER), (grep { !defined($inheader{$_}) } @::output_nm));
   }
   elsif ($B_printall) {
-    print STDERR "-- Addding columns @::output_nm to input\n" if @::output_nm && $B_debug;
+    print STDERR "-- Adding columns @::output_nm to input\n" if @::output_nm && $B_debug;
     @::output_nm = (@::HEADER, @::output_nm);
+  }
+
+  if ($B_print_header && keys %{{ map { ($_, 1) } @::output_nm }} < @::output_nm) {
+    my $job = $B_force ? 'continuing' : 'fatal, use -f to force';
+    print STDERR "-- Identical output column names exist ($job)\n";
+    exit 1 unless $B_force;
   }
 
   #
@@ -415,6 +423,7 @@ sub do_compute {
 
 my $Nrows = 0;    # includes header.
 my $Ncmts = 0;
+my $Nfilt = 0;
 
 while (<>) {
 
@@ -463,7 +472,10 @@ while (<>) {
     $val = $F[$val] if $indirection;
     $nmatch++ if $ops{$op}->($F[$colid], $val);
   }
-  next unless $B_print_tally || ($B_filter_or && $nmatch) || $nmatch == @::filter;
+  if (($nmatch < @::filter && $B_filter_and) || (!$nmatch && @::filter)) {
+    $Nfilt++;
+    next unless $B_print_tally;
+  }
 
   print "$rowname\t" if defined($rowname) && $B_print_rowname;
   my @outputs = map { $F[$_] } @::output_os;
@@ -474,6 +486,8 @@ while (<>) {
   print "\n";
 }
 
-print STDERR "$Ncmts comment lines in input\n" if $M_comment && $B_debug;
+print STDERR "-- $Ncmts comment lines in input\n" if $M_comment && $B_debug;
+my $would = $B_print_tally ? ' would' : '';
+print STDERR "-- $Nfilt rows$would have been filtered\n" if @::filter && $B_debug;
 
 
