@@ -250,10 +250,11 @@ sub urldecode {
 
 
 for my $spec (@::spec) {
-  if ($spec =~ /(.*?)::(.*)/) {
-    my ($handle, $compute) = ($1, $2);
+  if ($spec =~ /(.*?)(:[:=])(.*)/) {
+    my ($handle, $type, $compute) = ($1, $2, $3);
     my $stack = parse_stack($compute);
     push @::compute, [$handle, $stack];
+    push @::output, $handle if $type eq ':=';
   }
   elsif ($spec =~ /^@(.*?)([\/~](?:[a-z]{2,4})[\/~]|[=~]{1}|\/=|\/~)(.*)/) {
     my ($handle, $op, $val) = ($1, $2, $3);
@@ -297,8 +298,8 @@ sub wrangle_header {
     @::output = ((grep { !defined($excise{$_}) } @::HEADER), (grep { !defined($inheader{$_}) } @::output));
   }
   elsif ($B_printall) {
-    print STDERR "-- Supplied output columns @::output are ignored\n" if @::output;
-    @::output = @::HEADER;
+    print STDERR "-- Addding columns @::output to input\n" if @::output && $B_debug;
+    @::output = (@::HEADER, @::output);
   }
 
   #
