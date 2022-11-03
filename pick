@@ -48,8 +48,8 @@ BEGIN {
   $::OOM     = 2; $::OOM     = $ENV{OOM} if defined($ENV{OOM});
 }
 
-my $help_options=qq{Options:
-  -i in-place: all columns are output, <NAME>::<COMPUTE> replaces <NAME> if it exists
+my $help_options=q{Options:
+  -i in-place: all columns are output, <HANDLE>::<COMPUTE> replaces <HANDLE> if it exists
   -k headerless input, use 1 2 .. for column names
   -a print all input columns (filtering by colspec applies, -t accepted)
   -h do not print header
@@ -69,6 +69,13 @@ my $help_options=qq{Options:
   -at is useful for inspecting/checking filters
   options can be combined, use e.g. -kc/@ for headerless input,
   comment lines indicated by @.};
+
+my $spec_forms = q{
+  (1) <HANDLE>                 output <HANDLE> (either column or derived compute name)
+  (2) @<HANDLE><op><VAL>       filter criterion compare handle to constant value
+  (3) @<HANDLE><op>:<HANDLE2>  filter criterion compare handle to other handle
+  (4) <HANDLE>::<COMPUTE>      put <COMPUTE> in <HANDLE>
+  (5) <HANDLE>:=<COMPUTE>      put <COMPUTE> in <HANDLE> and add <HANDLE> to output};
 
 
 while (@::spec && $::spec[0] =~ /^-/) {
@@ -99,6 +106,8 @@ while (@::spec && $::spec[0] =~ /^-/) {
   }
   elsif ($options =~ /l/) {
     print $help_options, "\n";
+    print "\nSelect/filter/compute forms:$spec_forms\n";
+    print "See -H for longer description\n";
     exit 0;
   }
   elsif ($options =~ /H/) {
@@ -106,18 +115,7 @@ print <<EOH;
 Usage: pick [options] <colspec>+ < FILE
 Simple example: pick TAG ID < table.txt
 
-  - Pick and optionally filter columns and derived columns from tabular input.
-  - Pick either by column name or index.
-  - Combine columns with string and algebraic operations
-  - Filter with numerical and string comparison operators and regular expressions.
-  - Requires tab separated input.
-
-<colspec>
-  (1) <HANDLE>                 output <HANDLE> (either column or derived compute name)
-  (2) @<HANDLE><op><VAL>       filter criterion compare handle to constant value
-  (3) @<HANDLE><op>:<HANDLE2>  filter criterion compare handle to other handle
-  (4) <HANDLE>::<COMPUTE>      put <COMPUTE> in <HANDLE>
-  (5) <HANDLE>:=<COMPUTE>      put <COMPUTE> in <HANDLE> and add <HANDLE> to output
+<colspec>$spec_forms
   See further below.
 
 $help_options
@@ -127,13 +125,13 @@ HANDLE identifies either a column by name, or a derived value as in form (4).
 Form (1) -- just a handle -- selects it for output.
 Form (2) creates a filter comparing a handle to a constant value. 
 Form (3) creates a filter comparing a handle to another handle.
-Form (4) creates a derived value, see below for <COMPUTE> specification.
-Form (5) as form 4, and selects it for output.
+Form (4) creates a derived value in handle, <COMPUTE> specification below.
+Form (5) as form 4, and selects the handle for output.
 
 @<COLNAME><op>[^]<VAL>
 @<COLNAME><op>:<COLNAME>
 selects rows based on <VAL> or value in column <COLNAME>; see list below for <op>.
-Colon introduces a column name; <VAL> is url-decoded.
+Colon introduces a column name; <VAL> is url-decoded; a leading ^ is removed.
   =     String identity accept
   /=    String identity reject
   ~     Substring/regular expression match accept
@@ -174,7 +172,7 @@ die "-a -x do not combine\n" if $B_printall && $B_excise;
 die "-r -k do not combine\n" if $B_print_rowname && $B_headless;
 $B_print_header = 0 if $B_headless;
 
-die "Need something (use -l for list of options, -H for format description)\n" unless @::spec || $B_printall;
+die "Need something (use -l for short help, -H for longer description)\n" unless @::spec || $B_printall;
 
 
 sub interval_plus {
