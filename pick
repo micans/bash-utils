@@ -27,6 +27,8 @@ use warnings;
 
 %::handle_map = ();
 
+my $CMT = '#';
+
 my $B_print_header = 1;
 my $B_filter_or    = 0;
 my $B_print_rowname = 0;    # cannot combine with $B_headless.
@@ -59,8 +61,11 @@ my $help_options=qq{Options:
   -c strip lines starting with #
   -C pass lines starting with # unchanged
   -z print miscellaneous information, e.g. url encoding hex codes
+  -/<str> treat <str> at beginning of line as comment line, e.g.
 
-  -at is useful for inspecting/checking filters};
+  -at is useful for inspecting/checking filters
+  options can be combined, use e.g. -kc/@ for headerless input,
+  comment lines indicated by @.};
 
 
 while (@::spec && $::spec[0] =~ /^-/) {
@@ -78,9 +83,10 @@ while (@::spec && $::spec[0] =~ /^-/) {
   $B_inplace      = 1 if $options =~ /i/;
   $M_comment      = 1 if $options =~ /c/;
   $M_comment      = 2 if $options =~ /C/;
+  $CMT = $1 if $options =~ /\/(.*)/;
 
   if ($options =~ /z/) {
-    my @trickylist = split "", q{ <>!;$&`"'|(){}[]?*^-_+=@~/\#.,};
+    my @trickylist = split "", q{ <>!:;$&`"'|(){}[]?*^-_+=@~/\#.,};
     my @trickyenc  = map { sprintf("%02X", ord($_)) } @trickylist;
     my $t1 = join "  ", @trickylist;
     my $t2 = join " ",  @trickyenc;
@@ -103,11 +109,12 @@ Simple example: pick TAG ID < table.txt
   - Requires tab separated input.
 
 <colspec>
-  (1) <HANDLE>                 either column name or derived compute name for output
+  (1) <HANDLE>                 output <HANDLE> (either column or derived compute name)
   (2) @<HANDLE><op><VAL>       filter criterion compare handle to constant value
   (3) @<HANDLE><op>:<HANDLE2>  filter criterion compare handle to other handle
   (4) <HANDLE>::<COMPUTE>      put <COMPUTE> in <HANDLE>
-  See below further below.
+  (5) <HANDLE>:=<COMPUTE>      put <COMPUTE> in <HANDLE> and add <HANDLE> to output
+  See further below.
 
 $help_options
 
@@ -117,6 +124,7 @@ Form (1) -- just a handle -- selects it for output.
 Form (2) creates a filter comparing a handle to a constant value. 
 Form (3) creates a filter comparing a handle to another handle.
 Form (4) creates a derived value, see below for <COMPUTE> specification.
+Form (5) as form 4, and selects it for output.
 
 @<COLNAME><op>[^]<VAL>
 @<COLNAME><op>:<COLNAME>
@@ -132,9 +140,10 @@ Colon introduces a column name; <VAL> is url-decoded.
   ~eq|ne|lt|le|ge|gt~  string   comparison (equal, not equal, less than, less than or equal etc)
 
 <COMPUTE> is a concatenation of parts of the form (1) ^<string> (2) :<handle>
-  (3) ,<op> . <string> will be url-decoded. <handle> referes to a column name
-  or an earlier computed derived column, or column index with -k (headerless input).
-  <op> is one of
+  (3) ,<op> . <string> will be url-decoded. In particular, if you need one of [^:,]
+  in <string> it is best to url-encode it with 5E, 3A, 2C respectively.
+  <handle> referes to a column name or an earlier computed derived column, or
+  column index with -k (headerless input).  <op> is one of
     
     / add sub mul div get
     \\ mod cat           (consume two   leave one)
@@ -403,6 +412,7 @@ sub do_compute {
 }
 
 my $Nrows = 0;    # includes header.
+my $Ncmts = 0;
 
 while (<>) {
 
@@ -410,9 +420,10 @@ while (<>) {
   my @F = split "\t";
   my $rowname = "";
 
-  if (/^#/) {
+  if (/^$CMT/) {
     if ($M_comment) {
        print "$_\n" if $M_comment == 2;
+       $Ncmts++;
        next;
     }
   }
@@ -460,5 +471,7 @@ while (<>) {
   add_tally($nmatch) if $B_print_tally;
   print "\n";
 }
+
+print STDERR "$Ncmts comment lines in input\n" if $M_comment && $B_debug;
 
 
