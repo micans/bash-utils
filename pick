@@ -13,7 +13,6 @@
 
 # s o m e   i d e a s
 # -  operators to validate column type (integer, regex) .. half-exists already.
-# -  neatify/split output array into named instance and offset instance.
 # ?  numerical comparisons check field is numeric
 # ?  ord .. sprintf ..
 # ?  per-column A/ep/4/0.1    B/ep/5/0.2
@@ -22,7 +21,8 @@ use strict;
 use warnings;
 
 @::spec = @ARGV; @ARGV = ();
-@::output  = ();
+@::output_nm  = ();              # names - (header|1..N) + handles
+@::output_os  = ();              # names translated to offsets
 @::compute = ();
 @::filter  = ();
 
@@ -264,7 +264,7 @@ for my $spec (@::spec) {
     my ($handle, $type, $compute) = ($1, $2, $3);
     my $stack = parse_stack($compute);
     push @::compute, [$handle, $stack];
-    push @::output, $handle if $type eq ':=';
+    push @::output_nm, $handle if $type eq ':=';
   }
   elsif ($spec =~ /^@(.*?)([\/~](?:[a-z]{2,4})[\/~]|[=~]{1}|\/=|\/~)(.*)/) {
     my ($handle, $op, $val) = ($1, $2, $3);
@@ -279,12 +279,12 @@ for my $spec (@::spec) {
     push @::filter, [$op, $indirection, $val, $handle];
   }
   else {
-    push @::output, $spec;
+    push @::output_nm, $spec;
   }
 }
 
 sub add_tally {
-  print "\t" if @::output; print $_[0];
+  print "\t" if @::output_os; print $_[0];
 }
 
 
@@ -303,13 +303,13 @@ sub wrangle_header {
   }
 
   if ($B_excise) {         # note excise we end up with input order.
-    my %excise = map { ($_, 1) } @::output;
+    my %excise = map { ($_, 1) } @::output_nm;
     my %inheader = map { ($_, 1) } @::HEADER;
-    @::output = ((grep { !defined($excise{$_}) } @::HEADER), (grep { !defined($inheader{$_}) } @::output));
+    @::output_nm = ((grep { !defined($excise{$_}) } @::HEADER), (grep { !defined($inheader{$_}) } @::output_nm));
   }
   elsif ($B_printall) {
-    print STDERR "-- Addding columns @::output to input\n" if @::output && $B_debug;
-    @::output = (@::HEADER, @::output);
+    print STDERR "-- Addding columns @::output_nm to input\n" if @::output_nm && $B_debug;
+    @::output_nm = (@::HEADER, @::output_nm);
   }
 
   #
@@ -333,7 +333,6 @@ sub wrangle_header {
 
   #
   ##  In output list replace names by offsets into field array.
-  ##  Fixme - perhaps neater to not overwrite and have two data structures.
   #
 
   for (my $i=0; $i<@::output; $i++) {
@@ -341,8 +340,9 @@ sub wrangle_header {
     die "Handle $name in output does not reference a known entity\n" unless defined($::handle_map{$name});
     $::output[$i] = $::handle_map{$name};
   }
+  @::output_os = map { $::handle_map{$_} } @::output_nm;
 
-print STDERR "-- output columns @::output --\n" if $B_debug;
+print STDERR "-- output columns @::output_os --\n" if $B_debug;
 
   #
   ##  In filter list replace names by offsets into field array.
@@ -419,8 +419,8 @@ my $Ncmts = 0;
 while (<>) {
 
   chomp;
-  my @F = split "\t";
-  my $rowname = "";
+  my @F = split "\t", $_, -1;
+  my $rowname = undef;
 
   if (/^$CMT/) {
     if ($M_comment) {
@@ -434,7 +434,7 @@ while (<>) {
     wrangle_header();
     if ($B_print_header) {
       local $, = "\t";
-      print map { $::HEADER[$_] } @::output;
+      print map { $::HEADER[$_] } @::output_os;
       add_tally("T") if $B_print_tally;
       print "\n";
     }
@@ -465,8 +465,8 @@ while (<>) {
   }
   next unless $B_print_tally || ($B_filter_or && $nmatch) || $nmatch == @::filter;
 
-  print "$rowname\t" if $rowname && $B_print_rowname;
-  my @outputs = map { $F[$_] } @::output;
+  print "$rowname\t" if defined($rowname) && $B_print_rowname;
+  my @outputs = map { $F[$_] } @::output_os;
 
   local $" = "\t";
   print "@outputs";
