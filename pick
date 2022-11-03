@@ -409,7 +409,13 @@ while (<>) {
   my @F = split "\t";
   my $rowname = "";
 
-  if ($. == 1) {
+  if (/^#/) {
+    if ($M_comment) {
+       print "$_\n" if $M_comment == 2;
+       next;
+    }
+  }
+  elsif (!$Nrows) {
     @::HEADER = $B_headless ? (1..@F) : @F;
     wrangle_header();
     if ($B_print_header) {
@@ -420,12 +426,6 @@ while (<>) {
     }
     $Nrows++;
     next unless $B_headless;
-  }
-  elsif (/^#/) {
-    if ($M_comment) {
-       print "$_\n" if $M_comment == 2;
-       next;
-    }
   }
   else {
     $Nrows++;
