@@ -1,18 +1,31 @@
 #!/usr/bin/perl -CAS
 
-#  Ascii histograms and bar charts.
-#  -  Input is a stream of numbers for histograms, uniq -c output for bar charts.
-#  -  y-axis scale (--height), resolution is N times this (default N=8).
-#  -  number of bins (--bins, default 80)
-#  -  Optional subselection of data (--min --max)
-#  -  --cumulative 
-#  -  --histin if input is already histogram counts
-#  -  quartiles indicated
-#  -  default Unicode block glyphs u2581-u2588, --plain for retro-style.
-#
-#  -  bar charts with --tallyin if input is output of uniq (line format: <count> <item>)
+#         █ H                   Ascii histograms and bar charts.
+#         █▃  I                                                                
+#        ▂██                    Input is a stream of numbers for histograms, uniq -c output for bar charts.
+#        ███                    y-axis scale (--height), resolution is N times this (default N=8).
+#        ███                    number of bins (--bins, default 80)
+#        ███  S      F          Optional subselection of data (--min --max)
+#       ▃███▇      Y   I        --cumulative 
+#       █████     S  ▅█▄ T      --histin if input is already histogram counts
+#       █████      ▁▆███▁       quartiles indicated
+#      ▄█████    ▁▆██████       default Unicode block glyphs u2581-u2588, --plain for retro-style.
+#      ██████▅   ████████▃                                                                                                                                        
+#      ███████ ▁██████████      bar charts with --tallyin if input is output of uniq (line format: <count> <item>)
+#     ▄███████▆███████████▆                                                       
+#     █████████████████████                                                       
+#     █████████████████████▇                                                      
+#    ▇██████████████████████▄                                                     
+#   ▁████████████████████████▂                                                    
+#   ██████████████████████████▆▃                                                  
+#  ▃████████████████████████████▇▇▅▄▄▅▄▂▃▃▄▃▃▃▄▄▄▄▄▅▄▃▄▃▂▁                        
+# ▄████████████████████████████████████████████████████████▇▇▅▄▅▃▃▂▂▂▁▁▁▁▁        
+# 0.0 .____Q____._Q__,___Q.____,____.____,____.____,____.____,____.____,____._ 3.0
+# ND=273410 oor=356/0.1% hmin=0 hmax=3 dmin=0.01409641 dmax=5.863222
+# topbin(i=9,n=16880,p=6.2,x~0.31875) bw=0.0375 q=(0.3414933[9],0.620431[16],0.8757837[23])
 
 #  Thanks to Izaak van Dongen, Vlad Kisilev and Leopold Parts for feature suggestions.
+
 
 #  -  add mean/sdev?
 #  -  perhaps add optional output <binid> <bincount> <binmiddle>
