@@ -341,10 +341,9 @@ sub wrangle_header {
   ##  In output list replace names by offsets into field array.
   #
 
-  for (my $i=0; $i<@::output; $i++) {
-    my $name = $::output[$i];
+  for (my $i=0; $i<@::output_nm; $i++) {
+    my $name = $::output_nm[$i];
     die "Handle $name in output does not reference a known entity\n" unless defined($::handle_map{$name});
-    $::output[$i] = $::handle_map{$name};
   }
   @::output_os = map { $::handle_map{$_} } @::output_nm;
 
