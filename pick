@@ -41,7 +41,7 @@ BEGIN {
 }
 
 my $help_options=q{Options:
-  -i in-place: all columns are output, <HANDLE>::<COMPUTE> replaces <HANDLE> if it exists
+  -i in-place: <HANDLE>::<COMPUTE> replaces <HANDLE> if it exists
   -k headerless input, use 1 2 .. for column names
   -a print all input columns (filtering by colspec applies, -t accepted)
   -h do not print header
@@ -58,9 +58,10 @@ my $help_options=q{Options:
   -z print miscellaneous information, e.g. url encoding hex codes
   -/<str> treat <str> at beginning of line as comment line, e.g. -/@ for sam files
 
+  options can be combined, use e.g. -kc/@ for headerless input, comment lines indicated by @ .
   -at is useful for inspecting/checking filters
-  options can be combined, use e.g. -kc/@ for headerless input,
-  comment lines indicated by @.};
+  use -ai name::<COMPUTE> to change the name column to <COMPUTE>,
+  use -aik <num>::<COMPUTE> to change column <num> to <COMPUTE>.};
 
 my $spec_forms = q{
   (1) <HANDLE>                 output <HANDLE> (either column or derived compute name)
@@ -298,16 +299,19 @@ sub wrangle_header {
     my $name = $::HEADER[$i];
     die "Name $name defined more than once\n" if defined($::handle_map{$name});
     $::handle_map{$name} = $i;   
+    print STDERR "-- Map header name $name to offset $i\n" if $B_debug;
   }
 
+  print STDERR "-- Output column names as specified: @::output_nm\n" if $B_debug;
   if ($B_excise) {         # note excise we end up with input order.
     my %excise = map { ($_, 1) } @::output_nm;
     @::output_nm = ((grep { !defined($excise{$_}) } @::HEADER), (grep { !defined($inheader{$_}) } @::output_nm));
   }
   elsif ($B_printall) {
-    print STDERR "-- Adding columns @::output_nm to input\n" if @::output_nm && $B_debug;
-    @::output_nm = (@::HEADER, @::output_nm);
+    print STDERR "-- Adding columns @::output_nm to header names\n" if @::output_nm && $B_debug;
+    @::output_nm = (@::HEADER, grep { !defined($inheader{$_}) } @::output_nm);
   }
+  print STDERR "-- Output column names after -i/-a treatment: @::output_nm\n" if $B_debug && ($B_excise || $B_printall);
 
   if ($B_print_header && keys %{{ map { ($_, 1) } @::output_nm }} < @::output_nm) {
     my $job = $B_force ? 'continuing' : 'fatal, use -f to force';
@@ -322,7 +326,7 @@ sub wrangle_header {
 
   for (my $i=0; $i<@::compute; $i++) {
     my ($name, $compute) = @{$::compute[$i]};
-    die "Name $name defined more than once\n" if defined($::handle_map{$name}) && !$B_inplace;
+    die "Name $name already defined (use -i for in-place change)\n" if defined($::handle_map{$name}) && !$B_inplace;
     for my $comp (@$compute) {
       my ($type, $what) = @$comp;
       if ($type eq ':') {
@@ -330,8 +334,10 @@ sub wrangle_header {
          $comp->[1] = $::handle_map{$what};
       }
     }
-    $::HEADER[$::N+$i] = $name;        # only needed to print the new header.
-    $::handle_map{$name} = $::N+$i;
+    my $j = $::N + $i;
+    $::HEADER[$j] = $name;        # only needed to print the new header.
+    $::handle_map{$name} = $j;
+    print STDERR "-- Map compute name $name to offset $j\n" if $B_debug;
   }
 
   #
@@ -486,6 +492,7 @@ print STDERR "-- $Nfilt rows$would have been filtered\n" if @::filter && $B_debu
 __DATA__
 
    s o m e   i d e a s
+   -  clearly define all interactions between -a, -i, -x, -f
    -  operators to validate column type (integer, regex) .. half-exists already.
    -  tests
    ?  numerical comparisons check field is numeric
