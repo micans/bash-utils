@@ -11,7 +11,6 @@
 
                                       use strict;
                                      use warnings;
-
 @::spec = @ARGV; @ARGV = ();
 @::output_nm  = ();         # names - (header|1..N) + handles
 @::output_os  = ();         # names translated to offsets
@@ -52,6 +51,8 @@ my %cp_opdefinitions =
      and       => [ 2, undef, sub { $::STACK[-2] &= $::STACK[-1] } ],
      or        => [ 2, undef, sub { $::STACK[-2] |= $::STACK[-1] } ],
      xor       => [ 2, undef, sub { $::STACK[-2] ^= $::STACK[-1] } ],
+     max       => [ 2, undef, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] > $::STACK[-2] } ],
+     min       => [ 2, undef, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] < $::STACK[-2] } ],
 
      get       => [ 2, undef, sub { my $item =  $::STACK[-2] =~ /$::STACK[-1]/
                                                 ? (defined($1) ? $1 : $&) : ""; $::STACK[-2] = $item; } ],
@@ -86,6 +87,7 @@ for my $op (sort keys %cp_opdefinitions) {
 
             # $_[0] is $F[$i]
             # $_[1] is VAL or :VAL
+            # For /ep/ and /om/ third argument is ENV{EPSILON} or specified suffix.
 my %filterops = (
   '~'          => sub { $_[0] =~ /$_[1]/ },
   '/~'         => sub { $_[0] !~ /$_[1]/ },
@@ -541,6 +543,9 @@ print STDERR "-- $Ncmts comment lines in input\n" if $M_comment && $B_verbose;
 my $would = $B_print_tally ? ' would' : '';
 print STDERR "-- $Nkeep/$Nfilt rows$would have been kept/filtered\n" if @::filter && $B_verbose;
 
+my $B_header = 1 - $B_headless;
+print STDERR "== Line tally check failed: ($Nrows+$Ncmts != $B_header+$Nkeep+$Nfilt\n" if $Nrows+$Ncmts != $B_header+$Nkeep+$Nfilt;
+
 
 __DATA__
 
@@ -549,5 +554,6 @@ __DATA__
    -  clearly define all interactions between -a, -i, -x, -f
    -  operators to validate column type (integer, regex) .. half-exists already.
    -  tests
-   -  ifelse(filtername,compute1,compute2) is far beyond scope for now.
+   -  ifelse(filtername,compute1,compute2) is beyond scope for now.
+      -> o and c operators to delimit blocks, could become quite fiendish.
    ?  numerical comparisons check field is numeric
