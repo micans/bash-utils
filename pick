@@ -24,6 +24,7 @@ my $CMT = '#';
 
 my $B_print_header = 1;
 my $B_filter_and   = 1;
+my $B_verbose      = 0;
 my $B_print_rowname = 0;    # cannot combine with $B_headless.
 my $B_print_tally  = 0;
 my $B_printall     = 0;
@@ -37,8 +38,94 @@ my $M_comment      = 0;     # 0 oblivious, 1 strip, 2 pass
 
 BEGIN {
   $::EPSILON = 0.0001; $::EPSILON = $ENV{EPSILON} if defined($ENV{EPSILON});
-  $::OOM     = 2; $::OOM     = $ENV{OOM} if defined($ENV{OOM});
+  $::OOM     = 2;      $::OOM     = $ENV{OOM}     if defined($ENV{OOM});
 }
+
+my %cp_opdefinitions =
+   ( add       => [ 2, undef, sub { $::STACK[-2] += $::STACK[-1] } ],
+     mul       => [ 2, undef, sub { $::STACK[-2] *= $::STACK[-1] } ],
+     div       => [ 2, undef, sub { $::STACK[-2] /= $::STACK[-1] } ],
+     cat       => [ 2, undef, sub { $::STACK[-2] .= $::STACK[-1] } ],
+     sub       => [ 2, undef, sub { $::STACK[-2] -= $::STACK[-1] } ],
+     mod       => [ 2, undef, sub { $::STACK[-2] %= $::STACK[-1] } ],
+     pow       => [ 2, undef, sub { $::STACK[-2] **= $::STACK[-1] } ],
+     and       => [ 2, undef, sub { $::STACK[-2] &= $::STACK[-1] } ],
+     or        => [ 2, undef, sub { $::STACK[-2] |= $::STACK[-1] } ],
+     xor       => [ 2, undef, sub { $::STACK[-2] ^= $::STACK[-1] } ],
+
+     get       => [ 2, undef, sub { my $item =  $::STACK[-2] =~ /$::STACK[-1]/
+                                                ? (defined($1) ? $1 : $&) : ""; $::STACK[-2] = $item; } ],
+
+     ed        => [ 3, undef, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/  } ],
+     edg       => [ 3, undef, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
+
+     uc        => [ 1, undef, sub { $::STACK[-1] = uc($::STACK[-1]) }         ],
+     lc        => [ 1, undef, sub { $::STACK[-1] = lc($::STACK[-1]) }         ],
+     rot13     => [ 1, undef, sub { $::STACK[-1] = rot13($::STACK[-1]) }      ],
+     len       => [ 1, undef, sub { $::STACK[-1] = length($::STACK[-1]) }     ],
+     rc        => [ 1, undef, sub { $::STACK[-1] = rc($::STACK[-1]) }         ],
+     abs       => [ 1, undef, sub { $::STACK[-1] = abs($::STACK[-1]) }        ],
+     sqrt      => [ 1, undef, sub { $::STACK[-1] = sqrt($::STACK[-1]) }       ],
+     sq        => [ 1, undef, sub { $::STACK[-1] = $::STACK[-1]**2 }          ],
+     exp       => [ 1, undef, sub { $::STACK[-1] = exp($::STACK[-1]) }        ],
+     cos       => [ 1, undef, sub { $::STACK[-1] = cos($::STACK[-1]) }        ],
+     sin       => [ 1, undef, sub { $::STACK[-1] = sin($::STACK[-1]) }        ],
+     tan       => [ 1, undef, sub { $::STACK[-1] = sin($::STACK[-1])/cos($::STACK[-1]) } ],
+     log       => [ 1, undef, sub { $::STACK[-1] = log($::STACK[-1]) }        ],
+     log10     => [ 1, undef, sub { $::STACK[-1] = log($::STACK[-1])/log(10) }],
+     exp10     => [ 1, undef, sub { $::STACK[-1] = 10**$::STACK[-1] }         ],
+     sign      => [ 1, undef, sub { $::STACK[-1] = $::STACK[-1] > 0 ? 1 : $::STACK[-1] < 0 ? -1 : 0 } ],
+   );
+
+my $s = 0;
+@::CP_LIST = ();
+for my $op (sort keys %cp_opdefinitions) {
+   $::CP_LIST[$s] = $cp_opdefinitions{$op}[2];
+   $cp_opdefinitions{$op}[1] = $s++;
+}
+
+            # $_[0] is $F[$i]
+            # $_[1] is VAL or :VAL
+my %filterops = (
+  '~'          => sub { $_[0] =~ /$_[1]/ },
+  '/~'         => sub { $_[0] !~ /$_[1]/ },
+  '='          => sub { $_[0] eq $_[1] },
+  '/='         => sub { $_[0] ne $_[1] },
+  '/ep/'       => sub { interval_plus(@_) },
+  '/om/'       => sub { interval_mul(@_) },
+
+  '/eq/'       => sub { $_[0] == $_[1] },
+  '/ne/'       => sub { $_[0] != $_[1] },
+  '/lt/'       => sub { $_[0] <  $_[1] },
+  '/le/'       => sub { $_[0] <= $_[1] },
+  '/ge/'       => sub { $_[0] >= $_[1] },
+  '/gt/'       => sub { $_[0] >  $_[1] },
+
+     # Perl behaves weirdly with bit operators in very specific cases; perhaps
+     # because it thought both operands a string and one operand is negative.
+     # E.g. perl -e '$x = "13" & "4"; $y = "13" + "4"; print "$x $y\n";'
+     # yields 0 17
+     # perl -e '$x = "-1" & "4"; $y = "-1" + "4"; print "$x $y\n";'
+     # yields $ 3
+     # This is to do with when/how perl sees something as a number or string. A
+     # possible scenario is that perl considers fields resulting from string
+     # splits as strings until treated as a number, but that the combination of
+     # a bitwise operator and a negative-number-as-string does not lead to this
+     # string-to-number promotion. "-1" & 4 and -1 & "4" both avoid the problem
+     # - conceivably in both cases there is an operand that forces number
+     # promotion.  Thus, absint.
+     #
+  '/all/'      => sub { $_[1] == (abs(int($_[0])) & abs(int($_[1]))) },
+  '/any/'      => sub { abs(int($_[0])) & abs(int($_[1])) },
+  '/none/'     => sub { ! (abs(int($_[0])) & abs(int($_[1]))) },
+
+  '~eq~'       => sub { $_[0] eq $_[1] },
+  '~ne~'       => sub { $_[0] ne $_[1] },
+  '~lt~'       => sub { $_[0] lt $_[1] },
+  '~le~'       => sub { $_[0] le $_[1] },
+  '~ge~'       => sub { $_[0] ge $_[1] },
+  '~gt~'       => sub { $_[0] gt $_[1] }
+);
 
 my $help_options=q{Options:
   -i in-place: <HANDLE>::<COMPUTE> replaces <HANDLE> if it exists
@@ -46,7 +133,8 @@ my $help_options=q{Options:
   -a print all input columns (filtering by colspec applies, -t accepted)
   -h do not print header
   -t do not filter, print tally column of count of matched row filters
-  -v OR multiple criteria (default is AND)
+  -o OR multiple criteria (default is AND)
+  -v verbose
   -x take complement of selected input column(s) (works with -i)
   -r print rownames if row name field in header is the empty string.
     in this case _ is the name to select with <op> on rownames.
@@ -70,12 +158,17 @@ my $spec_forms = q{
   (4) <HANDLE>::<COMPUTE>      put <COMPUTE> in <HANDLE>
   (5) <HANDLE>:=<COMPUTE>      put <COMPUTE> in <HANDLE> and add <HANDLE> to output};
 
+my @ops1 = sort grep { $cp_opdefinitions{$_}[0] == 1 } keys %cp_opdefinitions;
+my @ops2 = sort grep { $cp_opdefinitions{$_}[0] == 2 } keys %cp_opdefinitions;
+my @ops3 = sort grep { $cp_opdefinitions{$_}[0] == 3 } keys %cp_opdefinitions;
+my @opsf = sort keys %filterops;
 
 while (@::spec && $::spec[0] =~ /^-/) {
 
   my $options = shift @::spec;
   $B_print_header = 0 if $options =~ /h/;
-  $B_filter_and   = 0 if $options =~ /v/;
+  $B_filter_and   = 0 if $options =~ /o/;
+  $B_verbose      = 1 if $options =~ /v/;
   $B_print_rowname= 1 if $options =~ /r/;
   $B_print_tally  = 1 if $options =~ /t/;
   $B_printall     = 1 if $options =~ /a/;
@@ -100,7 +193,13 @@ while (@::spec && $::spec[0] =~ /^-/) {
   elsif ($options =~ /l/) {
     print $help_options, "\n";
     print "\nSelect/filter/compute forms:$spec_forms\n";
-    print "See -H for longer description, including <COMPUTE> format.\n";
+    print "\nOperators for compute:\n";
+    print "  Take 1: @ops1\n";
+    print "  Take 2: @ops2\n";
+    print "  Take 3: @ops3\n";
+    print "\nFilter comparison operators:\n";
+    print "  @opsf\n";
+    print "\nSee -H for longer description, including <COMPUTE> format and operators and filter operators.\n";
     exit 0;
   }
   elsif ($options =~ /H/) {
@@ -140,11 +239,11 @@ Colon introduces a column name; <VAL> is url-decoded; a leading ^ is removed.
   in <string> it is best to url-encode it with 25, 5E, 3A, 2C respectively.
   <handle> refers to a column name or an earlier computed derived column, or
   column index with -k (headerless input).  <op> is one of
-    
-    / add sub mul div get
-    \\ mod cat           (consume two   leave one)
-    ed edg              (consume three leave one)       edit, edit global
-    uc lc rot13 len rc  (consume one   leave one)       upper case, lower case, rot13, length, revcompl
+
+Takes:
+  1  | @ops1
+  2  | @ops2
+  3  | @ops3
 
   If the very first part starts anything other than [,:^] it is inferred to be a handle
   (leading : not needed).  <COMPUTE> is a stack, so zut::foo:bar,add^str,cat
@@ -170,81 +269,45 @@ die "Need something (use -l for short help, -H for longer description)\n" unless
 
 
 sub interval_plus {
-  my ($x, $y) = @_;
-  return $x <= $y + $::EPSILON && $x >= $y - $::EPSILON;
+  my ($x, $y, $val) = @_;
+  my $epsilon = $val ? $val : $::EPSILON;
+  return $x <= $y + $epsilon && $x >= $y - $epsilon;
 }
 
 sub interval_mul {
-  my ($x, $y) = @_;
-  return abs($x) <= abs($y) * $::OOM && abs($x) >= abs($y) / $::OOM;
+  my ($x, $y, $val) = @_;
+  my $oom = $val ? $val : $::OOM;
+  return abs($x) <= abs($y) * $oom && abs($x) >= abs($y) / $oom;
 }
 
-            # $_[0] is $F[$i]
-            # $_[1] is VAL or :VAL
-my %ops = (
-  '~'    => sub { $_[0] =~ /$_[1]/ },
-  '/~'   => sub { $_[0] !~ /$_[1]/ },
-  '='    => sub { $_[0] eq $_[1] },
-  '/='   => sub { $_[0] ne $_[1] },
-  '/ep/' => sub { interval_plus(@_) },
-  '/om/' => sub { interval_mul(@_) },
 
-  '/eq/' => sub { $_[0] == $_[1] },
-  '/ne/' => sub { $_[0] != $_[1] },
-  '/lt/' => sub { $_[0] <  $_[1] },
-  '/le/' => sub { $_[0] <= $_[1] },
-  '/ge/' => sub { $_[0] >= $_[1] },
-  '/gt/' => sub { $_[0] >  $_[1] },
+my $TYPE_SCALAR = 1;
+my $TYPE_HANDLE = 2;
+my $TYPE_OPATOR = 3;    # (1) rule of six obvs, (2) it makes sense in Dutch.
 
-
-     # Perl behaves weirdly with bit operators in very specific cases; perhaps
-     # because it thought both operands a string and one operand is negative.
-     # E.g. perl -e '$x = "13" & "4"; $y = "13" + "4"; print "$x $y\n";'
-     # yields 0 17
-     # perl -e '$x = "-1" & "4"; $y = "-1" + "4"; print "$x $y\n";'
-     # yields $ 3
-     # This is to do with when/how perl sees something as a number or string. A
-     # possible scenario is that perl considers fields resulting from string
-     # splits as strings until treated as a number, but that the combination of
-     # a bitwise operator and a negative-number-as-string does not lead to this
-     # string-to-number promotion. "-1" & 4 and -1 & "4" both avoid the problem
-     # - conceivably in both cases there is an operand that forces number
-     # promotion.  Thus, absint.
-     #
-  '/all/' => sub  { $_[1] == (abs(int($_[0])) & abs(int($_[1]))) },
-  '/any/'  => sub { abs(int($_[0])) & abs(int($_[1])) },
-  '/none/' => sub { ! (abs(int($_[0])) & abs(int($_[1]))) },
-
-  '~eq~' => sub { $_[0] eq $_[1] },
-  '~ne~' => sub { $_[0] ne $_[1] },
-  '~lt~' => sub { $_[0] lt $_[1] },
-  '~le~' => sub { $_[0] le $_[1] },
-  '~ge~' => sub { $_[0] ge $_[1] },
-  '~gt~' => sub { $_[0] gt $_[1] }
-);
-
-my %stackopnarg =
-   ( add => 2, mul => 2, div => 2, cat => 2, sub => 2, mod => 2, get => 2,
-     ed  => 3, edg => 3,
-     uc  => 1, lc => 1, rot13 => 1, len => 1, rc => 1
-   );
+my %chartypetonum = ( '^', $TYPE_SCALAR, ':', $TYPE_HANDLE, ',', $TYPE_OPATOR );
 
 sub parse_stack {
-  my $spec = shift;
-  my @oppair = ();
+  my ($handle, $spec) = @_;
+  my @oplist = ();
   my $p = 0;
   $spec = ":$spec" if substr($spec, 0, 1) !~ /[\/^:]/;
   my $l = length($spec);
 
   while ($spec =~ /([,^:])([^,^:]+)/g) {
-    my ($type, $what) = ($1, $2);
-    $what = urldecode($what) if $type eq '^';
-    push @oppair, [$type, $what];
+    my ($type, $what) = ($chartypetonum{$1}, $2);
+    $what = urldecode($what) if $type == $TYPE_SCALAR;
+    push @oplist, [$type, $what];
     $p = pos($spec);
-    die "Not supported [$what]\n" if $type eq ',' && !defined($stackopnarg{$what});
+    if ($type == $TYPE_OPATOR) {
+      my $def = $cp_opdefinitions{$what};
+      die "Not supported [$what]\n" unless defined($def);
+      push @{$oplist[-1]}, ($def->[0], $def->[1]);
+print STDERR " >> $handle >> T=$type I=$what N=$def->[0], offset=$def->[1]\n" if $B_debug;
+    }
   }
   die "Parse error in spec [$spec] near position $p\n" unless $p == $l;
-  return \@oppair;
+  return \@oplist;
 }
 
 sub urldecode {
@@ -258,17 +321,20 @@ for my $spec (@::spec) {
      # fixme: ':=' or '::' cannot occur in handle in compute. url-decoding handle can remedy that.
   if ($spec =~ /(.*?)(:[:=])(.*)/) {
     my ($handle, $type, $compute) = ($1, $2, $3);
-    my $stack = parse_stack($compute);
+    my $stack = parse_stack($handle, $compute);
     push @::compute, [$handle, $stack];
     push @::output_nm, $handle if $type eq ':=';
   }
                 #  H handle
                 #  a1a2a3, b, c, d different forms for op
                 #  V value or :handle
-                #    ( H )([ a1](      a2    )[ a3]|  b    | c | d )( V)
-  elsif ($spec =~ /^@(.*?)([\/~](?:[a-z]{2,4})[\/~]|[=~]{1}|\/=|\/~)(.*)/) {
-    my ($handle, $op, $val) = ($1, $2, $3);
-    die "Unrecognised operator [$op]\n" unless defined($ops{$op});
+                #    ( H )([ a1](      a2    )[ a3]|  b    | c | d )( V)(  arg )
+  elsif ($spec =~ /^@(.*?)([\/~](?:[a-z]{2,4})[\/~]|[=~]{1}|\/=|\/~)(.*?)(\/.*?)?$/) {
+    my ($handle, $op, $val, $arg) = ($1, $2, $3, $4);
+    die "Unrecognised operator [$op]\n" unless defined($filterops{$op});
+    $arg = 0 unless defined($arg);
+    $arg =~ s|^/||;
+print STDERR "-- adding filter handle=[$handle] op=[$op] val=[$val] arg=[$arg]\n" if $B_debug;
     my $indirection = 0;
     if ($val =~ s/^://) {
       $indirection = 1;
@@ -276,7 +342,8 @@ for my $spec (@::spec) {
     else {
       $val = urldecode($val);
     }
-    push @::filter, [$op, $indirection, $val, $handle];
+                # NOTE. $arg for now only used by /ep/ and /om/ filters, ignored by the others.
+    push @::filter, [$op, $indirection, $val, $handle, $arg];
   }
   else {
     push @::output_nm, $spec;
@@ -330,7 +397,7 @@ sub wrangle_header {
     die "Name $name already defined (use -i for in-place change)\n" if defined($::handle_map{$name}) && !$B_inplace;
     for my $comp (@$compute) {
       my ($type, $what) = @$comp;
-      if ($type eq ':') {
+      if ($type == $TYPE_HANDLE) {
          die "Handle $what in compute $name does not reference a known entity\n" unless defined($::handle_map{$what});
          $comp->[1] = $::handle_map{$what};
       }
@@ -359,7 +426,7 @@ print STDERR "-- output columns @::output_os --\n" if $B_debug;
 
   for my $filt (@::filter) {
 
-    my ($op, $indirection, $val, $name) = @$filt;
+    my ($op, $indirection, $val, $name, $arg) = @$filt;
 
     die "Handle $name in filter does not reference a known entity\n" unless defined($::handle_map{$name});
     $filt->[3] = $::handle_map{$name};
@@ -380,51 +447,33 @@ sub do_compute {
   for my $spic (@::compute) {
 
     my ($handle, $compute) = @$spic;
-    my @stack = ();
-    for my $comp (@$compute) {
-      my ($type, $what) = @$comp;
+    @::STACK = ();
 
-      if ($type eq ':') {
-        push @stack, $F->[$what];
-      }
-      elsif ($type eq '^') {
-        push @stack, $what;
-      }
-      elsif ($type eq ',') {
-        my $n_wanted = $stackopnarg{$what};
-        die "Stack underflow ($spic->[0])\n" unless @stack >= $n_wanted;
-        if ($n_wanted == 2) {
-           if ($what eq 'add') { $stack[-2] += $stack[-1] }
-        elsif ($what eq 'cat') { $stack[-2] .= $stack[-1] }
-        elsif ($what eq 'mul') { $stack[-2] *= $stack[-1] }
-        elsif ($what eq 'sub') { $stack[-2] -= $stack[-1] }
-        elsif ($what eq 'div') { $stack[-2] /= $stack[-1] }
-        elsif ($what eq 'mod') { $stack[-2] %= $stack[-1] }
-        elsif ($what eq 'get') { my $item = $stack[-2] =~ /$stack[-1]/ ? (defined ($1) ? $1 : $&) : ""; $stack[-2] = $item; }
-           pop @stack;
-        }
-        elsif ($n_wanted == 1) {
-           if ($what eq 'uc') {  $stack[-1] = uc($stack[-1]) }
-        elsif ($what eq 'lc') {  $stack[-1] = lc($stack[-1]) }
-        elsif ($what eq 'rot13') {  $stack[-1] =~ tr/N-ZA-Mn-za-m/A-Za-z/ }
-        elsif ($what eq 'len') {  $stack[-1] = length($stack[-1]) }
-        elsif ($what eq 'rc') {  my $x = $stack[-1]; $x =~ tr/acgtACGT/tgcaTGCA/; $stack[-1] = reverse($x) }
-        }
-        else {
-           if ($what eq 'ed')  { $stack[-3] =~ s/$stack[-2]/$stack[-1]/ }
-        elsif ($what eq 'edg') { $stack[-3] =~ s/$stack[-2]/$stack[-1]/g }
-           pop @stack; pop @stack;
-        }
+    for my $comp (@$compute) {
+
+      my ($type, $what, @other) = @$comp;
+
+         if ($type == $TYPE_HANDLE) { push @::STACK, $F->[$what]; }
+      elsif ($type == $TYPE_SCALAR) { push @::STACK, $what; }
+      elsif ($type != $TYPE_OPATOR) { die "Really unfortunate!\n"; }
+
+      else {
+         my ($n_wanted, $offset) = @other;
+         die "Stack underflow ($spic->[0] item [$what])\n" unless @::STACK >= $n_wanted;
+         &{$::CP_LIST[$offset]};
+         pop @::STACK while --$n_wanted;
       }
     }
-    push @$F, (join "", @stack);
+    push @$F, (join "", @::STACK);
   }
   die "Cp error\n" unless @::HEADER == @$F;
 }
 
+
 my $Nrows = 0;    # includes header.
 my $Ncmts = 0;
 my $Nfilt = 0;
+my $Nkeep = 0;
 
 while (<>) {
 
@@ -454,7 +503,7 @@ while (<>) {
   }
 
   if (!$B_headless && $::N+1 == @F) {
-    print STDERR "-- adjusting for header row count discrepancy ($::N)\n" if $B_debug && $Nrows == 2;
+    print STDERR "-- adjusting for header row count discrepancy ($::N)\n" if $B_verbose && $Nrows == 2;
     if ($Nrows == 2)            { $::extra_rownames = 1; }
     elsif (!$::extra_rownames)  { die "Row count inconsistency at line $.\n"; }
     $rowname = shift @F;
@@ -467,13 +516,16 @@ while (<>) {
 
   my $nmatch = 0;
   for my $filt (@::filter) {
-    my ($op, $indirection, $val, $colid) = @$filt;
+    my ($op, $indirection, $val, $colid, $arg) = @$filt;
     $val = $F[$val] if $indirection;
-    $nmatch++ if $ops{$op}->($F[$colid], $val);
+    $nmatch++ if $filterops{$op}->($F[$colid], $val, $arg);
   }
-  if (($nmatch < @::filter && $B_filter_and) || (!$nmatch && @::filter)) {
+  if (@::filter && (($nmatch != @::filter && $B_filter_and) || ($nmatch == 0 && !$B_filter_and))) {
     $Nfilt++;
     next unless $B_print_tally;
+  }
+  else {
+    $Nkeep++;
   }
 
   print "$rowname\t" if defined($rowname) && $B_print_rowname;
@@ -485,17 +537,17 @@ while (<>) {
   print "\n";
 }
 
-print STDERR "-- $Ncmts comment lines in input\n" if $M_comment && $B_debug;
+print STDERR "-- $Ncmts comment lines in input\n" if $M_comment && $B_verbose;
 my $would = $B_print_tally ? ' would' : '';
-print STDERR "-- $Nfilt rows$would have been filtered\n" if @::filter && $B_debug;
+print STDERR "-- $Nkeep/$Nfilt rows$would have been kept/filtered\n" if @::filter && $B_verbose;
 
 
 __DATA__
 
    s o m e   i d e a s
+   -  predefine constants (e.g. log10). new syntax?
    -  clearly define all interactions between -a, -i, -x, -f
    -  operators to validate column type (integer, regex) .. half-exists already.
    -  tests
+   -  ifelse(filtername,compute1,compute2) is far beyond scope for now.
    ?  numerical comparisons check field is numeric
-   ?  ord .. sprintf ..
-   ?  per-column A/ep/4/0.1 B/ep/5/0.2
