@@ -400,7 +400,7 @@ sub wrangle_header {
     for my $comp (@$compute) {
       my ($type, $what) = @$comp;
       if ($type == $TYPE_HANDLE) {
-         die "Handle $what in compute $name does not reference a known entity\n" unless defined($::handle_map{$what});
+         die "Handle $what in compute $name does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$what});
          $comp->[1] = $::handle_map{$what};
       }
     }
@@ -416,7 +416,7 @@ sub wrangle_header {
 
   for (my $i=0; $i<@::output_nm; $i++) {
     my $name = $::output_nm[$i];
-    die "Handle $name in output does not reference a known entity\n" unless defined($::handle_map{$name});
+    die "Handle $name in output does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$name});
   }
   @::output_os = map { $::handle_map{$_} } @::output_nm;
 
@@ -430,10 +430,10 @@ print STDERR "-- output columns @::output_os --\n" if $B_debug;
 
     my ($op, $indirection, $val, $name, $arg) = @$filt;
 
-    die "Handle $name in filter does not reference a known entity\n" unless defined($::handle_map{$name});
+    die "Handle $name in filter does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$name});
     $filt->[3] = $::handle_map{$name};
     if ($indirection) {
-       die "Handle $val in filter does not reference a known entity\n" unless defined($::handle_map{$val});
+       die "Handle $val in filter does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$val});
        $filt->[2] = $::handle_map{$val};
     }
 print STDERR "-- filter @$filt --\n" if $B_debug;
@@ -556,4 +556,5 @@ __DATA__
    -  tests
    -  ifelse(filtername,compute1,compute2) is beyond scope for now.
       -> o and c operators to delimit blocks, could become quite fiendish.
+         ^filtname,o....,c,o......c,ifelse,
    ?  numerical comparisons check field is numeric
