@@ -62,9 +62,10 @@ my %cp_opdefinitions =
 
      uc        => [ 1, undef, sub { $::STACK[-1] = uc($::STACK[-1]) }         ],
      lc        => [ 1, undef, sub { $::STACK[-1] = lc($::STACK[-1]) }         ],
-     rot13     => [ 1, undef, sub { $::STACK[-1] = rot13($::STACK[-1]) }      ],
+     rev       => [ 1, undef, sub { $::STACK[-1] = reverse($::STACK[-1]) }    ],
+     rot13     => [ 1, undef, sub { $::STACK[-1] =~ tr/a-zA-Z/n-za-mN-ZA-M/ } ],
      len       => [ 1, undef, sub { $::STACK[-1] = length($::STACK[-1]) }     ],
-     rc        => [ 1, undef, sub { $::STACK[-1] = rc($::STACK[-1]) }         ],
+     rc        => [ 1, undef, sub { $::STACK[-1] =~ tr/acgtuACGTU/tgcaaTGCAA/; $::STACK[-1] = reverse($::STACK[-1]) } ],
      abs       => [ 1, undef, sub { $::STACK[-1] = abs($::STACK[-1]) }        ],
      sqrt      => [ 1, undef, sub { $::STACK[-1] = sqrt($::STACK[-1]) }       ],
      sq        => [ 1, undef, sub { $::STACK[-1] = $::STACK[-1]**2 }          ],
@@ -268,7 +269,6 @@ die "-r -k do not combine\n" if $B_print_rowname && $B_headless;
 $B_print_header = 0 if $B_headless;
 
 die "Need something (use -l for short help, -H for longer description)\n" unless @::spec || $B_printall;
-
 
 sub interval_plus {
   my ($x, $y, $val) = @_;
@@ -550,6 +550,7 @@ print STDERR "== Line tally check failed: ($Nrows+$Ncmts != $B_header+$Nkeep+$Nf
 __DATA__
 
    s o m e   i d e a s
+   -  catch divide by zero before it happens.
    -  predefine constants (e.g. log10). new syntax?
    -  clearly define all interactions between -a, -i, -x, -f
    -  operators to validate column type (integer, regex) .. half-exists already.
