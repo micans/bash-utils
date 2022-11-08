@@ -158,8 +158,8 @@ my $spec_forms = q{
   (1) <HANDLE>                 output <HANDLE> (column name, index, or derived compute name)
   (2) @<HANDLE><op><VAL>       filter criterion compare handle to constant value with <op>
   (3) @<HANDLE><op>:<HANDLE2>  filter criterion compare handle to other handle with <op>
-  (4) <HANDLE>::<COMPUTE>      put <COMPUTE> in <HANDLE>
-  (5) <HANDLE>:=<COMPUTE>      put <COMPUTE> in <HANDLE> and add <HANDLE> to output};
+  (4) <HANDLE>:=<COMPUTE>      put <COMPUTE> in <HANDLE>
+  (5) <HANDLE>::<COMPUTE>      put <COMPUTE> in <HANDLE> and add <HANDLE> to output};
 
 my @ops1 = sort grep { $cp_opdefinitions{$_}[0] == 1 } keys %cp_opdefinitions;
 my @ops2 = sort grep { $cp_opdefinitions{$_}[0] == 2 } keys %cp_opdefinitions;
@@ -183,7 +183,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
   $B_inplace      = 1 if $options =~ /i/;
   $M_comment      = 1 if $options =~ /c/;
   $M_comment      = 2 if $options =~ /C/;
-  $CMT = $1 if $options =~ /\/(.*)/;
+  ($CMT, $M_comment) = ($1, 1) if $options =~ /\/(.*)/;
 
   if ($options =~ /z/) {
     my @trickylist = split "", q{ <>!:;$%&`"'|(){}[]?*^-_+=@~/\#.,};
@@ -232,8 +232,8 @@ Colon introduces a column name; <VAL> is url-decoded; a leading ^ is removed.
   /=    String identity reject
   ~     Substring/regular expression match accept
   /~    Substring/regular expression match reject
-  /ep/  Aproximate numerical identity wrt VAL +- EPSILON; export variable EPSILON (current value $::EPSILON)
-  /om/  Aproximate numerical identity wrt VAL * OOM, VAL / OOM (current value $::OOM, not sign aware)
+  /ep/<what>/epsilon  Aproximate numerical identity wrt <what> +- epsilon
+  /om/<what>/oom      Aproximate magnitude identity wrt |<what>| * oom
   /eq|ne|lt|le|ge|gt/ numerical comparison (equal, not equal, less than, less than or equal etc)
   ~eq|ne|lt|le|ge|gt~  string   comparison (equal, not equal, less than, less than or equal etc)
 
@@ -256,9 +256,13 @@ Takes:
   equivalent to zut::foo:bar,add^str. To just prefix a column: zut::^foo:zut
   To concatenate two columns: zut::foo:bar . Below: get, ed and edg examples.
 
-   :handle^str1,get      =>  handle =~ s/str1/MATCH/    # MATCH refers to () if present in str1, matched part otherwise.
-   :handle^str1^str2,ed  =>  handle =~ s/str1/str2/     # str1 accepts most/all perl regular expression syntax.
-   :handle^str1^str2,edg =>  handle =~ s/str1/str2/g    # str1 accepts most/all perl regular expression syntax.
+   :handle^str1,get      =>  handle =~ s/str1/MATCH/
+   :handle^str1^str2,ed  =>  handle =~ s/str1/str2/ 
+   :handle^str1^str2,edg =>  handle =~ s/str1/str2/g
+
+  MATCH refers to () if present in str1, matched part otherwise.
+  str1 accepts most/all perl regular expression syntax.
+  str1 accepts most/all perl regular expression syntax.
 EOH
   exit 0;
   }
@@ -325,7 +329,7 @@ for my $spec (@::spec) {
     my ($handle, $type, $compute) = ($1, $2, $3);
     my $stack = parse_stack($handle, $compute);
     push @::compute, [$handle, $stack];
-    push @::output_nm, $handle if $type eq ':=';
+    push @::output_nm, $handle if $type eq '::';
   }
                 #  H handle
                 #  a1a2a3, b, c, d different forms for op
@@ -334,7 +338,12 @@ for my $spec (@::spec) {
   elsif ($spec =~ /^@(.*?)([\/~](?:[a-z]{2,4})[\/~]|[=~]{1}|\/=|\/~)(.*?)(\/.*?)?$/) {
     my ($handle, $op, $val, $arg) = ($1, $2, $3, $4);
     die "Unrecognised operator [$op]\n" unless defined($filterops{$op});
-    $arg = 0 unless defined($arg);
+    if (defined($arg)) {
+      die "Extra argument currently only allowed for /ep/ and /om/" unless $op =~ /^\/(ep|om)\/$/;
+    }
+    else{
+       $arg = 0;
+    }
     $arg =~ s|^/||;
 print STDERR "-- adding filter handle=[$handle] op=[$op] val=[$val] arg=[$arg]\n" if $B_debug;
     my $indirection = 0;
@@ -550,12 +559,15 @@ print STDERR "== Line tally check failed: ($Nrows+$Ncmts != $B_header+$Nkeep+$Nf
 __DATA__
 
    s o m e   i d e a s
+   -  filter table
    -  catch divide by zero before it happens.
-   -  predefine constants (e.g. log10). new syntax?
+   -  predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI ?
+   -  -s short-circuit filtering: in and-filtering bail out after first fail
+      -> can help prevent failing later filters in heterogeneous data.
    -  clearly define all interactions between -a, -i, -x, -f
    -  operators to validate column type (integer, regex) .. half-exists already.
    -  tests
    -  ifelse(filtername,compute1,compute2) is beyond scope for now.
       -> o and c operators to delimit blocks, could become quite fiendish.
-         ^filtname,o....,c,o......c,ifelse,
+         ^filtname,o....,c,o......c,ifelse, c would know how many things below it until o.
    ?  numerical comparisons check field is numeric
