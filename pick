@@ -147,9 +147,10 @@ my $help_options=q{Options:
   -C pass lines starting with the comment sign unchanged (cf -/ option)
   -f force output (overrides identical output columns)
   -z print miscellaneous information, e.g. url encoding hex codes
-  -/<str> treat <str> at beginning of line as comment line, e.g. -/@ for sam files
+  -/<str> treat <str> at beginning of line as comment line, e.g. -/@ for sam files (implies -c)
 
-  options can be combined, use e.g. -kc/@ for headerless input, comment lines indicated by @ .
+  options can be combined, use e.g. -ok/@ for headerless input, comment lines indicated by @
+  and filters OR selection.
   -at is useful for inspecting/checking filters
   use -ai <name>::<COMPUTE> to change column <name> to <COMPUTE>,
   use -aik <num>::<COMPUTE> to change column <num> to <COMPUTE>.};
@@ -186,7 +187,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
   ($CMT, $M_comment) = ($1, 1) if $options =~ /\/(.*)/;
 
   if ($options =~ /z/) {
-    my @trickylist = split "", q{ <>!:;$%&`"'|(){}[]?*^-_+=@~/\#.,};
+    my @trickylist = split "", q{ %:^,!@#$&*(){}[]<>.;`"'|?-_+=~/\\};
     my @trickyenc  = map { sprintf("%02X", ord($_)) } @trickylist;
     my $t1 = join "  ", @trickylist;
     my $t2 = join " ",  @trickyenc;
