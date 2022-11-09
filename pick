@@ -3,40 +3,40 @@
        ##                                                                               ##
       ##      Pick columns and select rows from tabular input, add derived columns       ##
      ##                 Pick and select either by column name or index                    ##
-    ##   Select with numerical and string comparison operators and regular expressions.    ##
-    ##                Select on either existing columns or derived columns.                ##
-     ##            Compute derived columns with string and algebraic operations.          ##
-      ##                      Requires tab separated input.                              ##
+    ##   Select with numerical and string comparison operators and regular expressions     ##
+    ##                Select on either existing columns or derived columns                 ##
+     ##            Compute derived columns with string and algebraic operations           ##
+      ##                      Requires tab separated input                               ##
        ##                See -H (EOH below) and -l (brief help)                         ##
 
                                       use strict;
                                      use warnings;
 @::spec = @ARGV; @ARGV = ();
-@::output_nm  = ();         # names - (header|1..N) + handles
-@::output_os  = ();         # names translated to offsets
-@::compute = ();
-@::select  = ();
 
-%::handle_map = ();
+@::output_nm  = ();         # names - (header|1..N) + handles
+@::output_os  = ();         # names translated to offsets in @F (field array)
+@::compute = ();            # derived column specifications
+@::select  = ();            # row select specifications
+%::handle_map = ();         # map column names to offsets
 
 my $CMT = '#';              # ::/my style is somewhat intractable.
 
 my $B_print_header = 1;     # B_oolean
-my $B_select_and   = 1;
-my $B_verbose      = 0;
+my $B_select_and   = 1;     # Require all selections to match (use -o for any)
 my $B_print_rowname = 0;    # cannot combine with $B_headless.
-my $B_print_tally  = 0;
-my $B_printall     = 0;
-my $B_inplace      = 0;
+my $B_print_tally  = 0;     # Print trailing T column with count of selections matched
+my $B_printall     = 0;     # Select all columns
+my $B_inplace      = 0;     # Allow derived column to redefine existing column name
 my $B_excise       = 0;     # print all except the plain column handles listed, cannot combine with $B_printall
-my $B_add_row_column = 0;
-my $B_headless     = 0;
-my $B_debug        = 0;
-my $B_force        = 0;
+my $B_add_row_column = 0;   # See -H
+my $B_headless     = 0;     # No header (-k option)
+my $B_force        = 0;     # Force output if identical output names exist
 my $M_comment      = 0;     # M_ode: 0 oblivious, 1 strip, 2 pass
+my $B_debug        = 0;
+my $B_verbose      = 0;
 
 $::EPSILON         = 0.0001;  # obvs the best default epsilon - 10,000 is a myriad.
-$::OOM             = 2;
+$::OOM             = 2;     # order of magnitude. Maybe sqrt(2) makes more sense.
 
 sub stacky { die "$_[0] stack error\n" unless @::STACK >= $_[1]; }
 
@@ -88,7 +88,8 @@ my %cp_opdefinitions =
             # $_[1] is VAL or :VAL
             # For /ep/ and /om/ third argument is $::EPSILON/$::OOM or specified suffix.
             # 40 41 etc just to keep sort order when outputting list of select ops,
-            # as '/' is slightly overloaded in a confusing way (negation and delimiter).
+            # as '/' is overloaded in a slightly confusing way (negation and num op delimiter),
+            # as is '~' (matching and string op delimiter)
             #
 my %sel_opdefinitions = (
   '~'          => [ 40, sub { $_[0] =~ /$_[1]/ } ],
@@ -450,12 +451,12 @@ print STDERR "-- output columns @::output_os --\n" if $B_debug;
 
     my $opdef = $sel_opdefinitions{$op};
     die "The impossible happened ($op)\n" unless defined($opdef);
-    $sel->[0] = $opdef->[1];
+    $sel->[0] = $opdef->[1];             # fixme overwrite inelegant
 
     $sel->[3] = $::handle_map{$name};    # fixme overwrite inelegant
     if ($indirection) {
        die "Handle $val in select does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$val});
-       $sel->[2] = $::handle_map{$val};
+       $sel->[2] = $::handle_map{$val};  # fixme overwrite inelegant
     }
     { my ($code, $indirection, $val, $name, $arg) = @$sel;
 print STDERR "-- select code=$code ind=$indirection val=$val name=$name arg=$arg --\n" if $B_debug; }
