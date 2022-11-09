@@ -79,30 +79,34 @@ my %cp_opdefinitions =
      sign      => [ 1, undef, sub { $::STACK[-1] = $::STACK[-1] > 0 ? 1 : $::STACK[-1] < 0 ? -1 : 0 } ],
    );
 
-my $s = 0;
-@::CP_LIST = ();
-for my $op (sort keys %cp_opdefinitions) {
-   $::CP_LIST[$s] = $cp_opdefinitions{$op}[2];
-   $cp_opdefinitions{$op}[1] = $s++;
-}
-
+            # sub { } :
             # $_[0] is $F[$i]
             # $_[1] is VAL or :VAL
             # For /ep/ and /om/ third argument is ENV{EPSILON} or specified suffix.
-my %filterops = (
-  '~'          => sub { $_[0] =~ /$_[1]/ },
-  '/~'         => sub { $_[0] !~ /$_[1]/ },
-  '='          => sub { $_[0] eq $_[1] },
-  '/='         => sub { $_[0] ne $_[1] },
-  '/ep/'       => sub { interval_plus(@_) },
-  '/om/'       => sub { interval_mul(@_) },
+            # 40 41 etc just to keep sort order when outputting list of filter ops.
+            #
+my %ft_opdefinitions = (
+  '~'          => [ 40, undef, sub { $_[0] =~ /$_[1]/ } ],
+  '/~'         => [ 41, undef, sub { $_[0] !~ /$_[1]/ } ],
+  '='          => [ 42, undef, sub { $_[0]  eq $_[1]  } ],
+  '/='         => [ 43, undef, sub { $_[0]  ne $_[1]  } ],
 
-  '/eq/'       => sub { $_[0] == $_[1] },
-  '/ne/'       => sub { $_[0] != $_[1] },
-  '/lt/'       => sub { $_[0] <  $_[1] },
-  '/le/'       => sub { $_[0] <= $_[1] },
-  '/ge/'       => sub { $_[0] >= $_[1] },
-  '/gt/'       => sub { $_[0] >  $_[1] },
+  '/eq/'       => [ 44, undef, sub { $_[0] == $_[1] } ],
+  '/ne/'       => [ 45, undef, sub { $_[0] != $_[1] } ],
+  '/lt/'       => [ 46, undef, sub { $_[0] <  $_[1] } ],
+  '/le/'       => [ 47, undef, sub { $_[0] <= $_[1] } ],
+  '/ge/'       => [ 48, undef, sub { $_[0] >= $_[1] } ],
+  '/gt/'       => [ 49, undef, sub { $_[0] >  $_[1] } ],
+
+  '/ep/'       => [ 50, undef, sub { interval_plus(@_)} ],
+  '/om/'       => [ 51, undef, sub { interval_mul(@_) } ],
+
+  '~eq~'       => [ 52, undef, sub { $_[0] eq $_[1] } ],
+  '~ne~'       => [ 53, undef, sub { $_[0] ne $_[1] } ],
+  '~lt~'       => [ 54, undef, sub { $_[0] lt $_[1] } ],
+  '~le~'       => [ 55, undef, sub { $_[0] le $_[1] } ],
+  '~ge~'       => [ 56, undef, sub { $_[0] ge $_[1] } ],
+  '~gt~'       => [ 57, undef, sub { $_[0] gt $_[1] } ],
 
      # Perl behaves weirdly with bit operators in very specific cases; perhaps
      # because it thought both operands a string and one operand is negative.
@@ -118,16 +122,10 @@ my %filterops = (
      # - conceivably in both cases there is an operand that forces number
      # promotion.  Thus, absint.
      #
-  '/all/'      => sub { $_[1] == (abs(int($_[0])) & abs(int($_[1]))) },
-  '/any/'      => sub { abs(int($_[0])) & abs(int($_[1])) },
-  '/none/'     => sub { ! (abs(int($_[0])) & abs(int($_[1]))) },
+  '/all/'      => [ 58, undef, sub { $_[1] == (abs(int($_[0])) & abs(int($_[1]))) } ],
+  '/any/'      => [ 59, undef, sub { abs(int($_[0])) & abs(int($_[1])) } ],
+  '/none/'     => [ 60, undef, sub { ! (abs(int($_[0])) & abs(int($_[1]))) } ]
 
-  '~eq~'       => sub { $_[0] eq $_[1] },
-  '~ne~'       => sub { $_[0] ne $_[1] },
-  '~lt~'       => sub { $_[0] lt $_[1] },
-  '~le~'       => sub { $_[0] le $_[1] },
-  '~ge~'       => sub { $_[0] ge $_[1] },
-  '~gt~'       => sub { $_[0] gt $_[1] }
 );
 
 my $help_options=q{Options:
@@ -165,11 +163,13 @@ my $spec_forms = q{
 my @ops1 = sort grep { $cp_opdefinitions{$_}[0] == 1 } keys %cp_opdefinitions;
 my @ops2 = sort grep { $cp_opdefinitions{$_}[0] == 2 } keys %cp_opdefinitions;
 my @ops3 = sort grep { $cp_opdefinitions{$_}[0] == 3 } keys %cp_opdefinitions;
-my @opsf = sort keys %filterops;
+# filterops
+my @opsf = sort { $ft_opdefinitions{$a}[0] <=> $ft_opdefinitions{$b}[0] } keys %ft_opdefinitions;
 
 while (@::spec && $::spec[0] =~ /^-/) {
 
   my $options = shift @::spec;
+  ($CMT, $M_comment) = ($1, 1) if $options =~ s/\/(.*)$//;
   $B_print_header = 0 if $options =~ /h/;
   $B_filter_and   = 0 if $options =~ /o/;
   $B_verbose      = 1 if $options =~ /v/;
@@ -184,7 +184,6 @@ while (@::spec && $::spec[0] =~ /^-/) {
   $B_inplace      = 1 if $options =~ /i/;
   $M_comment      = 1 if $options =~ /c/;
   $M_comment      = 2 if $options =~ /C/;
-  ($CMT, $M_comment) = ($1, 1) if $options =~ /\/(.*)/;
 
   if ($options =~ /z/) {
     my @trickylist = split "", q{ %:^,!@#$&*(){}[]<>.;`"'|?-_+=~/\\};
@@ -309,8 +308,9 @@ sub parse_stack {
     if ($type == $TYPE_OPATOR) {
       my $def = $cp_opdefinitions{$what};
       die "Not supported [$what]\n" unless defined($def);
-      push @{$oplist[-1]}, ($def->[0], $def->[1]);
-print STDERR " >> $handle >> T=$type I=$what N=$def->[0], offset=$def->[1]\n" if $B_debug;
+                           # N stack required, code.
+      push @{$oplist[-1]}, ($def->[0], $def->[2]);
+print STDERR "-- $handle >> type=$type op=$what N=$def->[0], code=$def->[2]\n" if $B_debug;
     }
   }
   die "Parse error in spec [$spec] near position $p\n" unless $p == $l;
@@ -338,7 +338,7 @@ for my $spec (@::spec) {
                 #    ( H )([ a1](      a2    )[ a3]|  b    | c | d )( V)(  arg )
   elsif ($spec =~ /^@(.*?)([\/~](?:[a-z]{2,4})[\/~]|[=~]{1}|\/=|\/~)(.*?)(\/.*?)?$/) {
     my ($handle, $op, $val, $arg) = ($1, $2, $3, $4);
-    die "Unrecognised operator [$op]\n" unless defined($filterops{$op});
+    die "Unrecognised operator [$op]\n" unless defined($ft_opdefinitions{$op});
     if (defined($arg)) {
       die "Extra argument currently only allowed for /ep/ and /om/" unless $op =~ /^\/(ep|om)\/$/;
     }
@@ -411,7 +411,7 @@ sub wrangle_header {
       my ($type, $what) = @$comp;
       if ($type == $TYPE_HANDLE) {
          die "Handle $what in compute $name does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$what});
-         $comp->[1] = $::handle_map{$what};
+         $comp->[1] = $::handle_map{$what};     # fixme overwrite inelegant
       }
     }
     my $j = $::N + $i;
@@ -441,12 +441,18 @@ print STDERR "-- output columns @::output_os --\n" if $B_debug;
     my ($op, $indirection, $val, $name, $arg) = @$filt;
 
     die "Handle $name in filter does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$name});
-    $filt->[3] = $::handle_map{$name};
+
+    my $ft = $ft_opdefinitions{$op};
+    die "The impossible happened ($op)\n" unless defined($ft);
+    $filt->[0] = $ft->[2];
+
+    $filt->[3] = $::handle_map{$name};    # fixme overwrite inelegant
     if ($indirection) {
        die "Handle $val in filter does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$val});
        $filt->[2] = $::handle_map{$val};
     }
-print STDERR "-- filter @$filt --\n" if $B_debug;
+    { my ($code, $indirection, $val, $name, $arg) = @$filt;
+print STDERR "-- filter code=$code ind=$indirection val=$val name=$name arg=$arg --\n" if $B_debug; }
 
   }
 }
@@ -470,9 +476,9 @@ sub do_compute {
       elsif ($type != $TYPE_OPATOR) { die "Really unfortunate!\n"; }
 
       else {
-         my ($n_wanted, $offset) = @other;
+         my ($n_wanted, $code) = @other;
          die "Stack underflow ($spic->[0] item [$what])\n" unless @::STACK >= $n_wanted;
-         &{$::CP_LIST[$offset]};
+         &{$code};
          pop @::STACK while --$n_wanted;
       }
     }
@@ -484,7 +490,7 @@ sub do_compute {
 
 my $Nrows = 0;    # includes header.
 my $Ncmts = 0;
-my $Nfilt = 0;
+my $Ndisc = 0;
 my $Nkeep = 0;
 
 while (<>) {
@@ -530,10 +536,12 @@ while (<>) {
   for my $filt (@::filter) {
     my ($op, $indirection, $val, $colid, $arg) = @$filt;
     $val = $F[$val] if $indirection;
-    $nmatch++ if $filterops{$op}->($F[$colid], $val, $arg);
+    # $nmatch++ if $::FT_LIST[$op]->($F[$colid], $val, $arg);
+    $nmatch++ if $op->($F[$colid], $val, $arg);
+      # $arg currently only used for /ep/ and /om/
   }
   if (@::filter && (($nmatch != @::filter && $B_filter_and) || ($nmatch == 0 && !$B_filter_and))) {
-    $Nfilt++;
+    $Ndisc++;
     next unless $B_print_tally;
   }
   else {
@@ -551,19 +559,18 @@ while (<>) {
 
 print STDERR "-- $Ncmts comment lines in input\n" if $M_comment && $B_verbose;
 my $would = $B_print_tally ? ' would' : '';
-print STDERR "-- $Nkeep/$Nfilt rows$would have been kept/filtered\n" if @::filter && $B_verbose;
+print STDERR "-- $Nkeep/$Ndisc rows$would have been kept/discarded\n" if @::filter && $B_verbose;
 
 my $B_header = 1 - $B_headless;
-print STDERR "== Line tally check failed: ($Nrows+$Ncmts != $B_header+$Nkeep+$Nfilt\n" if $Nrows+$Ncmts != $B_header+$Nkeep+$Nfilt;
+print STDERR "== Line tally check failed: ($Nrows != $B_header+$Nkeep+$Ndisc\n" if $Nrows != $B_header+$Nkeep+$Ndisc;
 
 
 __DATA__
 
    s o m e   i d e a s
-   -  filter table
    -  catch divide by zero before it happens.
    -  predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI ?
-   -  -s short-circuit filtering: in and-filtering bail out after first fail
+   ?  -s short-circuit filtering: in and-filtering bail out after first fail
       -> can help prevent failing later filters in heterogeneous data.
    -  clearly define all interactions between -a, -i, -x, -f
    -  operators to validate column type (integer, regex) .. half-exists already.
