@@ -1,10 +1,10 @@
 #!/usr/bin/perl
 
        ##                                                                               ##
-      ##      Pick columns and filter rows from tabular input, add derived columns       ##
-     ##                 Pick and filter either by column name or index                    ##
-    ##   Filter with numerical and string comparison operators and regular expressions.    ##
-    ##                Filter on either existing columns or derived columns.                ##
+      ##      Pick columns and select rows from tabular input, add derived columns       ##
+     ##                 Pick and select either by column name or index                    ##
+    ##   Select with numerical and string comparison operators and regular expressions.    ##
+    ##                Select on either existing columns or derived columns.                ##
      ##            Compute derived columns with string and algebraic operations.          ##
       ##                      Requires tab separated input.                              ##
        ##                See -H (EOH below) and -l (brief help)                         ##
@@ -15,98 +15,103 @@
 @::output_nm  = ();         # names - (header|1..N) + handles
 @::output_os  = ();         # names translated to offsets
 @::compute = ();
-@::filter  = ();
+@::select  = ();
 
 %::handle_map = ();
 
-my $CMT = '#';
+my $CMT = '#';              # ::/my style is somewhat intractable.
 
-my $B_print_header = 1;
-my $B_filter_and   = 1;
+my $B_print_header = 1;     # B_oolean
+my $B_select_and   = 1;
 my $B_verbose      = 0;
 my $B_print_rowname = 0;    # cannot combine with $B_headless.
 my $B_print_tally  = 0;
 my $B_printall     = 0;
 my $B_inplace      = 0;
-my $B_excise       = 0;     # print all except unadorned columns listed, cannot combine with $B_printall
+my $B_excise       = 0;     # print all except the plain column handles listed, cannot combine with $B_printall
 my $B_add_row_column = 0;
 my $B_headless     = 0;
 my $B_debug        = 0;
 my $B_force        = 0;
-my $M_comment      = 0;     # 0 oblivious, 1 strip, 2 pass
+my $M_comment      = 0;     # M_ode: 0 oblivious, 1 strip, 2 pass
 
-BEGIN {
-  $::EPSILON = 0.0001; $::EPSILON = $ENV{EPSILON} if defined($ENV{EPSILON});
-  $::OOM     = 2;      $::OOM     = $ENV{OOM}     if defined($ENV{OOM});
-}
+$::EPSILON         = 0.0001;  # obvs the best default epsilon - 10,000 is a myriad.
+$::OOM             = 2;
+
+sub stacky { die "$_[0] stack error\n" unless @::STACK >= $_[1]; }
 
 my %cp_opdefinitions =
-   ( add       => [ 2, undef, sub { $::STACK[-2] += $::STACK[-1] } ],
-     mul       => [ 2, undef, sub { $::STACK[-2] *= $::STACK[-1] } ],
-     div       => [ 2, undef, sub { $::STACK[-2] /= $::STACK[-1] } ],
-     cat       => [ 2, undef, sub { $::STACK[-2] .= $::STACK[-1] } ],
-     sub       => [ 2, undef, sub { $::STACK[-2] -= $::STACK[-1] } ],
-     mod       => [ 2, undef, sub { $::STACK[-2] %= $::STACK[-1] } ],
-     pow       => [ 2, undef, sub { $::STACK[-2] **= $::STACK[-1] } ],
-     and       => [ 2, undef, sub { $::STACK[-2] &= $::STACK[-1] } ],
-     or        => [ 2, undef, sub { $::STACK[-2] |= $::STACK[-1] } ],
-     xor       => [ 2, undef, sub { $::STACK[-2] ^= $::STACK[-1] } ],
-     max       => [ 2, undef, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] > $::STACK[-2] } ],
-     min       => [ 2, undef, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] < $::STACK[-2] } ],
+   ( add       => [ 2, sub { $::STACK[-2] += $::STACK[-1] } ],
+     mul       => [ 2, sub { $::STACK[-2] *= $::STACK[-1] } ],
+     div       => [ 2, sub { $::STACK[-2] /= $::STACK[-1] } ],
+     cat       => [ 2, sub { $::STACK[-2] .= $::STACK[-1] } ],
+     sub       => [ 2, sub { $::STACK[-2] -= $::STACK[-1] } ],
+     pop       => [ 0, sub { stacky('pop', 1); pop @::STACK } ],
+     dup       => [ 0, sub { stacky('dup', 1); push @::STACK, $::STACK[-1]  } ],
+     xch       => [ 0, sub { stacky('xch', 2); ($::STACK[-2], $::STACK[-1]) = ($::STACK[-1], $::STACK[-2]) } ],
+     mod       => [ 2, sub { $::STACK[-2] %= $::STACK[-1] } ],
+     pow       => [ 2, sub { $::STACK[-2] **= $::STACK[-1] } ],
+     and       => [ 2, sub { $::STACK[-2] &= $::STACK[-1] } ],
+     or        => [ 2, sub { $::STACK[-2] |= $::STACK[-1] } ],
+     xor       => [ 2, sub { $::STACK[-2] ^= $::STACK[-1] } ],
+     max       => [ 2, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] > $::STACK[-2] } ],
+     min       => [ 2, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] < $::STACK[-2] } ],
+     rep       => [ 2, sub { $::STACK[-2] = $::STACK[-2] x $::STACK[-1] } ],
 
-     get       => [ 2, undef, sub { my $item =  $::STACK[-2] =~ /$::STACK[-1]/
-                                                ? (defined($1) ? $1 : $&) : ""; $::STACK[-2] = $item; } ],
+     get       => [ 2, sub { my $item =  $::STACK[-2] =~ /$::STACK[-1]/
+                                         ? (defined($1) ? $1 : $&) : ""; $::STACK[-2] = $item; } ],
 
-     ed        => [ 3, undef, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/  } ],
-     edg       => [ 3, undef, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
+     ed        => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/  } ],
+     edg       => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
 
-     uc        => [ 1, undef, sub { $::STACK[-1] = uc($::STACK[-1]) }         ],
-     lc        => [ 1, undef, sub { $::STACK[-1] = lc($::STACK[-1]) }         ],
-     rev       => [ 1, undef, sub { $::STACK[-1] = reverse($::STACK[-1]) }    ],
-     rot13     => [ 1, undef, sub { $::STACK[-1] =~ tr/a-zA-Z/n-za-mN-ZA-M/ } ],
-     len       => [ 1, undef, sub { $::STACK[-1] = length($::STACK[-1]) }     ],
-     rc        => [ 1, undef, sub { $::STACK[-1] =~ tr/acgtuACGTU/tgcaaTGCAA/; $::STACK[-1] = reverse($::STACK[-1]) } ],
-     abs       => [ 1, undef, sub { $::STACK[-1] = abs($::STACK[-1]) }        ],
-     sqrt      => [ 1, undef, sub { $::STACK[-1] = sqrt($::STACK[-1]) }       ],
-     sq        => [ 1, undef, sub { $::STACK[-1] = $::STACK[-1]**2 }          ],
-     exp       => [ 1, undef, sub { $::STACK[-1] = exp($::STACK[-1]) }        ],
-     cos       => [ 1, undef, sub { $::STACK[-1] = cos($::STACK[-1]) }        ],
-     sin       => [ 1, undef, sub { $::STACK[-1] = sin($::STACK[-1]) }        ],
-     tan       => [ 1, undef, sub { $::STACK[-1] = sin($::STACK[-1])/cos($::STACK[-1]) } ],
-     log       => [ 1, undef, sub { $::STACK[-1] = log($::STACK[-1]) }        ],
-     log10     => [ 1, undef, sub { $::STACK[-1] = log($::STACK[-1])/log(10) }],
-     exp10     => [ 1, undef, sub { $::STACK[-1] = 10**$::STACK[-1] }         ],
-     sign      => [ 1, undef, sub { $::STACK[-1] = $::STACK[-1] > 0 ? 1 : $::STACK[-1] < 0 ? -1 : 0 } ],
+     uc        => [ 1, sub { $::STACK[-1] = uc($::STACK[-1]) }         ],
+     lc        => [ 1, sub { $::STACK[-1] = lc($::STACK[-1]) }         ],
+     rev       => [ 1, sub { $::STACK[-1] = reverse($::STACK[-1]) }    ],
+     rot13     => [ 1, sub { $::STACK[-1] =~ tr/a-zA-Z/n-za-mN-ZA-M/ } ],
+     len       => [ 1, sub { $::STACK[-1] = length($::STACK[-1]) }     ],
+     rc        => [ 1, sub { $::STACK[-1] =~ tr/acgtuACGTU/tgcaaTGCAA/; $::STACK[-1] = reverse($::STACK[-1]) } ],
+     abs       => [ 1, sub { $::STACK[-1] = abs($::STACK[-1]) }        ],
+     sqrt      => [ 1, sub { $::STACK[-1] = sqrt($::STACK[-1]) }       ],
+     sq        => [ 1, sub { $::STACK[-1] = $::STACK[-1]**2 }          ],
+     exp       => [ 1, sub { $::STACK[-1] = exp($::STACK[-1]) }        ],
+     cos       => [ 1, sub { $::STACK[-1] = cos($::STACK[-1]) }        ],
+     sin       => [ 1, sub { $::STACK[-1] = sin($::STACK[-1]) }        ],
+     tan       => [ 1, sub { $::STACK[-1] = sin($::STACK[-1])/cos($::STACK[-1]) } ],
+     log       => [ 1, sub { $::STACK[-1] = log($::STACK[-1]) }        ],
+     log10     => [ 1, sub { $::STACK[-1] = log($::STACK[-1])/log(10) }],
+     exp10     => [ 1, sub { $::STACK[-1] = 10**$::STACK[-1] }         ],
+     sign      => [ 1, sub { $::STACK[-1] = $::STACK[-1] > 0 ? 1 : $::STACK[-1] < 0 ? -1 : 0 } ],
    );
 
             # sub { } :
             # $_[0] is $F[$i]
             # $_[1] is VAL or :VAL
-            # For /ep/ and /om/ third argument is ENV{EPSILON} or specified suffix.
-            # 40 41 etc just to keep sort order when outputting list of filter ops.
+            # For /ep/ and /om/ third argument is $::EPSILON/$::OOM or specified suffix.
+            # 40 41 etc just to keep sort order when outputting list of select ops,
+            # as '/' is slightly overloaded in a confusing way (negation and delimiter).
             #
-my %ft_opdefinitions = (
-  '~'          => [ 40, undef, sub { $_[0] =~ /$_[1]/ } ],
-  '/~'         => [ 41, undef, sub { $_[0] !~ /$_[1]/ } ],
-  '='          => [ 42, undef, sub { $_[0]  eq $_[1]  } ],
-  '/='         => [ 43, undef, sub { $_[0]  ne $_[1]  } ],
+my %sel_opdefinitions = (
+  '~'          => [ 40, sub { $_[0] =~ /$_[1]/ } ],
+  '/~'         => [ 41, sub { $_[0] !~ /$_[1]/ } ],
+  '='          => [ 42, sub { $_[0]  eq $_[1]  } ],
+  '/='         => [ 43, sub { $_[0]  ne $_[1]  } ],
 
-  '/eq/'       => [ 44, undef, sub { $_[0] == $_[1] } ],
-  '/ne/'       => [ 45, undef, sub { $_[0] != $_[1] } ],
-  '/lt/'       => [ 46, undef, sub { $_[0] <  $_[1] } ],
-  '/le/'       => [ 47, undef, sub { $_[0] <= $_[1] } ],
-  '/ge/'       => [ 48, undef, sub { $_[0] >= $_[1] } ],
-  '/gt/'       => [ 49, undef, sub { $_[0] >  $_[1] } ],
+  '/eq/'       => [ 44, sub { $_[0] == $_[1] } ],
+  '/ne/'       => [ 45, sub { $_[0] != $_[1] } ],
+  '/lt/'       => [ 46, sub { $_[0] <  $_[1] } ],
+  '/le/'       => [ 47, sub { $_[0] <= $_[1] } ],
+  '/ge/'       => [ 48, sub { $_[0] >= $_[1] } ],
+  '/gt/'       => [ 49, sub { $_[0] >  $_[1] } ],
 
-  '/ep/'       => [ 50, undef, sub { interval_plus(@_)} ],
-  '/om/'       => [ 51, undef, sub { interval_mul(@_) } ],
+  '/ep/'       => [ 50, sub { interval_plus(@_)} ],
+  '/om/'       => [ 51, sub { interval_mul(@_) } ],
 
-  '~eq~'       => [ 52, undef, sub { $_[0] eq $_[1] } ],
-  '~ne~'       => [ 53, undef, sub { $_[0] ne $_[1] } ],
-  '~lt~'       => [ 54, undef, sub { $_[0] lt $_[1] } ],
-  '~le~'       => [ 55, undef, sub { $_[0] le $_[1] } ],
-  '~ge~'       => [ 56, undef, sub { $_[0] ge $_[1] } ],
-  '~gt~'       => [ 57, undef, sub { $_[0] gt $_[1] } ],
+  '~eq~'       => [ 52, sub { $_[0] eq $_[1] } ],
+  '~ne~'       => [ 53, sub { $_[0] ne $_[1] } ],
+  '~lt~'       => [ 54, sub { $_[0] lt $_[1] } ],
+  '~le~'       => [ 55, sub { $_[0] le $_[1] } ],
+  '~ge~'       => [ 56, sub { $_[0] ge $_[1] } ],
+  '~gt~'       => [ 57, sub { $_[0] gt $_[1] } ],
 
      # Perl behaves weirdly with bit operators in very specific cases; perhaps
      # because it thought both operands a string and one operand is negative.
@@ -122,18 +127,18 @@ my %ft_opdefinitions = (
      # - conceivably in both cases there is an operand that forces number
      # promotion.  Thus, absint.
      #
-  '/all/'      => [ 58, undef, sub { $_[1] == (abs(int($_[0])) & abs(int($_[1]))) } ],
-  '/any/'      => [ 59, undef, sub { abs(int($_[0])) & abs(int($_[1])) } ],
-  '/none/'     => [ 60, undef, sub { ! (abs(int($_[0])) & abs(int($_[1]))) } ]
+  '/all/'      => [ 58, sub { $_[1] == (abs(int($_[0])) & abs(int($_[1]))) } ],
+  '/any/'      => [ 59, sub { abs(int($_[0])) & abs(int($_[1])) } ],
+  '/none/'     => [ 60, sub { ! (abs(int($_[0])) & abs(int($_[1]))) } ]
 
 );
 
 my $help_options=q{Options:
   -i in-place: <HANDLE>::<COMPUTE> replaces <HANDLE> if it exists
   -k headerless input, use 1 2 .. for column names
-  -a print all input columns (filtering by colspec applies, -t accepted)
+  -a print all input columns (selecting by colspec applies, -t accepted)
   -h do not print header
-  -t do not filter, print tally column of count of matched row filters
+  -t do not select, print tally column of count of matched row select criteria
   -o OR multiple criteria (default is AND)
   -v verbose
   -x take complement of selected input column(s) (works with -i)
@@ -148,30 +153,31 @@ my $help_options=q{Options:
   -/<str> treat <str> at beginning of line as comment line, e.g. -/@ for sam files (implies -c)
 
   options can be combined, use e.g. -ok/@ for headerless input, comment lines indicated by @
-  and filters OR selection.
-  -at is useful for inspecting/checking filters
+  and selects OR selection.
+  -at is useful for inspecting/checking select criteria
   use -ai <name>::<COMPUTE> to change column <name> to <COMPUTE>,
   use -aik <num>::<COMPUTE> to change column <num> to <COMPUTE>.};
 
 my $spec_forms = q{
   (1) <HANDLE>                 output <HANDLE> (column name, index, or derived compute name)
-  (2) @<HANDLE><op><VAL>       filter criterion compare handle to constant value with <op>
-  (3) @<HANDLE><op>:<HANDLE2>  filter criterion compare handle to other handle with <op>
+  (2) @<HANDLE><op><VAL>       select criterion compare handle to constant value with <op>
+  (3) @<HANDLE><op>:<HANDLE2>  select criterion compare handle to other handle with <op>
   (4) <HANDLE>:=<COMPUTE>      put <COMPUTE> in <HANDLE>
   (5) <HANDLE>::<COMPUTE>      put <COMPUTE> in <HANDLE> and add <HANDLE> to output};
 
+my @ops0 = sort grep { $cp_opdefinitions{$_}[0] == 0 } keys %cp_opdefinitions;
 my @ops1 = sort grep { $cp_opdefinitions{$_}[0] == 1 } keys %cp_opdefinitions;
 my @ops2 = sort grep { $cp_opdefinitions{$_}[0] == 2 } keys %cp_opdefinitions;
 my @ops3 = sort grep { $cp_opdefinitions{$_}[0] == 3 } keys %cp_opdefinitions;
-# filterops
-my @opsf = sort { $ft_opdefinitions{$a}[0] <=> $ft_opdefinitions{$b}[0] } keys %ft_opdefinitions;
+# selectops
+my @opsf = sort { $sel_opdefinitions{$a}[0] <=> $sel_opdefinitions{$b}[0] } keys %sel_opdefinitions;
 
 while (@::spec && $::spec[0] =~ /^-/) {
 
   my $options = shift @::spec;
   ($CMT, $M_comment) = ($1, 1) if $options =~ s/\/(.*)$//;
   $B_print_header = 0 if $options =~ /h/;
-  $B_filter_and   = 0 if $options =~ /o/;
+  $B_select_and   = 0 if $options =~ /o/;
   $B_verbose      = 1 if $options =~ /v/;
   $B_print_rowname= 1 if $options =~ /r/;
   $B_print_tally  = 1 if $options =~ /t/;
@@ -195,14 +201,15 @@ while (@::spec && $::spec[0] =~ /^-/) {
   }
   elsif ($options =~ /l/) {
     print $help_options, "\n";
-    print "\nSelect/filter/compute forms:$spec_forms\n";
+    print "\nSelect/compute forms:$spec_forms\n";
     print "\nOperators for compute:\n";
+    print "  Take 0: @ops0\n";
     print "  Take 1: @ops1\n";
     print "  Take 2: @ops2\n";
     print "  Take 3: @ops3\n";
-    print "\nFilter comparison operators:\n";
+    print "\nSelect comparison operators:\n";
     print "  @opsf\n";
-    print "\nSee -H for longer description, including <COMPUTE> format and operators and filter operators.\n";
+    print "\nSee -H for longer description, including <COMPUTE> format and operators and select operators.\n";
     exit 0;
   }
   elsif ($options =~ /H/) {
@@ -218,8 +225,8 @@ $help_options
 <colspec>
 HANDLE identifies either a column by name, or a derived value as in form (4).
 Form (1) -- just a handle -- selects it for output.
-Form (2) creates a filter comparing a handle to a constant value. 
-Form (3) creates a filter comparing a handle to another handle.
+Form (2) creates a select criterion comparing a handle to a constant value. 
+Form (3) creates a select criterion comparing a handle to another handle.
 Form (4) creates a derived value in handle, <COMPUTE> specification below.
 Form (5) as form 4, and selects the handle for output.
 
@@ -244,6 +251,7 @@ Colon introduces a column name; <VAL> is url-decoded; a leading ^ is removed.
   column index with -k (headerless input).  <op> is one of
 
 Takes:
+  0  | @ops0
   1  | @ops1
   2  | @ops2
   3  | @ops3
@@ -261,7 +269,6 @@ Takes:
    :handle^str1^str2,edg =>  handle =~ s/str1/str2/g
 
   MATCH refers to () if present in str1, matched part otherwise.
-  str1 accepts most/all perl regular expression syntax.
   str1 accepts most/all perl regular expression syntax.
 EOH
   exit 0;
@@ -306,11 +313,11 @@ sub parse_stack {
     push @oplist, [$type, $what];
     $p = pos($spec);
     if ($type == $TYPE_OPATOR) {
-      my $def = $cp_opdefinitions{$what};
-      die "Not supported [$what]\n" unless defined($def);
+      my $opdef = $cp_opdefinitions{$what};
+      die "Not supported [$what]\n" unless defined($opdef);
                            # N stack required, code.
-      push @{$oplist[-1]}, ($def->[0], $def->[2]);
-print STDERR "-- $handle >> type=$type op=$what N=$def->[0], code=$def->[2]\n" if $B_debug;
+      push @{$oplist[-1]}, ($opdef->[0], $opdef->[1]);
+print STDERR "-- $handle >> type=$type op=$what N=$opdef->[0], code=$opdef->[1]\n" if $B_debug;
     }
   }
   die "Parse error in spec [$spec] near position $p\n" unless $p == $l;
@@ -338,7 +345,7 @@ for my $spec (@::spec) {
                 #    ( H )([ a1](      a2    )[ a3]|  b    | c | d )( V)(  arg )
   elsif ($spec =~ /^@(.*?)([\/~](?:[a-z]{2,4})[\/~]|[=~]{1}|\/=|\/~)(.*?)(\/.*?)?$/) {
     my ($handle, $op, $val, $arg) = ($1, $2, $3, $4);
-    die "Unrecognised operator [$op]\n" unless defined($ft_opdefinitions{$op});
+    die "Unrecognised operator [$op]\n" unless defined($sel_opdefinitions{$op});
     if (defined($arg)) {
       die "Extra argument currently only allowed for /ep/ and /om/" unless $op =~ /^\/(ep|om)\/$/;
     }
@@ -346,7 +353,7 @@ for my $spec (@::spec) {
        $arg = 0;
     }
     $arg =~ s|^/||;
-print STDERR "-- adding filter handle=[$handle] op=[$op] val=[$val] arg=[$arg]\n" if $B_debug;
+print STDERR "-- adding select criterion handle=[$handle] op=[$op] val=[$val] arg=[$arg]\n" if $B_debug;
     my $indirection = 0;
     if ($val =~ s/^://) {
       $indirection = 1;
@@ -354,8 +361,8 @@ print STDERR "-- adding filter handle=[$handle] op=[$op] val=[$val] arg=[$arg]\n
     else {
       $val = urldecode($val);
     }
-                # NOTE. $arg for now only used by /ep/ and /om/ filters, ignored by the others.
-    push @::filter, [$op, $indirection, $val, $handle, $arg];
+                # NOTE. $arg for now only used by /ep/ and /om/ selection, ignored by the others.
+    push @::select, [$op, $indirection, $val, $handle, $arg];
   }
   else {
     push @::output_nm, $spec;
@@ -365,7 +372,6 @@ print STDERR "-- adding filter handle=[$handle] op=[$op] val=[$val] arg=[$arg]\n
 sub add_tally {
   print "\t" if @::output_os; print $_[0];
 }
-
 
 sub wrangle_header {
 
@@ -379,19 +385,19 @@ sub wrangle_header {
     my $name = $::HEADER[$i];
     die "Name $name defined more than once\n" if defined($::handle_map{$name});
     $::handle_map{$name} = $i;   
-    print STDERR "-- Map header name $name to offset $i\n" if $B_debug;
+    print STDERR "-- map header name $name to offset $i\n" if $B_debug;
   }
 
-  print STDERR "-- Output column names as specified: @::output_nm\n" if $B_debug;
+  print STDERR "-- output column names as specified: @::output_nm\n" if $B_debug;
   if ($B_excise) {         # note excise we end up with input order.
     my %excise = map { ($_, 1) } @::output_nm;
     @::output_nm = ((grep { !defined($excise{$_}) } @::HEADER), (grep { !defined($inheader{$_}) } @::output_nm));
   }
   elsif ($B_printall) {
-    print STDERR "-- Adding columns @::output_nm to header names\n" if @::output_nm && $B_debug;
+    print STDERR "-- adding columns @::output_nm to header names\n" if @::output_nm && $B_debug;
     @::output_nm = (@::HEADER, grep { !defined($inheader{$_}) } @::output_nm);
   }
-  print STDERR "-- Output column names after -i/-a treatment: @::output_nm\n" if $B_debug && ($B_excise || $B_printall);
+  print STDERR "-- output column names after -i/-a treatment: @::output_nm\n" if $B_debug && ($B_excise || $B_printall);
 
   if ($B_print_header && keys %{{ map { ($_, 1) } @::output_nm }} < @::output_nm) {
     my $job = $B_force ? 'continuing' : 'fatal, use -f to force';
@@ -417,7 +423,7 @@ sub wrangle_header {
     my $j = $::N + $i;
     $::HEADER[$j] = $name;        # only needed to print the new header.
     $::handle_map{$name} = $j;
-    print STDERR "-- Map compute name $name to offset $j\n" if $B_debug;
+    print STDERR "-- map compute name $name to offset $j\n" if $B_debug;
   }
 
   #
@@ -433,26 +439,26 @@ sub wrangle_header {
 print STDERR "-- output columns @::output_os --\n" if $B_debug;
 
   #
-  ##  In filter list replace names by offsets into field array.
+  ##  In select list replace names by offsets into field array.
   #
 
-  for my $filt (@::filter) {
+  for my $sel (@::select) {
 
-    my ($op, $indirection, $val, $name, $arg) = @$filt;
+    my ($op, $indirection, $val, $name, $arg) = @$sel;
 
-    die "Handle $name in filter does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$name});
+    die "Handle $name in select does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$name});
 
-    my $ft = $ft_opdefinitions{$op};
-    die "The impossible happened ($op)\n" unless defined($ft);
-    $filt->[0] = $ft->[2];
+    my $opdef = $sel_opdefinitions{$op};
+    die "The impossible happened ($op)\n" unless defined($opdef);
+    $sel->[0] = $opdef->[1];
 
-    $filt->[3] = $::handle_map{$name};    # fixme overwrite inelegant
+    $sel->[3] = $::handle_map{$name};    # fixme overwrite inelegant
     if ($indirection) {
-       die "Handle $val in filter does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$val});
-       $filt->[2] = $::handle_map{$val};
+       die "Handle $val in select does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$val});
+       $sel->[2] = $::handle_map{$val};
     }
-    { my ($code, $indirection, $val, $name, $arg) = @$filt;
-print STDERR "-- filter code=$code ind=$indirection val=$val name=$name arg=$arg --\n" if $B_debug; }
+    { my ($code, $indirection, $val, $name, $arg) = @$sel;
+print STDERR "-- select code=$code ind=$indirection val=$val name=$name arg=$arg --\n" if $B_debug; }
 
   }
 }
@@ -479,7 +485,7 @@ sub do_compute {
          my ($n_wanted, $code) = @other;
          die "Stack underflow ($spic->[0] item [$what])\n" unless @::STACK >= $n_wanted;
          &{$code};
-         pop @::STACK while --$n_wanted;
+         pop @::STACK while --$n_wanted > 0;
       }
     }
     push @$F, (join "", @::STACK);
@@ -533,14 +539,13 @@ while (<>) {
   do_compute(\@F);         # this pushes compute onto @F if present.
 
   my $nmatch = 0;
-  for my $filt (@::filter) {
-    my ($op, $indirection, $val, $colid, $arg) = @$filt;
+  for my $sel (@::select) {
+    my ($op, $indirection, $val, $colid, $arg) = @$sel;
     $val = $F[$val] if $indirection;
-    # $nmatch++ if $::FT_LIST[$op]->($F[$colid], $val, $arg);
     $nmatch++ if $op->($F[$colid], $val, $arg);
       # $arg currently only used for /ep/ and /om/
   }
-  if (@::filter && (($nmatch != @::filter && $B_filter_and) || ($nmatch == 0 && !$B_filter_and))) {
+  if (@::select && (($nmatch != @::select && $B_select_and) || ($nmatch == 0 && !$B_select_and))) {
     $Ndisc++;
     next unless $B_print_tally;
   }
@@ -559,10 +564,10 @@ while (<>) {
 
 print STDERR "-- $Ncmts comment lines in input\n" if $M_comment && $B_verbose;
 my $would = $B_print_tally ? ' would' : '';
-print STDERR "-- $Nkeep/$Ndisc rows$would have been kept/discarded\n" if @::filter && $B_verbose;
+print STDERR "-- $Nkeep/$Ndisc rows$would have been kept/discarded\n" if @::select && $B_verbose;
 
 my $B_header = 1 - $B_headless;
-print STDERR "== Line tally check failed: ($Nrows != $B_header+$Nkeep+$Ndisc\n" if $Nrows != $B_header+$Nkeep+$Ndisc;
+print STDERR "== Line tally check failed: ($Nrows != $B_header+$Nkeep+$Ndisc)\n" if $Nrows != $B_header+$Nkeep+$Ndisc;
 
 
 __DATA__
@@ -570,12 +575,19 @@ __DATA__
    s o m e   i d e a s
    -  catch divide by zero before it happens.
    -  predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI ?
-   ?  -s short-circuit filtering: in and-filtering bail out after first fail
-      -> can help prevent failing later filters in heterogeneous data.
+      written colum index: ^^COLUMN ^^COLUMN0.
+   -? descriptions of operators, e.g. rep
+   ?  -s short-circuit selecting: in and-selecting bail out after first fail
+      -> can help prevent failing later select criterions in heterogeneous data.
    -  clearly define all interactions between -a, -i, -x, -f
    -  operators to validate column type (integer, regex) .. half-exists already.
+   -  rep is a lot of (memory) rope. Some warning/protection/override mechanism?
+   -  reheader option that only manipulates header names, does no parsing otherwise.
    -  tests
-   -  ifelse(filtername,compute1,compute2) is beyond scope for now.
+   ?? normalise all columns relative to one as percentage or fraction. wildcard selection?
+      would require population at creation of @HEADER time.  foo*::^^it:anycov,div^100,mul
+      Maybe more an R thing.
+   ?? ifelse(selectname,compute1,compute2) is beyond scope for now.
       -> o and c operators to delimit blocks, could become quite fiendish.
          ^filtname,o....,c,o......c,ifelse, c would know how many things below it until o.
    ?  numerical comparisons check field is numeric
