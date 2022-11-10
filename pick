@@ -13,7 +13,7 @@
                                      use warnings;
 @::spec = @ARGV; @ARGV = ();
 
-@::output_nm  = ();         # names - (header|1..N) + handles
+@::output_nm  = ();         # names - (header|1..N) + compute handles
 @::output_os  = ();         # names translated to offsets in @F (field array)
 @::compute = ();            # derived column specifications
 @::select  = ();            # row select specifications
@@ -28,7 +28,7 @@ my $B_print_tally  = 0;     # Print trailing T column with count of selections m
 my $B_printall     = 0;     # Select all columns
 my $B_inplace      = 0;     # Allow derived column to redefine existing column name
 my $B_excise       = 0;     # print all except the plain column handles listed, cannot combine with $B_printall
-my $B_add_row_column = 0;   # See -H
+my $B_add_row_column = 0;   # See -H, EOH
 my $B_headless     = 0;     # No header (-k option)
 my $B_force        = 0;     # Force output if identical output names exist
 my $M_comment      = 0;     # M_ode: 0 oblivious, 1 strip, 2 pass
@@ -89,7 +89,7 @@ my %cp_opdefinitions =
             # For /ep/ and /om/ third argument is $::EPSILON/$::OOM or specified suffix.
             # 40 41 etc just to keep sort order when outputting list of select ops,
             # as '/' is overloaded in a slightly confusing way (negation and num op delimiter),
-            # as is '~' (matching and string op delimiter)
+            # as is '~' (matching and string op delimiter). This keeps them grouped together.
             #
 my %sel_opdefinitions = (
   '~'          => [ 40, sub { $_[0] =~ /$_[1]/ } ],
@@ -204,13 +204,14 @@ while (@::spec && $::spec[0] =~ /^-/) {
     print $help_options, "\n";
     print "\nSelect/compute forms:$spec_forms\n";
     print "\nOperators for compute:\n";
-    print "  Take 0: @ops0\n";
+    print "  Stack control: @ops0\n";
     print "  Take 1: @ops1\n";
     print "  Take 2: @ops2\n";
     print "  Take 3: @ops3\n";
     print "\nSelect comparison operators:\n";
     print "  @opsf\n";
-    print "\nSee -H for longer description, including <COMPUTE> format and operators and select operators.\n";
+    print "\nCOMPUTE: <part>+ where <part> is one of ^<value> :<handle> ,<operator>\n";
+    print "\nSee -H for longer descriptions.\n";
     exit 0;
   }
   elsif ($options =~ /H/) {
@@ -502,16 +503,17 @@ my $Nkeep = 0;
 
 while (<>) {
 
-  chomp;
-  my @F = split "\t", $_, -1;
-  my $rowname = undef;
-
   if ($M_comment && /^$CMT/) {
     print "$_\n" if $M_comment == 2;
     $Ncmts++;
     next;
   }
-  elsif (!$Nrows) {
+
+  chomp;
+  my @F = split "\t", $_, -1;
+  my $rowname = undef;
+
+  if (!$Nrows) {
     @::HEADER = $B_headless ? (1..@F) : @F;
     wrangle_header();
     if ($B_print_header) {
@@ -529,11 +531,11 @@ while (<>) {
 
   if (!$B_headless && $::N+1 == @F) {
     print STDERR "-- adjusting for header row count discrepancy ($::N)\n" if $B_verbose && $Nrows == 2;
-    if ($Nrows == 2)            { $::extra_rownames = 1; }
-    elsif (!$::extra_rownames)  { die "Row count inconsistency at line $.\n"; }
+    if ($Nrows == 2)              { $::B_extra_rownames = 1; }
+    elsif (!$::B_extra_rownames)  { die "Row count inconsistency line $.\n"; }
     $rowname = shift @F;
   }
-  elsif ($::extra_rownames || $::N != @F) {
+  elsif ($::B_extra_rownames || $::N != @F) {
     die "Row count inconsistency at line $.\n";
   }
 
@@ -569,6 +571,19 @@ print STDERR "-- $Nkeep/$Ndisc rows$would have been kept/discarded\n" if @::sele
 
 my $B_header = 1 - $B_headless;
 print STDERR "== Line tally check failed: ($Nrows != $B_header+$Nkeep+$Ndisc)\n" if $Nrows != $B_header+$Nkeep+$Ndisc;
+
+
+
+       ####        ####
+      ##   #      #   ##
+     #                  #
+    ##                  ##
+    ##     R. I. P.     ##
+     ##                ##
+      ##    recol     ##
+       ##            ##
+         ##        ##
+           #      #
 
 
 __DATA__

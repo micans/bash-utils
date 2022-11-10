@@ -20,13 +20,14 @@ now.
   Filter rows, select and update columns, combine and compute new columns with
   `pick`.  It supports algebraic operations as well as string operations and
   regular expressions in both filter conditions and computation. I've made
-  several versions over the years, this is the first one that is fun to use
-  with an implementation not bordering on hideous, although the commit history
-  of pick reveals a fairly hideous detour.
+  several versions over the years (most called `recol`). This is the first one
+  that is fun to use with an implementation not bordering on hideous, although
+  the commit history of pick reveals a fairly hideous detour and slow winding
+  way to a concise implementation.
 
-  A useful feature is that column operations and row clauses are expressed in column names
-  for tables with a header line or indexes otherwise. Row filtering can refer
-  to derived columns, derived columns can utilise earlier derived columns, and derived
+  Column operations and row clauses are *expressed in column names for tables with a header line*
+  or indexes otherwise. Row filtering can referenc
+  derived columns, derived columns can utilise earlier derived columns, and derived
   columns can be included in the output.
 
   The interface is a tiny command-line format to describe column selection,
@@ -48,12 +49,20 @@ pick foo bar tim @bar~ge~a @bar~lt~c @tim/gt/0 < data.txt
    # as above, also output doodle which is column yam with column bob subtracted
    # and column zut added, filter on doodle fields larger than -2.
    #
-pick foo bar tim doodle doodle::yam:bob,sub:zut,add @bar~ge~a @bar~lt~c @tim/gt/0 @doodle/gt/-2 < data.txt
+pick foo bar tim doodle::yam:bob,sub:zut,add @bar~ge~a @bar~lt~c @tim/gt/0 @doodle/gt/-2 < data.txt
+
+   # as above, using indexes for headerless data
+   #
+pick -k 2 5 3 doodle::1:4,sub:7,add @5~ge~a @5~lt~c @3/gt/0 @doodle/gt/-2 < data.txt
 ```
 
   I add whatever functionality seems useful. Hence it is currently possible to encrypt your
   data with rot13 or reverse complement DNA/RNA. The documentation is output when given `-H` -
-  `-h` is the option to prevent output of column names.
+  `-h` is the option to prevent output of column names, or `-l` for a more concise summary
+  of options and syntax.
+
+  Supported compute operators:
+  `dup pop xch abs cos exp exp10 lc len log log10 rc rev rot13 sign sin sq sqrt tan uc add and cat div get max min mod mul or pow rep sub xor ed edg`
 
 
 ## Unix terminal histograms and bar charts
