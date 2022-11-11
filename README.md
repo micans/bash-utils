@@ -26,7 +26,7 @@ now.
   way to a concise implementation.
 
   Column operations and row clauses are *expressed in column names for tables with a header line*
-  or indexes otherwise. Row filtering can referenc
+  or indexes otherwise. Row filtering can reference
   derived columns, derived columns can utilise earlier derived columns, and derived
   columns can be included in the output.
 
@@ -62,7 +62,7 @@ pick -k 2 5 3 doodle::1:4,sub:7,add @5~ge~a @5~lt~c @3/gt/0 @doodle/gt/-2 < data
   of options and syntax.
 
   Supported compute operators:
-  `dup pop xch abs cos exp exp10 lc len log log10 rc rev rot13 sign sin sq sqrt tan uc add and cat div get max min mod mul or pow rep sub xor ed edg`
+  `dup pop xch abs cos exp exp10 lc len log log10 rc rev rot13 sign sin sq sqrt tan uc add and cat div get max min mod mul or pow sub xor ed edg`
 
 
 ## Unix terminal histograms and bar charts

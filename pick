@@ -56,7 +56,7 @@ my %cp_opdefinitions =
      xor       => [ 2, sub { $::STACK[-2] ^= $::STACK[-1] } ],
      max       => [ 2, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] > $::STACK[-2] } ],
      min       => [ 2, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] < $::STACK[-2] } ],
-     rep       => [ 2, sub { $::STACK[-2] = $::STACK[-2] x $::STACK[-1] } ],
+     # rep       => [ 2, sub { $::STACK[-2] = $::STACK[-2] x $::STACK[-1] } ],
 
      get       => [ 2, sub { my $item =  $::STACK[-2] =~ /$::STACK[-1]/
                                          ? (defined($1) ? $1 : $&) : ""; $::STACK[-2] = $item; } ],
@@ -252,19 +252,19 @@ Colon introduces a column name; <VAL> is url-decoded; a leading ^ is removed.
   <handle> refers to a column name or an earlier computed derived column, or
   column index with -k (headerless input).  <op> is one of
 
-Takes:
-  0  | @ops0
-  1  | @ops1
-  2  | @ops2
-  3  | @ops3
+  Stack control: @ops0
+  Take 1 | @ops1
+  Take 2 | @ops2
+  Take 3 | @ops3
 
-  If the very first part starts anything other than [,:^] it is inferred to be a handle
-  (leading : not needed).  <COMPUTE> is a stack, so zut::foo:bar,add^str,cat
-  creates a new column called zut by adding columns foo and bar and then
-  concatenating 'str'. The default operation is concatenation; if no operators
-  are left the remainder of the stack is concatenated. Thus the above is
-  equivalent to zut::foo:bar,add^str. To just prefix a column: zut::^foo:zut
-  To concatenate two columns: zut::foo:bar . Below: get, ed and edg examples.
+  If the very first part starts with anything other than [,:^] it is inferred
+  to be a handle (leading : not needed).  <COMPUTE> is a stack, so
+  zut::foo:bar,add^str,cat creates a new column called zut by adding columns
+  foo and bar and then concatenating 'str'. The default operation is
+  concatenation; if no operators are left the remainder of the stack is
+  concatenated. Thus the above is equivalent to zut::foo:bar,add^str. To just
+  prefix a column: zut::^foo:zut To concatenate two columns: zut::foo:bar .
+  Below: get, ed and edg examples.
 
    :handle^str1,get      =>  handle =~ s/str1/MATCH/
    :handle^str1^str2,ed  =>  handle =~ s/str1/str2/ 
