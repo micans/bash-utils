@@ -53,7 +53,7 @@ my $SUBLEVELS  =  8;      # capitals for constants maybe
 my $user_min   =  undef;
 my $user_max   =  undef;
 my $user_Ymax  =  undef;
-my $NBINS      =  80;
+my $NBINS      =  100;
 my $zilch      =  ' ';
 my $canvaslrh  =  undef;
 
@@ -82,7 +82,7 @@ Options:
 --stair-sep=X     use X as separator to split stairs (default $stairsep)
 --zilch=S         use S as filler for histogram (default space)
 --ymax=NUM        set maximum for y axis; ignored if too small
---cv=l,r[,n[,h]]  set canvas (((xmin, xmax), nbins), ymax) simultaneously
+--cv=l/r[/n[/h]]  set canvas (((xmin, xmax), nbins), height) simultaneously
 
 Normal output is formed by vertical bars (regular histogram for numerical distributions).
 With --tallyin  horizontal bars are output, preceded by labels, followed by counts.
@@ -132,7 +132,7 @@ die "Two many modes (--histin --tallyin)\n" if $tallyin + $histin >= 2;
 
 if (defined($canvaslrh)) {
   if ($canvaslrh =~ s|^(\S+?)/(\S+?)/(\S+)/(\S+)$|$&|) {
-    ($user_min, $user_max, $NBINS, $user_Ymax) = ($1, $2, $3, $4);
+    ($user_min, $user_max, $NBINS, $height) = ($1, $2, $3, $4);
   }
   elsif ($canvaslrh =~ s|^(\S+?)/(\S+?)/(\S+)$|$&|) {
     ($user_min, $user_max, $NBINS) = ($1, $2, $3);
@@ -151,7 +151,7 @@ elsif ($emoji) {
                      # say hi to flushed, woozy, monocle, grinning and sunglasses.
   $staircase = '😳-🥴-🧐-😀-😎';
   $zilch = '  ' unless $zilch ne ' ';      #  Used to have 'anxious face with sweat' 😰
-  $NBINS = 20 if $NBINS == 80;
+  $NBINS = 20 if $NBINS == 100;
 }
 elsif ($tallyin) {
   $staircase = $stonehenge;
