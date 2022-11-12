@@ -43,6 +43,7 @@ my $n_args     =  @ARGV;
 my $help       =  0;
 my $debug      =  0;
 my $cumulative =  0;
+my $terse      =  0;
 my $plain      =  0;
 my $emoji      =  0;
 my $histin     =  0;      # input data is already histogram data
@@ -77,6 +78,7 @@ Options:
 --cumulative      print cumulative histogram
 --histin          input is already histogram counts
 --tallyin         input is the output of uniq (line format <count> <item>)
+--terse           do not print quantile and bin information
 
 --stairs=x-y[-z]* use these as cursor sublevels (argument will split on '$stairsep' or --sep)
 --stair-sep=X     use X as separator to split stairs (default $stairsep)
@@ -120,6 +122,7 @@ if
    ,  "emoji"           =>   \$emoji
    ,  "histin"          =>   \$histin
    ,  "tallyin"         =>   \$tallyin
+   ,  "terse"           =>   \$terse
    ,  "emoji_"          =>   \$emosep
    )
 )
@@ -435,7 +438,12 @@ if ($out_of_range) {
   $oor = ' oor=' . $N_out_of_range . sprintf("/%.1f", 100 * $N_out_of_range / $ND_orig) . '%';
 }
 
-my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND_orig);
-print "ND=$ND$oor hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax\n";
-print "topbin(i=$bigbinid,n=$bigbin,p=$bigbinpct,x~$bigbinmid) bw=$width q=($q1\[$p1],$q2\[$p2],$q3\[$p3])\n";
+if ($terse) {
+}
+else {
+  my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND_orig);
+  print "ND=$ND$oor hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax\n";
+  print "topbin(i=$bigbinid,n=$bigbin,p=$bigbinpct,x~$bigbinmid) bw=$width q=($q1\[$p1],$q2\[$p2],$q3\[$p3])\n";
+}
+
 
