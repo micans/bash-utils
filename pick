@@ -592,12 +592,14 @@ __DATA__
    -  catch divide by zero before it happens.
    -  predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI ?
       written colum index: ^^COLUMN ^^COLUMN0.
-   -? descriptions of operators, e.g. rep
+   -? descriptions of operators
+   -  implement in Python.
+   -  implement in cimfomfa/C.
    ?  -s short-circuit selecting: in and-selecting bail out after first fail
       -> can help prevent failing later select criterions in heterogeneous data.
    -  clearly define all interactions between -a, -i, -x, -f
    -  operators to validate column type (integer, regex) .. half-exists already.
-   -  rep is a lot of (memory) rope. Some warning/protection/override mechanism?
+   #  rep is a lot of (memory) rope. Some warning/protection/override mechanism?
    -  reheader option that only manipulates header names, does no parsing otherwise.
    -  tests
    ?? normalise all columns relative to one as percentage or fraction. wildcard selection?
