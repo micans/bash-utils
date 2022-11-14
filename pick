@@ -25,6 +25,7 @@ my $B_print_header = 1;     # B_oolean
 my $B_select_and   = 1;     # Require all selections to match (use -o for any)
 my $B_print_rowname = 0;    # cannot combine with $B_headless.
 my $B_print_tally  = 0;     # Print trailing T column with count of selections matched
+my $B_print_lineno = 0;     #
 my $B_printall     = 0;     # Select all columns
 my $B_inplace      = 0;     # Allow derived column to redefine existing column name
 my $B_excise       = 0;     # print all except the plain column handles listed, cannot combine with $B_printall
@@ -139,7 +140,8 @@ my $help_options=q{Options:
   -k headerless input, use 1 2 .. for column names
   -a print all input columns (selecting by colspec applies, -t accepted)
   -h do not print header
-  -t do not select, print tally column of count of matched row select criteria
+  -T do not select, print tally column of count of matched row select criteria (name T)
+  -L print line number column (name L)
   -o OR multiple criteria (default is AND)
   -v verbose
   -x take complement of selected input column(s) (works with -i)
@@ -181,7 +183,8 @@ while (@::spec && $::spec[0] =~ /^-/) {
   $B_select_and   = 0 if $options =~ /o/;
   $B_verbose      = 1 if $options =~ /v/;
   $B_print_rowname= 1 if $options =~ /r/;
-  $B_print_tally  = 1 if $options =~ /t/;
+  $B_print_tally  = 1 if $options =~ /T/;
+  $B_print_lineno = 1 if $options =~ /L/;
   $B_printall     = 1 if $options =~ /a/;
   $B_excise       = 1 if $options =~ /x/;
   $B_add_row_column =1 if $options =~ /R/;
@@ -371,8 +374,8 @@ print STDERR "-- adding select criterion handle=[$handle] op=[$op] val=[$val] ar
   }
 }
 
-sub add_tally {
-  print "\t" if @::output_os; print $_[0];
+sub add_column {
+  print "\t" if $::N_column_output++; print $_[0];
 }
 
 sub wrangle_header {
@@ -519,7 +522,9 @@ while (<>) {
     if ($B_print_header) {
       local $, = "\t";
       print map { $::HEADER[$_] } @::output_os;
-      add_tally("T") if $B_print_tally;
+      $::N_column_output = @::output_os;
+      add_column("L") if $B_print_lineno;
+      add_column("T") if $B_print_tally;
       print "\n";
     }
     $Nrows++;
@@ -561,7 +566,10 @@ while (<>) {
 
   local $" = "\t";
   print "@outputs";
-  add_tally($nmatch) if $B_print_tally;
+  $::N_column_output = @outputs;
+
+  add_column($Nrows)  if $B_print_lineno;
+  add_column($nmatch) if $B_print_tally;
   print "\n";
 }
 
