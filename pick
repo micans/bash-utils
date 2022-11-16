@@ -145,7 +145,6 @@ my $help_options=q{Options:
   -c strip lines starting with the comment sign (cf -/ option)
   -C pass lines starting with the comment sign unchanged (cf -/ option)
   -i in-place: <HANDLE>::<COMPUTE> replaces <HANDLE> if it exists
-  -z print miscellaneous information, e.g. url encoding hex codes
   -/<str> treat <str> at beginning of line as comment line, e.g. -/@ for sam files (implies -c)
   -v verbose
 
@@ -154,15 +153,19 @@ my $help_options=q{Options:
   -L print file line number column (name L)
   -N print table row number column (name N)
 
-  -r print rownames if row name field in header is the empty string.
-    in this case _ is the name to select with <op> on rownames.
+  -r print rownames if row name field in header is the empty string
+    in this case _ is the name to select with <op> on rownames
   -R add _ column if no row name field exists in the header;
-    NOTE an empty field is recognised and mapped to _ automatically.
+    NOTE an empty field is recognised and mapped to _ automatically
   -f force output (overrides identical output columns)
   -K (weird mode) header exists but use 1 2 .. for column names (selection not applied to header)
+    (consider using a=longcolumnname b=longercolumname; pick $a $b @$b/gt/0 @$a/lt/0 < data.txt)
 
-  options can be combined, use e.g. -ok/@ for headerless input, comment lines indicated by @
-  and selects OR selection.
+  -z ARG+ prints url-encoding of ARG+
+  -l Concise help output
+  -H Longer pick description
+
+  Options combine, e.g. -ok/@ for headerless input, comments indicated by @ and OR selection.
   -AT is useful for inspecting/checking select criteria
   use -Ai <name>::<COMPUTE> to change column <name> to <COMPUTE>,
   use -Aik <num>::<COMPUTE> to change column <num> to <COMPUTE>.};
@@ -172,7 +175,11 @@ my $spec_forms = q{
   (2) @<HANDLE><op><VAL>       select criterion compare handle to constant value with <op>
   (3) @<HANDLE><op>:<HANDLE2>  select criterion compare handle to other handle with <op>
   (4) <HANDLE>:=<COMPUTE>      put <COMPUTE> in <HANDLE>
-  (5) <HANDLE>::<COMPUTE>      put <COMPUTE> in <HANDLE> and add <HANDLE> to output};
+  (5) <HANDLE>::<COMPUTE>      put <COMPUTE> in <HANDLE> and add <HANDLE> to output
+
+  HANDLE[2], VAL and handles and values in COMPUTE are all URL-decoded.
+  URL-encoding is generally necessary for characters in [%:^/~]. Use pick -z <string>
+  to find the url-encoding of <string> .};
 
 my @ops0 = sort grep { $cp_opdefinitions{$_}[0] == 0 } keys %cp_opdefinitions;
 my @ops1 = sort grep { $cp_opdefinitions{$_}[0] == 1 } keys %cp_opdefinitions;
@@ -204,11 +211,10 @@ while (@::spec && $::spec[0] =~ /^-/) {
   $M_comment      = 2 if $options =~ /C/;
 
   if ($options =~ /z/) {
-    my @trickylist = split "", q{ %:^,!@#$&*(){}[]<>.;`"'|?-_+=~/\\};
-    my @trickyenc  = map { sprintf("%02X", ord($_)) } @trickylist;
-    my $t1 = join "  ", @trickylist;
-    my $t2 = join " ",  @trickyenc;
-    print "$t1\n$t2\n";
+    local $, = ' ';
+    print map { urlencode($_) } @::spec;
+    if (@::spec) { print "\n"; }
+    else { print STDERR "-- No arguments given to url-encode\n"; }
     exit 0;
   }
   elsif ($options =~ /l/) {
@@ -243,10 +249,9 @@ Form (3) creates a select criterion comparing a handle to another handle.
 Form (4) creates a derived value in handle, <COMPUTE> specification below.
 Form (5) as form 4, and selects the handle for output.
 
-@<COLNAME><op>[^]<VAL>
-@<COLNAME><op>:<COLNAME>
-selects rows based on <VAL> or value in column <COLNAME>; see list below for <op>.
-Colon introduces a column name; <VAL> is url-decoded; a leading ^ is removed.
+@<COLNAME><op><VAL>
+@<COLNAME><op>:<COLNAME>  select rows based on <VAL> or value in column <COLNAME>.
+
 <op> is one of the following:
   =     String identity accept
   /=    String identity reject
@@ -258,10 +263,12 @@ Colon introduces a column name; <VAL> is url-decoded; a leading ^ is removed.
   ~eq|ne|lt|le|ge|gt~  string   comparison (equal, not equal, less than, less than or equal etc)
 
 <COMPUTE> is a concatenation of parts of the form (1) ^<string> (2) :<handle>
-  (3) ,<op> . <string> will be url-decoded. In particular, if you need one of [%^:,/~]
-  in <string> it is best to url-encode it with 25, 5E, 3A, 2C, 2F, 7E respectively.
+  (3) ,<op> . <string> and <handle> will be url-decoded. In particular, if you
+  need one of [%^:,/~] in <string> it is best to url-encode it with 25, 5E, 3A,
+  2C, 2F, 7E respectively; use pick -z <string> to find its URL-encoded form.
   <handle> refers to a column name or an earlier computed derived column, or
   column index with -k (headerless input).  <op> is one of
+
 
   Stack control: @ops0
   Take 1 | @ops1
@@ -338,6 +345,12 @@ print STDERR "-- $handle >> type=$type op=$what N=$opdef->[0], code=$opdef->[1]\
   return \@oplist;
 }
 
+sub urlencode {
+   my $val = shift;
+   $val =~ s/([^A-Za-z0-9\-_.])/ uc sprintf "%%%0x", ord $1 /eg;
+   return $val;
+}
+
 sub urldecode {
    my $val = shift;
    $val =~ s/%([A-Fa-f\d]{2})/chr hex $1/eg;
@@ -348,7 +361,7 @@ sub urldecode {
 for my $spec (@::spec) {
      # fixme: ':=' or '::' cannot occur in handle in compute. url-decoding handle can remedy that.
   if ($spec =~ /(.*?)(:[:=])(.*)/) {
-    my ($handle, $type, $compute) = ($1, $2, $3);
+    my ($handle, $type, $compute) = (urldecode($1), $2, $3);
     my $stack = parse_stack($handle, $compute);
     push @::compute, [$handle, $stack];
     push @::output_nm, $handle if $type eq '::';
@@ -358,28 +371,22 @@ for my $spec (@::spec) {
                 #  V value or :handle
                 #    ( H )([ a1](      a2    )[ a3]|  b    | c | d )( V)(  arg )
   elsif ($spec =~ /^@(.*?)([\/~](?:[a-z]{2,4})[\/~]|[=~]{1}|\/=|\/~)(.*?)(\/.*?)?$/) {
-    my ($handle, $op, $val, $arg) = ($1, $2, $3, $4);
+    my ($handle, $op, $val, $arg) = (urldecode($1), $2, urldecode($3), $4);
     die "Unrecognised operator [$op]\n" unless defined($sel_opdefinitions{$op});
     if (defined($arg)) {
       die "Extra argument currently only allowed for /ep/ and /om/" unless $op =~ /^\/(ep|om)\/$/;
+      $arg=urldecode($arg);
     }
     else{
        $arg = 0;
     }
-    $arg =~ s|^/||;
 print STDERR "-- adding select criterion handle=[$handle] op=[$op] val=[$val] arg=[$arg]\n" if $B_debug;
-    my $indirection = 0;
-    if ($val =~ s/^://) {
-      $indirection = 1;
-    }
-    else {
-      $val = urldecode($val);
-    }
-                # NOTE. $arg for now only used by /ep/ and /om/ selection, ignored by the others.
+    my $indirection = $val =~ s/^:// ? 1 : 0;
     push @::select, [$op, $indirection, $val, $handle, $arg];
+             # NOTE. $arg for now only used by /ep/ and /om/ selection, ignored by the others.
   }
   else {
-    push @::output_nm, $spec;
+    push @::output_nm, urldecode($spec);
   }
 }
 
@@ -615,15 +622,13 @@ __DATA__
 
    s o m e   i d e a s
    -  catch divide by zero before it happens.
-   -  variations for -/CMT; -//CMT anywhere; -///pat select on pattern
+   /  numerical comparisons check field is numeric; however duplicates perl's work/warnings
+   -  variations for -/CMT; -//CMT anywhere; +/pat select on pattern
    -  predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI ?
       written row/column index: ^^ROW ^^ROW0 ^^COLUMN ^^COLUMN0.
    -? descriptions of operators
    -  implement in Python.
    -  implement in cimfomfa/C.
-   ?  -s short-circuit selecting: in and-selecting bail out after first fail
-      -> can help prevent failing later select criterions in heterogeneous data.
-      -> heterogeneous data better served with -/// selection
    -  clearly define all interactions between -A, -i, -x, -f
    -  operators to validate column type (integer, regex) .. half-exists already.
    #  rep is a lot of (memory) rope. Some warning/protection/override mechanism?
@@ -631,4 +636,3 @@ __DATA__
    ?? ifelse(selectname,compute1,compute2) is beyond scope for now.
       -> o and c operators to delimit blocks, could become quite fiendish.
          ^filtname,o....,c,o......c,ifelse, c would know how many things below it until o.
-   ?  numerical comparisons check field is numeric
