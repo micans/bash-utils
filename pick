@@ -59,7 +59,6 @@ my %cp_opdefinitions =
      xor       => [ 2, sub { $::STACK[-2] ^= $::STACK[-1] } ],
      max       => [ 2, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] > $::STACK[-2] } ],
      min       => [ 2, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] < $::STACK[-2] } ],
-     # rep       => [ 2, sub { $::STACK[-2] = $::STACK[-2] x $::STACK[-1] } ],
 
      get       => [ 2, sub { my $item =  $::STACK[-2] =~ /$::STACK[-1]/
                                          ? (defined($1) ? $1 : $&) : ""; $::STACK[-2] = $item; } ],
@@ -330,7 +329,7 @@ sub parse_stack {
 
   while ($spec =~ /([,^:])([^,^:]+)/g) {
     my ($type, $what) = ($chartypetonum{$1}, $2);
-    $what = urldecode($what) if $type == $TYPE_SCALAR;
+    $what = urldecode($what) if $type == $TYPE_SCALAR || $type == $TYPE_HANDLE;     #constant.
     push @oplist, [$type, $what];
     $p = pos($spec);
     if ($type == $TYPE_OPATOR) {
@@ -371,11 +370,11 @@ for my $spec (@::spec) {
                 #  V value or :handle
                 #    ( H )([ a1](      a2    )[ a3]|  b    | c | d )( V)(  arg )
   elsif ($spec =~ /^@(.*?)([\/~](?:[a-z]{2,4})[\/~]|[=~]{1}|\/=|\/~)(.*?)(\/.*?)?$/) {
-    my ($handle, $op, $val, $arg) = (urldecode($1), $2, urldecode($3), $4);
+    my ($handle, $op, $val, $arg) = (urldecode($1), $2, urldecode($3), $4);      #constant
     die "Unrecognised operator [$op]\n" unless defined($sel_opdefinitions{$op});
     if (defined($arg)) {
       die "Extra argument currently only allowed for /ep/ and /om/" unless $op =~ /^\/(ep|om)\/$/;
-      $arg=urldecode($arg);
+      $arg=urldecode($arg);      #constant
     }
     else{
        $arg = 0;
@@ -605,34 +604,32 @@ my $B_header = 1 - $B_headless;
 print STDERR "== Line tally check failed: ($Nrows != $B_header+$Nkeep+$Ndisc)\n" if $Nrows != $B_header+$Nkeep+$Ndisc;
 
 
-
-       ####        ####
-      ##   #      #   ##
-     #                  #
-    ##                  ##
-    ##     R. I. P.     ##
-     ##                ##
-      ##    recol     ##
-       ##            ##
-         ##        ##
-           #      #
-
-
+                                      ####        ####
+                                     ##   #      #   ##
+                                    #                  #
+                                   ##                  ##
+                                   ##     R. I. P.     ##
+                                    ##                ##
+                                     ##    recol     ##
+                                      ##            ##
+                                        ##        ##
+                                          #      #
 __DATA__
 
    s o m e   i d e a s
+
    -  catch divide by zero before it happens.
    /  numerical comparisons check field is numeric; however duplicates perl's work/warnings
    -  variations for -/CMT; -//CMT anywhere; +/pat select on pattern
-   -  predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI ?
-      written row/column index: ^^ROW ^^ROW0 ^^COLUMN ^^COLUMN0.
+   ?? predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI - no real need.
    -? descriptions of operators
-   -  implement in Python.
    -  implement in cimfomfa/C.
+   -  implement in Python.
    -  clearly define all interactions between -A, -i, -x, -f
    -  operators to validate column type (integer, regex) .. half-exists already.
-   #  rep is a lot of (memory) rope. Some warning/protection/override mechanism?
+   #  rep is a lot of (memory) rope. Some warning/protection/override mechanism? Removed rep.
    -  tests
    ?? ifelse(selectname,compute1,compute2) is beyond scope for now.
       -> o and c operators to delimit blocks, could become quite fiendish.
          ^filtname,o....,c,o......c,ifelse, c would know how many things below it until o.
+
