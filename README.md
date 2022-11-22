@@ -33,27 +33,35 @@ now.
   The interface is a tiny command-line format to describe column selection,
   row filtering, and derived column computation. It was designed to avoid shell
   meta characters as much as possible. Derived columns are computed in a tiny
-  stack language that accepts column names, constant values, and operators.
+  stack language that accepts column names (`:<name>`), constant values (`^<value>`)
+  and operators (`,<op>`).
 
 ```
    # pick columns foo bar from data.txt.
    #
 pick foo bar < data.txt
 
-   # pick columns foo bar tim with rows where bar fields compare
-   # lexicographically between a inclusive and c exclusive and tim fields are
-   # larger than zero.
+   # as above, also output new column doodle which is column yam with column
+   # bob subtracted and constant value '1' added. (interval length for inclusive bounds)
    #
-pick foo bar tim @bar~ge~a @bar~lt~c @tim/gt/0 < data.txt
+pick foo bar doodle::yam:bob,sub^1,add
+   #
+   # <name>::<compute> puts the result of <compute> in <name> and outputs it
+   # <name>:=<compute> puts the result of <compute> in <name> (for comparison or further use)
+   #
+   # : signifies a handle,
+   # , signifies an operator
+   # ^ signifies a constant value
 
-   # as above, also output doodle which is column yam with column bob subtracted
-   # and column zut added, filter on doodle fields larger than -2.
+   # pick columns foo bar with rows where tim fields are larger than zero.
    #
-pick foo bar tim doodle::yam:bob,sub:zut,add @bar~ge~a @bar~lt~c @tim/gt/0 @doodle/gt/-2 < data.txt
+pick foo bar @tim/gt/0 < data.txt
 
-   # as above, using indexes for headerless data
+   # pick the length of column foo without printing a header, pipe it to hissyfit.
+   # Each compute needs an associated name that is unique (the part before ::).
+   # In this example the unique name is the empty string.
    #
-pick -k 2 5 3 doodle::1:4,sub:7,add @5~ge~a @5~lt~c @3/gt/0 @doodle/gt/-2 < data.txt
+pick -h ::foo,len < data.txt | hissyfit
 ```
 
   I add whatever functionality seems useful. Hence it is currently possible to encrypt your

@@ -13,6 +13,15 @@
                                      use warnings;
 @::spec = @ARGV; @ARGV = ();
 
+sub helphelp {
+   my $status = shift;
+   print STDERR "Use -l (list) for concise help, -H for long help, -h suppresses header line output\n";
+   print STDERR "Pick only works as a pipe, so invoke e.g. as: pick foo bar < data.txt\n";
+   exit $status;
+}
+
+helphelp(0) unless @::spec;
+
 @::output_nm  = ();         # names - (header|1..N) + compute handles
 @::output_os  = ();         # names translated to offsets in @F (field array)
 @::compute = ();            # derived column specifications
@@ -191,32 +200,32 @@ while (@::spec && $::spec[0] =~ /^-/) {
 
   my $options = shift @::spec;
   ($CMT, $M_comment) = ($1, 1) if $options =~ s/\/(.*)$//;
-  $B_print_header = 0 if $options =~ /h/;
-  $B_select_and   = 0 if $options =~ /o/;
-  $B_verbose      = 1 if $options =~ /v/;
-  $B_print_rowname= 1 if $options =~ /r/;
-  $B_print_tally  = 1 if $options =~ /T/;
-  $B_print_lineno = 1 if $options =~ /L/;
-  $B_print_rowno  = 1 if $options =~ /N/;
-  $B_printall     = 1 if $options =~ /A/;
-  $B_excise       = 1 if $options =~ /x/;
-  $B_add_row_column =1 if $options =~ /R/;
-  $B_headless     = 1 if $options =~ /k/;
-  ($B_headless, $B_weirdmode) = (1, 1) if $options =~ /K/;
-  $B_debug        = 1 if $options =~ /d/;
-  $B_force        = 1 if $options =~ /f/;
-  $B_inplace      = 1 if $options =~ /i/;
-  $M_comment      = 1 if $options =~ /c/;
-  $M_comment      = 2 if $options =~ /C/;
+  $B_print_header = 0 if $options =~ s/h//;
+  $B_select_and   = 0 if $options =~ s/o//;
+  $B_verbose      = 1 if $options =~ s/v//;
+  $B_print_rowname= 1 if $options =~ s/r//;
+  $B_print_tally  = 1 if $options =~ s/T//;
+  $B_print_lineno = 1 if $options =~ s/L//;
+  $B_print_rowno  = 1 if $options =~ s/N//;
+  $B_printall     = 1 if $options =~ s/A//;
+  $B_excise       = 1 if $options =~ s/x//;
+  $B_add_row_column =1 if $options =~ s/R//;
+  $B_headless     = 1 if $options =~ s/k//;
+  ($B_headless, $B_weirdmode) = (1, 1) if $options =~ s/K//;
+  $B_debug        = 1 if $options =~ s/d//;
+  $B_force        = 1 if $options =~ s/f//;
+  $B_inplace      = 1 if $options =~ s/i//;
+  $M_comment      = 1 if $options =~ s/c//;
+  $M_comment      = 2 if $options =~ s/C//;
 
-  if ($options =~ /z/) {
+  if ($options =~ s/z//) {
     local $, = ' ';
     print map { urlencode($_) } @::spec;
     if (@::spec) { print "\n"; }
     else { print STDERR "-- No arguments given to url-encode\n"; }
     exit 0;
   }
-  elsif ($options =~ /l/) {
+  elsif ($options =~ s/l//) {
     print $help_options, "\n";
     print "\nSelect/compute forms:$spec_forms\n";
     print "\nOperators for compute:\n";
@@ -292,14 +301,17 @@ Form (5) as form 4, and selects the handle for output.
 EOH
   exit 0;
   }
+  if ($options ne '-') {
+    print STDERR "Option string not fully parsed: $options remains\n";
+    exit 1;
+  }
 }
 
 die "-a -x do not combine\n" if $B_printall && $B_excise;
 die "-r -k do not combine\n" if $B_print_rowname && $B_headless;
 $B_print_header = 0 if $B_headless;
 
-# die "Need something (use -l for short help, -H for longer description)\n" unless @::spec || $B_printall;
-# Turns out we don't need anything. pick -NLT < abc works, for example. Or even pick < abc.
+helphelp(1) unless @::spec || $B_printall;
 
 sub interval_plus {
   my ($x, $y, $val) = @_;
@@ -618,8 +630,9 @@ __DATA__
 
    s o m e   i d e a s
 
-   -  catch divide by zero before it happens.
+   -  -f is useless in the sense that the same name implies the same content.
    /  numerical comparisons check field is numeric; however duplicates perl's work/warnings
+   ?  catch divide by zero before it happens.
    -  variations for -/CMT; -//CMT anywhere; +/pat select on pattern
    ?? predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI - no real need.
    -? descriptions of operators
