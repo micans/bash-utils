@@ -44,7 +44,7 @@ pick foo bar < data.txt
    # as above, also output new column doodle which is column yam with column
    # bob subtracted and constant value '1' added. (interval length for inclusive bounds)
    #
-pick foo bar doodle::yam:bob,sub^1,add
+pick foo bar doodle::yam:bob,sub^1,add < data.txt
    #
    # <name>::<compute> puts the result of <compute> in <name> and outputs it
    # <name>:=<compute> puts the result of <compute> in <name> (for comparison or further use)

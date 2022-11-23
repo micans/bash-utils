@@ -28,9 +28,9 @@ helphelp(0) unless @::spec;
 @::select  = ();            # row select specifications
 %::handle_map = ();         # map column names to offsets
 
-my $CMT = '#';              # ::/my style is somewhat intractable.
+my $PAT_IGNORE     = '';    # ::/my style is somewhat intractable. :: tend to be thing accessed in subroutines.
 
-my $B_print_header = 1;     # B_oolean
+my $B_print_header = 1;     # B_oolean. Also accessed in subroutines.
 my $B_select_and   = 1;     # Require all selections to match (use -o for any)
 my $B_print_rowname = 0;    # cannot combine with $B_headless.
 my $B_print_tally  = 0;     # Print trailing T column with count of selections matched
@@ -43,7 +43,7 @@ my $B_add_row_column = 0;   # See -H, EOH
 my $B_headless     = 0;     # No header (-k option)
 my $B_weirdmode    = 0;     # Header exists, but users wants to use numbers (turns of selections for header)
 my $B_force        = 0;     # Force output if identical output names exist
-my $M_comment      = 0;     # M_ode: 0 oblivious, 1 strip, 2 pass
+my $M_ignore       = 0;     # M_ode: 0 oblivious, 1 skip, 2 pass
 my $B_debug        = 0;     # Mostly documents the stages of compute and selection definitions
 my $B_verbose      = 0;     # Not terrifically interesting
 
@@ -150,10 +150,10 @@ my $help_options=q{Options:
   -h do not print header
   -o OR multiple criteria (default is AND)
   -x take complement of selected input column(s) (works with -i)
-  -c strip lines starting with the comment sign (cf -/ option)
-  -C pass lines starting with the comment sign unchanged (cf -/ option)
   -i in-place: <HANDLE>::<COMPUTE> replaces <HANDLE> if it exists
-  -/<str> treat <str> at beginning of line as comment line, e.g. -/@ for sam files (implies -c)
+  -/<pat>  skip lines matching <pat>; use e.g. -/^# for commented lines, -/^@ for sam files
+  -//<pat> pass through lines matching <pat>
+     <pat> allows perl regular expressions, e.g. ^ $ . [] * ? (|) work.
   -v verbose
 
   -A print all input columns (selecting by colspec applies, -T accepted)
@@ -167,7 +167,8 @@ my $help_options=q{Options:
     NOTE an empty field is recognised and mapped to _ automatically
   -f force output (overrides identical output columns)
   -K (weird mode) header exists but use 1 2 .. for column names (selection not applied to header)
-    (consider using a=longcolumnname b=longercolumname; pick $a $b @$b/gt/0 @$a/lt/0 < data.txt)
+    1. consider using a=longcolumnname b=longercolumname; pick $a $b @$b/gt/0 @$a/lt/0 < data.txt
+    2. -h has no effect with -K, you need to pipe output to tail -n +2; hence consider 1.
 
   -z ARG+ prints url-encoding of ARG+
   -l Concise help output
@@ -199,7 +200,8 @@ my @opsf = sort { $sel_opdefinitions{$a}[0] <=> $sel_opdefinitions{$b}[0] } keys
 while (@::spec && $::spec[0] =~ /^-/) {
 
   my $options = shift @::spec;
-  ($CMT, $M_comment) = ($1, 1) if $options =~ s/\/(.*)$//;
+  ($PAT_IGNORE, $M_ignore) = ($1, 2) if $options =~ s/\/\/(.*)$//;
+  ($PAT_IGNORE, $M_ignore) = ($1, 1) if $options =~ s/\/([^\/].*)$//;
   $B_print_header = 0 if $options =~ s/h//;
   $B_select_and   = 0 if $options =~ s/o//;
   $B_verbose      = 1 if $options =~ s/v//;
@@ -215,8 +217,6 @@ while (@::spec && $::spec[0] =~ /^-/) {
   $B_debug        = 1 if $options =~ s/d//;
   $B_force        = 1 if $options =~ s/f//;
   $B_inplace      = 1 if $options =~ s/i//;
-  $M_comment      = 1 if $options =~ s/c//;
-  $M_comment      = 2 if $options =~ s/C//;
 
   if ($options =~ s/z//) {
     local $, = ' ';
@@ -228,6 +228,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
   elsif ($options =~ s/l//) {
     print $help_options, "\n";
     print "\nSelect/compute forms:$spec_forms\n";
+    print "\n  COMPUTE: <part>+ where <part> is one of ^<value> :<handle> ,<operator>\n";
     print "\nOperators for compute:\n";
     print "  Stack control: @ops0\n";
     print "  Take 1: @ops1\n";
@@ -235,7 +236,6 @@ while (@::spec && $::spec[0] =~ /^-/) {
     print "  Take 3: @ops3\n";
     print "\nSelect comparison operators:\n";
     print "  @opsf\n";
-    print "\nCOMPUTE: <part>+ where <part> is one of ^<value> :<handle> ,<operator>\n";
     print "\nSee -H for longer descriptions.\n";
     exit 0;
   }
@@ -527,15 +527,15 @@ sub do_compute {
 
 
 my $Nrows = 0;    # includes header.
-my $Ncmts = 0;
+my $Nignr = 0;
 my $Ndisc = 0;
 my $Nkeep = 0;
 
 while (<>) {
 
-  if ($M_comment && /^$CMT/) {
-    print "$_" if $M_comment == 2;
-    $Ncmts++;
+  if ($M_ignore && /$PAT_IGNORE/) {
+    print "$_" if $M_ignore == 2;
+    $Nignr++;
     next;
   }
 
@@ -608,7 +608,7 @@ while (<>) {
   print "\n";
 }
 
-print STDERR "-- $Ncmts comment lines in input\n" if $M_comment && $B_verbose;
+print STDERR "-- $Nignr ignored lines in input\n" if $M_ignore && $B_verbose;
 my $would = $B_print_tally ? ' would' : '';
 print STDERR "-- $Nkeep/$Ndisc rows$would have been kept/discarded\n" if @::select && $B_verbose;
 
@@ -630,13 +630,14 @@ __DATA__
 
    s o m e   i d e a s
 
+   ?? +/pat select on pattern?
+   ?? -E <num> take lines with <num> fields, pass/filter the rest.
    -  -f is useless in the sense that the same name implies the same content.
    /  numerical comparisons check field is numeric; however duplicates perl's work/warnings
    ?  catch divide by zero before it happens.
-   -  variations for -/CMT; -//CMT anywhere; +/pat select on pattern
    ?? predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI - no real need.
    -? descriptions of operators
-   -  implement in cimfomfa/C.
+   -  implement in cimfomfa/C (regular expressions not as good).
    -  implement in Python.
    -  clearly define all interactions between -A, -i, -x, -f
    -  operators to validate column type (integer, regex) .. half-exists already.

@@ -424,3 +424,7 @@ function rc() {
    fi
 }
 
+function trtn {
+   tr '\t' '\n'
+}
+
