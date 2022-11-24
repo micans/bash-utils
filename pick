@@ -174,7 +174,7 @@ my $help_options=q{Options:
   -l Concise help output
   -H Longer pick description
 
-  Options combine, e.g. -ok/@ for headerless input, comments indicated by @ and OR selection.
+  Options combine, e.g. -ok/^@ for headerless input, comments indicated by ^@, OR selection.
   -AT is useful for inspecting/checking select criteria
   use -Ai <name>::<COMPUTE> to change column <name> to <COMPUTE>,
   use -Aik <num>::<COMPUTE> to change column <num> to <COMPUTE>.};
@@ -185,6 +185,9 @@ my $spec_forms = q{
   (3) @<HANDLE><op>:<HANDLE2>  select criterion compare handle to other handle with <op>
   (4) <HANDLE>:=<COMPUTE>      put <COMPUTE> in <HANDLE>
   (5) <HANDLE>::<COMPUTE>      put <COMPUTE> in <HANDLE> and add <HANDLE> to output
+
+  COMPUTE: <part>+ where <part> is one of ^<value> :<handle> ,<operator>
+  Later computes have access to HANDLEs that were computed before.
 
   HANDLE[2], VAL and handles and values in COMPUTE are all URL-decoded.
   URL-encoding is generally necessary for characters in [%:^/~]. Use pick -z <string>
@@ -228,7 +231,6 @@ while (@::spec && $::spec[0] =~ /^-/) {
   elsif ($options =~ s/l//) {
     print $help_options, "\n";
     print "\nSelect/compute forms:$spec_forms\n";
-    print "\n  COMPUTE: <part>+ where <part> is one of ^<value> :<handle> ,<operator>\n";
     print "\nOperators for compute:\n";
     print "  Stack control: @ops0\n";
     print "  Take 1: @ops1\n";
@@ -245,7 +247,7 @@ Usage: pick [options] <colspec>+ < FILE
 Simple example: pick TAG ID < table.txt
 
 <colspec>$spec_forms
-See further below for <op> list.
+  See further below for <op> list.
 
 $help_options
 
