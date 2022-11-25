@@ -19,7 +19,7 @@ now.
 
   `pick` can be thought of as a hybrid of (unix) `cut`, `R` and `awk`. It can select
   columns like `cut`, but allows doing so either by column name or column index;
-  it understands the concept of a header line. Column names or indexes become
+  it understands both header lines and row names. Column names or indexes become
   variables; these variables can be used to create new columns using arithmetic
   or string operations, or to update an existing column.
   The same variables can be used in conditional expressions
@@ -46,7 +46,11 @@ now.
    #
 pick foo bar < data.txt
 
-   # as above, also output new column doodle which is column yam with column
+   # select all columns (-A), add 1 to column foo in-place (-i).
+   #
+pick -Ai foo::foo^1,add < data.txt
+
+   # as the first, also output new column doodle which is column yam with column
    # bob subtracted and constant value '1' added. (interval length for inclusive bounds)
    #
 pick foo bar doodle::yam:bob,sub^1,add < data.txt
