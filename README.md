@@ -17,24 +17,29 @@ now.
 
 ## Stream compute on rows/columns in tabular data.
 
-  Filter rows, select and update columns, combine and compute new columns with
-  `pick`.  It supports algebraic operations as well as string operations and
-  regular expressions in both filter conditions and computation. I've made
-  several versions over the years (most called `recol`). This is the first one
-  that is fun to use with an implementation not bordering on hideous, although
-  the commit history of pick reveals a fairly hideous detour and slow winding
-  way to a concise implementation.
+  `pick` can be thought of as a hybrid of (unix) `cut`, `R` and `awk`. It can select
+  columns like `cut`, but allows doing so either by column name or column index;
+  it understands the concept of a header line. Column names or indexes become
+  variables; these variables can be used to create new columns using arithmetic
+  or string operations, or to update an existing column.
+  The same variables can be used in conditional expressions
+  to filter rows of interest.
 
-  Column operations and row clauses are *expressed in column names for tables with a header line*
-  or indexes otherwise. Row filtering can reference
-  derived columns, derived columns can utilise earlier derived columns, and derived
-  columns can be included in the output.
+  `pick` is the latest incarnation of a concept that I've attempted and failed at
+  many times over the years.  The recent ones were all called `recol`.  This is
+  the first one that is fun to use with an implementation not bordering on
+  hideous, although the commit history of pick reveals a fairly hideous detour
+  and slow winding way to a concise implementation.
 
   The interface is a tiny command-line format to describe column selection,
   row filtering, and derived column computation. It was designed to avoid shell
   meta characters as much as possible. Derived columns are computed in a tiny
   stack language that accepts column names (`:<name>`), constant values (`^<value>`)
   and operators (`,<op>`).
+
+  `pick` and `hissyfit` are a powerful combination. I aim to either find a good
+  terminal scatterplot script or add it myself for unmitigated textual science joy.
+
 
 ```
    # pick columns foo bar from data.txt.
