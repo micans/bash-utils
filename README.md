@@ -17,8 +17,8 @@ now.
 
 ## Stream compute on rows/columns in tabular data.
 
-  `pick` can be thought of as a hybrid of (unix) `cut`, `R` and `awk`. It can select
-  columns like `cut`, but allows doing so either by column name or column index;
+  `pick` can be thought of as (unix) `cut` on steroids, augmented with aspects of `R` and `awk`.
+  It can select columns like `cut`, but allows doing so either by column name or column index;
   it understands both header lines and row names. Column names or indexes become
   variables; these variables can be used to create new columns using arithmetic
   or string operations, or to update an existing column.
