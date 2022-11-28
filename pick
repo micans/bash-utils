@@ -372,7 +372,6 @@ sub urldecode {
 
 
 for my $spec (@::spec) {
-     # fixme: ':=' or '::' cannot occur in handle in compute. url-decoding handle can remedy that.
   if ($spec =~ /(.*?)(:[:=])(.*)/) {
     my ($handle, $type, $compute) = (urldecode($1), $2, $3);
     my $stack = parse_stack($handle, $compute);
@@ -452,11 +451,16 @@ sub wrangle_header {
       if ($type == $TYPE_HANDLE) {
          die "Handle $what in compute $name does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$what});
          $comp->[1] = $::handle_map{$what};     # fixme overwrite inelegant
+                              # inplace NOTE. when using foo::foo^1,add, this maps the lookup for the second foo to the offset
+                              # for the current foo, and the second foo no longer exists. The first foo does not have an
+                              # associated offset yet;
       }
     }
     my $j = $::N + $i;
     $::HEADER[$j] = $name;        # only needed to print the new header.
     $::handle_map{$name} = $j;
+                              # inplace NOTE continued. Future lookups for foo will refer to this definition; This includes output.
+                              # This process is consistently applied if multiple foo:: are specified.
     print STDERR "-- map compute name $name to offset $j\n" if $B_debug;
   }
 
@@ -533,6 +537,7 @@ my $Nignr = 0;
 my $Ndisc = 0;
 my $Nkeep = 0;
 
+
 while (<>) {
 
   if ($M_ignore && /$PAT_IGNORE/) {
@@ -542,7 +547,7 @@ while (<>) {
   }
 
   chomp;
-  my @F = split "\t", $_, -1;
+  my @F = $_ ? split "\t", $_, -1 : ("");
   my $rowname = undef;
 
   if (!$Nrows) {
@@ -633,16 +638,13 @@ __DATA__
    s o m e   i d e a s
 
    ?? +/pat select on pattern?
-   ?? -E <num> take lines with <num> fields, pass/filter the rest.
    -  -f is useless in the sense that the same name implies the same content.
    /  numerical comparisons check field is numeric; however duplicates perl's work/warnings
-   ?  catch divide by zero before it happens.
-   ?? predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI - no real need.
-   -? descriptions of operators
+   ?  optionally catch divide by zero before it happens.
+   ?  predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI - no real need.
+   -  descriptions of operators
    -  implement in cimfomfa/C (regular expressions not as good).
-   -  implement in Python.
    -  clearly define all interactions between -A, -i, -x, -f
-   -  operators to validate column type (integer, regex) .. half-exists already.
    #  rep is a lot of (memory) rope. Some warning/protection/override mechanism? Removed rep.
    -  tests
    ?? ifelse(selectname,compute1,compute2) is beyond scope for now.
