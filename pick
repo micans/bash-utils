@@ -341,7 +341,7 @@ sub parse_stack {
   $spec = ":$spec" if substr($spec, 0, 1) !~ /[\/^:]/;
   my $l = length($spec);
 
-  while ($spec =~ /([,^:])([^,^:]+)/g) {
+  while ($spec =~ /([,^:])([^,^:]*)/g) {
     my ($type, $what) = ($chartypetonum{$1}, $2);
     $what = urldecode($what) if $type == $TYPE_SCALAR || $type == $TYPE_HANDLE;     #constant.
     push @oplist, [$type, $what];
