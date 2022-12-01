@@ -165,7 +165,7 @@ my $help_options=q{Options:
     in this case _ is the name to select with <op> on rownames
   -R add _ column if no row name field exists in the header;
     NOTE an empty field is recognised and mapped to _ automatically
-  -f force output (overrides identical output columns)
+  -f force processing (allows both identical input and output column names)
   -K (weird mode) header exists but use 1 2 .. for column names (selection not applied to header)
     1. consider using a=longcolumnname b=longercolumname; pick $a $b @$b/gt/0 @$a/lt/0 < data.txt
     2. -h has no effect with -K, you need to pipe output to tail -n +2; hence consider 1.
@@ -416,7 +416,7 @@ sub wrangle_header {
 
   for (my $i=0; $i<@::HEADER; $i++) {
     my $name = $::HEADER[$i];
-    die "Name $name defined more than once\n" if defined($::handle_map{$name});
+    die "Name $name defined more than once\n" if defined($::handle_map{$name}) && !defined($B_force);
     $::handle_map{$name} = $i;   
     print STDERR "-- map header name $name to offset $i\n" if $B_debug;
   }

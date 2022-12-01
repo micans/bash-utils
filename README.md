@@ -39,6 +39,7 @@ now.
 
   `pick` and `hissyfit` are a powerful combination. I aim to either find a good
   terminal scatterplot script or add it myself for unmitigated textual science joy.
+  [YouPlot](https://github.com/red-data-tools/YouPlot) looks quite promising.
 
 
 ```
@@ -66,9 +67,9 @@ pick foo bar doodle::yam:bob,sub^1,add < data.txt
    #
 pick foo bar @tim/gt/0 < data.txt
 
-   # pick the length of column foo without printing a header, pipe it to hissyfit.
-   # Each compute needs an associated name that is unique (the part before ::).
-   # In this example the unique name is the empty string.
+   # pick the length of column foo items without printing a header, pipe it to
+   # hissyfit.  Each compute needs an associated name that is unique (the part
+   # before ::).  In this example the unique name is the empty string.
    #
 pick -h ::foo,len < data.txt | hissyfit
 ```
