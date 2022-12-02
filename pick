@@ -148,7 +148,7 @@ my %sel_opdefinitions = (
 my $help_options=q{Options:
   -k headerless input, use 1 2 .. for column names (see also -K below)
   -h do not print header
-  -o OR multiple criteria (default is AND)
+  -o OR multiple select criteria (default is AND)
   -x take complement of selected input column(s) (works with -i)
   -i in-place: <HANDLE>::<COMPUTE> replaces <HANDLE> if it exists
   -/<pat>  skip lines matching <pat>; use e.g. -/^# for commented lines, -/^@ for sam files
@@ -313,7 +313,7 @@ die "-a -x do not combine\n" if $B_printall && $B_excise;
 die "-r -k do not combine\n" if $B_print_rowname && $B_headless;
 $B_print_header = 0 if $B_headless;
 
-helphelp(1) unless @::spec || $B_printall;
+helphelp(1) unless @::spec || $B_printall || $B_excise;
 
 sub interval_plus {
   my ($x, $y, $val) = @_;
