@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+use Digest::MD5 qw(md5_hex);
+
        ##                                                                               ##
       ##      Pick columns and select rows from tabular input, add derived columns       ##
      ##                 Pick and select either by column name or index                    ##
@@ -74,11 +76,13 @@ my %cp_opdefinitions =
 
      ed        => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/  } ],
      edg       => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
+     substr    => [ 3, sub { $::STACK[-3] =  substr($::STACK[-3], $::STACK[-2], $::STACK[-1]) } ],
 
      uc        => [ 1, sub { $::STACK[-1] = uc($::STACK[-1]) }         ],
      lc        => [ 1, sub { $::STACK[-1] = lc($::STACK[-1]) }         ],
      rev       => [ 1, sub { $::STACK[-1] = reverse($::STACK[-1]) }    ],
      rot13     => [ 1, sub { $::STACK[-1] =~ tr/a-zA-Z/n-za-mN-ZA-M/ } ],
+     md5       => [ 1, sub { $::STACK[-1] = md5_hex($::STACK[-1]) }    ],
      len       => [ 1, sub { $::STACK[-1] = length($::STACK[-1]) }     ],
      rc        => [ 1, sub { $::STACK[-1] =~ tr/acgtuACGTU/tgcaaTGCAA/; $::STACK[-1] = reverse($::STACK[-1]) } ],
      abs       => [ 1, sub { $::STACK[-1] = abs($::STACK[-1]) }        ],
