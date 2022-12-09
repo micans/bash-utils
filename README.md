@@ -29,7 +29,7 @@ now.
   many times over the years.  The recent ones were all called `recol`.  This is
   the first one that is fun to use, surprisingly powerful, and an implementation
   that has some aspects of elegance, although the commit history of pick
-  reveals a fairly hideous detour and slow winding way to a conciseness.
+  reveals a fairly hideous detour and slow winding way to conciseness.
 
   The interface is a tiny command-line format to describe column selection,
   row filtering, and derived column computation. It was designed to avoid shell
@@ -51,6 +51,12 @@ pick foo bar < data.txt
    #
 pick -Ai foo::foo^1,add < data.txt
 
+   # pick columns foo bar with rows where tim fields are larger than zero.
+   # multiple @ selections are possible; default is AND, use -o for OR.
+   # tim can refer to a newly computed variable
+   #
+pick foo bar @tim/gt/0 < data.txt
+
    # as the first, also output new column doodle which is column yam with column
    # bob subtracted and constant value '1' added. (interval length for inclusive bounds)
    #
@@ -63,11 +69,7 @@ pick foo bar doodle::yam:bob,sub^1,add < data.txt
    # , signifies an operator
    # ^ signifies a constant value
 
-   # pick columns foo bar with rows where tim fields are larger than zero.
-   #
-pick foo bar @tim/gt/0 < data.txt
-
-   # pick the length of column foo items without printing a header, pipe it to
+   # pick the length of items in column foo without printing a header, pipe it to
    # hissyfit.  Each compute needs an associated name that is unique (the part
    # before ::).  In this example the unique name is the empty string.
    #
