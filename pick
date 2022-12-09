@@ -70,6 +70,8 @@ my %cp_opdefinitions =
      xor       => [ 2, sub { $::STACK[-2] ^= $::STACK[-1] } ],
      max       => [ 2, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] > $::STACK[-2] } ],
      min       => [ 2, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] < $::STACK[-2] } ],
+     dd        => [ 2, sub { $::STACK[-2] = sprintf("%.*f", $::STACK[-1], $::STACK[-2]) } ],
+     zeropad   => [ 2, sub { my $l = $::STACK[-1] - length($::STACK[-2]); $l = 0 if $l < 0; $::STACK[-2] = '0' x $l . $::STACK[-2] } ],
 
      get       => [ 2, sub { my $item =  $::STACK[-2] =~ /$::STACK[-1]/
                                          ? (defined($1) ? $1 : $&) : ""; $::STACK[-2] = $item; } ],
@@ -78,6 +80,12 @@ my %cp_opdefinitions =
      edg       => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
      substr    => [ 3, sub { $::STACK[-3] =  substr($::STACK[-3], $::STACK[-2], $::STACK[-1]) } ],
 
+     tobin     => [ 1, sub { $::STACK[-1] = sprintf("%b", $::STACK[-1]) } ],
+     tohex     => [ 1, sub { $::STACK[-1] = sprintf("%x", $::STACK[-1]) } ],
+     tooct     => [ 1, sub { $::STACK[-1] = sprintf("%o", $::STACK[-1]) } ],
+     binto     => [ 1, sub { $::STACK[-1] = oct("0b$::STACK[-1]") } ],
+     hexto     => [ 1, sub { $::STACK[-1] = hex($::STACK[-1]) } ],
+     octto     => [ 1, sub { $::STACK[-1] = oct($::STACK[-1]) } ],
      uc        => [ 1, sub { $::STACK[-1] = uc($::STACK[-1]) }         ],
      lc        => [ 1, sub { $::STACK[-1] = lc($::STACK[-1]) }         ],
      rev       => [ 1, sub { $::STACK[-1] = reverse($::STACK[-1]) }    ],
