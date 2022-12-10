@@ -71,7 +71,7 @@ my %cp_opdefinitions =
      max       => [ 2, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] > $::STACK[-2] } ],
      min       => [ 2, sub { $::STACK[-2] = $::STACK[-1] if $::STACK[-1] < $::STACK[-2] } ],
      dd        => [ 2, sub { $::STACK[-2] = sprintf("%.*f", $::STACK[-1], $::STACK[-2]) } ],
-     zeropad   => [ 2, sub { my $l = $::STACK[-1] - length($::STACK[-2]); $l = 0 if $l < 0; $::STACK[-2] = '0' x $l . $::STACK[-2] } ],
+     zp        => [ 2, sub { my $l = $::STACK[-1] - length($::STACK[-2]); $l = 0 if $l < 0; $::STACK[-2] = '0' x $l . $::STACK[-2] } ],
 
      get       => [ 2, sub { my $item =  $::STACK[-2] =~ /$::STACK[-1]/
                                          ? (defined($1) ? $1 : $&) : ""; $::STACK[-2] = $item; } ],
@@ -250,7 +250,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
     print "  Take 3: @ops3\n";
     print "\nSelect comparison operators:\n";
     print "  @opsf\n";
-    print "\nSee -H for longer descriptions.\n";
+    print "\nSee -H for longer descriptions and some operator explanations.\n";
     exit 0;
   }
   elsif ($options =~ /H/) {
@@ -304,11 +304,13 @@ Form (5) as form 4, and selects the handle for output.
   concatenation; if no operators are left the remainder of the stack is
   concatenated. Thus the above is equivalent to zut::foo:bar,add^str. To just
   prefix a column: zut::^foo:zut To concatenate two columns: zut::foo:bar .
-  Below: get, ed and edg examples.
+  Below: examples/explanations for some operators that may not be self-explanatory.
 
    :handle^str1,get      =>  handle =~ s/str1/MATCH/
    :handle^str1^str2,ed  =>  handle =~ s/str1/str2/ 
    :handle^str1^str2,edg =>  handle =~ s/str1/str2/g
+   :handle^num1^num2,substr =>  substring(handle, num1=offset, num2=count)
+   :handle^num1,zp       =>  left-padding with zeroes to length num1
 
   MATCH refers to () if present in str1, matched part otherwise.
   str1 accepts most/all perl regular expression syntax.
@@ -649,6 +651,7 @@ __DATA__
 
    s o m e   i d e a s
 
+   -  currently (no loops) stack underflow could be pre-computed in wrangle_header
    ?? +/pat select on pattern?
    -  -f is useless in the sense that the same name implies the same content.
    /  numerical comparisons check field is numeric; however duplicates perl's work/warnings
