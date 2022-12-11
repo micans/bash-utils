@@ -79,6 +79,8 @@ my %cp_opdefinitions =
      ed        => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/  } ],
      edg       => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
      substr    => [ 3, sub { $::STACK[-3] =  substr($::STACK[-3], $::STACK[-2], $::STACK[-1]) } ],
+     pct       => [ 3, sub { $::STACK[-3] = $::STACK[-2] ? sprintf("%.*f", $::STACK[-1], $::STACK[-3] * 100 / $::STACK[-2]) : '-' } ],
+     frac      => [ 3, sub { $::STACK[-3] = $::STACK[-2] ? sprintf("%.*f", $::STACK[-1], $::STACK[-3] / $::STACK[-2]) : '-' } ],
 
      tobin     => [ 1, sub { $::STACK[-1] = sprintf("%b", $::STACK[-1]) } ],
      tohex     => [ 1, sub { $::STACK[-1] = sprintf("%x", $::STACK[-1]) } ],
@@ -306,14 +308,16 @@ Form (5) as form 4, and selects the handle for output.
   prefix a column: zut::^foo:zut To concatenate two columns: zut::foo:bar .
   Below: examples/explanations for some operators that may not be self-explanatory.
 
-   :handle^str1,get      =>  handle =~ s/str1/MATCH/
-   :handle^str1^str2,ed  =>  handle =~ s/str1/str2/ 
-   :handle^str1^str2,edg =>  handle =~ s/str1/str2/g
-   :handle^num1^num2,substr =>  substring(handle, num1=offset, num2=count)
-   :handle^num1,zp       =>  left-padding with zeroes to length num1
-
-  MATCH refers to () if present in str1, matched part otherwise.
-  str1 accepts most/all perl regular expression syntax.
+stack   op      result
+------+---------+-------------------------------------------------------------------
+x e   | get     |  x =~ s/e/MATCH/   } MATCH is \$1 corresponding to outer () if exists,
+x e z | ed      |  x =~ s/e/z/       } matched part otherwise
+x e z | edg     |  x =~ s/e/z/g      } e accepts most perl regular expression syntax
+x n   | zp      |  left-padding with zeroes to length n
+x o n | substr  |  substr(x, o=offset, n=count)
+x y n | pct     |  x as percentage of y with n decimals } '-' if y is zero
+x y n | frac    |  x as fraction of y with n decimals   }
+x n   | dd      |  x rounded to n decimals
 EOH
   exit 0;
   }
