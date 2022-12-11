@@ -655,6 +655,7 @@ __DATA__
 
    s o m e   i d e a s
 
+   ?? @@ to select before compute (e.g. avoid divide by zero)?
    -  currently (no loops) stack underflow could be pre-computed in wrangle_header
    ?? +/pat select on pattern?
    -  -f is useless in the sense that the same name implies the same content.

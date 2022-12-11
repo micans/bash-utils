@@ -47,10 +47,6 @@ now.
    #
 pick foo bar < data.txt
 
-   # select all columns (-A), add 1 to column foo in-place (-i).
-   #
-pick -Ai foo::foo^1,add < data.txt
-
    # pick columns foo bar with rows where tim fields are larger than zero.
    # multiple @ selections are possible; default is AND, use -o for OR.
    # tim can refer to a newly computed variable
@@ -69,6 +65,10 @@ pick foo bar doodle::yam:bob,sub^1,add < data.txt
    # , signifies an operator
    # ^ signifies a constant value
 
+   # select all columns (-A), add 1 to column foo in-place (-i).
+   #
+pick -Ai foo::foo^1,add < data.txt
+
    # pick the length of items in column foo without printing a header, pipe it to
    # hissyfit.  Each compute needs an associated name that is unique (the part
    # before ::).  In this example the unique name is the empty string.
@@ -82,7 +82,12 @@ pick -h ::foo,len < data.txt | hissyfit
   of options and syntax.
 
   Supported compute operators:
-  `dup pop xch abs cos exp exp10 lc len log log10 rc rev rot13 sign sin sq sqrt tan uc add and cat div get max min mod mul or pow sub xor ed edg`
+```
+Stack manipulation: xch dup pop
+Consume 1: abs binto cos exp exp10 hexto lc len log log10 md5 octto rc rev rot13 sign sin sq sqrt tan tobin tohex tooct uc
+Consume 2: add and cat dd div get max min mod mul or pow sub xor zp
+Consume 3: ed edg frac pct substr
+```
 
 
 ## Unix terminal histograms and bar charts
