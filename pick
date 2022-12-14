@@ -1,5 +1,26 @@
 #!/usr/bin/perl
 
+                   Copyright (c) 2022  Stijn van Dongen
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
 use Digest::MD5 qw(md5_hex);
 
        ##                                                                               ##
@@ -311,7 +332,7 @@ Form (5) as form 4, and selects the handle for output.
 stack   op      result
 ------+---------+-------------------------------------------------------------------
 x e   | get     |  x =~ s/e/MATCH/   } MATCH is \$1 corresponding to outer () if exists,
-x e z | ed      |  x =~ s/e/z/       } matched part otherwise
+x e z | ed      |  x =~ s/e/z/       } matched part otherwise.
 x e z | edg     |  x =~ s/e/z/g      } e accepts most perl regular expression syntax
 x n   | zp      |  left-padding with zeroes to length n
 x o n | substr  |  substr(x, o=offset, n=count)
@@ -655,8 +676,12 @@ __DATA__
 
    s o m e   i d e a s
 
-   ?? @@ to select before compute (e.g. avoid divide by zero)?
-   -  currently (no loops) stack underflow could be pre-computed in wrangle_header
+   -  -I update in-place if selection is met, pass through otherwise.
+      perhaps a conditional reroute/assignment after compute and select, e.g.
+         pick -Ai foo::<compute> foo@<select>
+      ties <select> to handle foo rather than to output: foo@ becomes a switch
+      whether to update foo or not.
+
    ?? +/pat select on pattern?
    -  -f is useless in the sense that the same name implies the same content.
    /  numerical comparisons check field is numeric; however duplicates perl's work/warnings
