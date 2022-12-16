@@ -96,6 +96,7 @@ my %cp_opdefinitions =
 
      get       => [ 2, sub { my $item =  $::STACK[-2] =~ /$::STACK[-1]/
                                          ? (defined($1) ? $1 : $&) : ""; $::STACK[-2] = $item; } ],
+     uie       => [ 2, sub { $::STACK[-2] = $::STACK[-1] unless length($::STACK[-2]) } ],
 
      ed        => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/  } ],
      edg       => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
@@ -334,6 +335,7 @@ stack   op      result
 x e   | get     |  x =~ s/e/MATCH/   } MATCH is \$1 corresponding to outer () if exists,
 x e z | ed      |  x =~ s/e/z/       } matched part otherwise.
 x e z | edg     |  x =~ s/e/z/g      } e accepts most perl regular expression syntax
+x y   | uie     |  (use if empty) x or y if x is the empty string
 x n   | zp      |  left-padding with zeroes to length n
 x o n | substr  |  substr(x, o=offset, n=count)
 x y n | pct     |  x as percentage of y with n decimals } '-' if y is zero
@@ -676,12 +678,7 @@ __DATA__
 
    s o m e   i d e a s
 
-   -  -I update in-place if selection is met, pass through otherwise.
-      perhaps a conditional reroute/assignment after compute and select, e.g.
-         pick -Ai foo::<compute> foo@<select>
-      ties <select> to handle foo rather than to output: foo@ becomes a switch
-      whether to update foo or not.
-
+   -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string.
    ?? +/pat select on pattern?
    -  -f is useless in the sense that the same name implies the same content.
    /  numerical comparisons check field is numeric; however duplicates perl's work/warnings
