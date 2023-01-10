@@ -102,6 +102,7 @@ my %cp_opdefinitions =
      cigarmax  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'max') } ],
    cigarcount  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'count') } ],
      cigarls   => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'list') } ],
+   cigarseqlen => [ 1, sub { $::STACK[-1] = acigar($::STACK[-1], 'MIS=X', 'sum') } ],
 
      ed        => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/  } ],
      edg       => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
