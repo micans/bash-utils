@@ -422,11 +422,11 @@ sub urldecode {
 sub acigar {
    my ($cigar, $subset, $mode) = @_;
    my $p;
-   my $num = 0; my $count = 0; my $max = 0; my $sum = 0; my @list = ();
-   while ($cigar =~ m/(\d+|[MIDNSHP=X])/ig) {
-     my $it = $1;
-     if ($it =~ /^\d+$/) { $num = $it; }
-     elsif ($subset =~ /$it/i) {
+   my $n = 0; my $count = 0; my $max = 0; my $sum = 0; my @list = ();
+   while ($cigar =~ m/(\d+)([MIDNSHP=X])/ig) {    # not a strict parser, e.. 1M:-)2M matches.
+     my ($num, $it) = ($1, $2);
+     $n += length($&);
+     if ($subset =~ /$it/i) {
          $count++;
          $sum += $num;
          $max = $num if $num > $max;
@@ -434,7 +434,7 @@ sub acigar {
      }   
      $p = pos($cigar);
    }
-   print STDERR "-- Unmatched cigar string $cigar at $p (line $.)\n" unless $p == length($cigar);
+   print STDERR "-- Unmatched part in cigar string $cigar at $p (line $.)\n" unless $p == length($cigar) && $n == length($cigar);
    if ($mode eq 'max')      { return $max  }
    elsif ($mode eq 'sum')   { return $sum }
    elsif ($mode eq 'count') { return $count }
