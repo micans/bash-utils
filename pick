@@ -98,6 +98,11 @@ my %cp_opdefinitions =
                                          ? (defined($1) ? $1 : $&) : ""; $::STACK[-2] = $item; } ],
      uie       => [ 2, sub { $::STACK[-2] = $::STACK[-1] unless length($::STACK[-2]) } ],
 
+     cigarsum  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'sum') } ],
+     cigarmax  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'max') } ],
+   cigarcount  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'count') } ],
+     cigarls   => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'list') } ],
+
      ed        => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/  } ],
      edg       => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
      substr    => [ 3, sub { $::STACK[-3] =  substr($::STACK[-3], $::STACK[-2], $::STACK[-1]) } ],
@@ -110,6 +115,8 @@ my %cp_opdefinitions =
      binto     => [ 1, sub { $::STACK[-1] = oct("0b$::STACK[-1]") } ],
      hexto     => [ 1, sub { $::STACK[-1] = hex($::STACK[-1]) } ],
      octto     => [ 1, sub { $::STACK[-1] = oct($::STACK[-1]) } ],
+     urldc     => [ 1, sub { $::STACK[-1] = urldecode($::STACK[-1]) } ],
+     urlec     => [ 1, sub { $::STACK[-1] = urlencode($::STACK[-1]) } ],
      uc        => [ 1, sub { $::STACK[-1] = uc($::STACK[-1]) }         ],
      lc        => [ 1, sub { $::STACK[-1] = lc($::STACK[-1]) }         ],
      rev       => [ 1, sub { $::STACK[-1] = reverse($::STACK[-1]) }    ],
@@ -257,9 +264,9 @@ while (@::spec && $::spec[0] =~ /^-/) {
   $B_force        = 1 if $options =~ s/f//;
   $B_inplace      = 1 if $options =~ s/i//;
 
-  if ($options =~ s/z//) {
+  if ($options =~ s/(z+)//) {
     local $, = ' ';
-    print map { urlencode($_) } @::spec;
+    print map { length($1) % 2 == 1 ? urlencode($_) : urldecode($_) } @::spec;
     if (@::spec) { print "\n"; }
     else { print STDERR "-- No arguments given to url-encode\n"; }
     exit 0;
@@ -409,6 +416,29 @@ sub urldecode {
    my $val = shift;
    $val =~ s/%([A-Fa-f\d]{2})/chr hex $1/eg;
    return $val;
+}
+
+sub acigar {
+   my ($cigar, $subset, $mode) = @_;
+   my $p;
+   my $num = 0; my $count = 0; my $max = 0; my $sum = 0; my @list = ();
+   while ($cigar =~ m/(\d+|[MIDNSHP=X])/ig) {
+     my $it = $1;
+     if ($it =~ /^\d+$/) { $num = $it; }
+     elsif ($subset =~ /$it/i) {
+         $count++;
+         $sum += $num;
+         $max = $num if $num > $max;
+         push @list, $num;
+     }   
+     $p = pos($cigar);
+   }
+   print STDERR "-- Unmatched cigar string $cigar at $p (line $.)\n" unless $p == length($cigar);
+   if ($mode eq 'max')      { return $max  }
+   elsif ($mode eq 'sum')   { return $sum }
+   elsif ($mode eq 'count') { return $count }
+   elsif ($mode eq 'list')  { return join ',', @list }
+   else                     { return -1 }
 }
 
 
@@ -678,7 +708,14 @@ __DATA__
 
    s o m e   i d e a s
 
-   -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string.
+   -  currently (no loops) stack underflow could be pre-computed in wrangle_header
+   -  empty/missing row name column doesnot/does work with -r. Annoying.
+      shift rowname -> no selection by col name possible, need -r.
+      leave rowname -> selection required (-r does not work)
+      -> problem that wrangling happens at header line. Advantage of shifting rownames is that it can
+      be done after that. So current solution not so bad. Alternative is to buffer header line and
+      first line and do everything then.
+   -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    ?? +/pat select on pattern?
    -  -f is useless in the sense that the same name implies the same content.
    /  numerical comparisons check field is numeric; however duplicates perl's work/warnings
