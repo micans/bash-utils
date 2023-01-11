@@ -321,13 +321,7 @@ Form (5) as form 4, and selects the handle for output.
   need one of [%^:,/~] in <string> it is best to url-encode it with 25, 5E, 3A,
   2C, 2F, 7E respectively; use pick -z <string> to find its URL-encoded form.
   <handle> refers to a column name or an earlier computed derived column, or
-  column index with -k (headerless input).  <op> is one of
-
-
-  Stack control: @ops0
-  Take 1 | @ops1
-  Take 2 | @ops2
-  Take 3 | @ops3
+  column index with -k (headerless input).
 
   If the very first part starts with anything other than [,:^] it is inferred
   to be a handle (leading : not needed).  <COMPUTE> is a stack, so
@@ -338,17 +332,29 @@ Form (5) as form 4, and selects the handle for output.
   prefix a column: zut::^foo:zut To concatenate two columns: zut::foo:bar .
   Below: examples/explanations for some operators that may not be self-explanatory.
 
-stack   op      result
-------+---------+-------------------------------------------------------------------
-x e   | get     |  x =~ s/e/MATCH/   } MATCH is \$1 corresponding to outer () if exists,
-x e z | ed      |  x =~ s/e/z/       } matched part otherwise.
-x e z | edg     |  x =~ s/e/z/g      } e accepts most perl regular expression syntax
-x y   | uie     |  (use if empty) x or y if x is the empty string
-x n   | zp      |  left-padding with zeroes to length n
-x o n | substr  |  substr(x, o=offset, n=count)
-x y n | pct     |  x as percentage of y with n decimals } '-' if y is zero
-x y n | frac    |  x as fraction of y with n decimals   }
-x n   | dd      |  x rounded to n decimals
+Explaining the self-unexplained
+   stack   op              result
+   ------+--------------+-------------------------------------------------------------------
+   x e   | get          |  x =~ s/e/MATCH/   } MATCH is \$1 corresponding to outer () if exists,
+   x e z | ed           |  x =~ s/e/z/       } matched part otherwise.
+   x e z | edg          |  x =~ s/e/z/g      } e accepts most perl regular expression syntax
+   x y   | uie          |  (use if empty) x or y if x is the empty string
+   x n   | zp           |  left-padding with zeroes to length n
+   x o n | substr       |  substr(x, o=offset, n=count)
+   x y n | pct          |  x as percentage of y with n decimals } '-' if y is zero
+   x y n | frac         |  x as fraction of y with n decimals   }
+   x n   | dd           |  x rounded to n decimals
+   c s   | cigarsum     |  sum of lengths of s items in cigar string c  } s subset of MINDSHP=X
+   c s   | cigarmax     |  max of lengths of s items in cigar string c  }
+   c s   | cigarcount   |  count of s items in cigar string c           }
+   c s   | cigarls      |  comma-separated list of s items in c,        }
+   c     | cigarseqlen  |  equivalent to "c MIS=X cigarsum" (query length)
+
+List of <op>
+  Stack control | @ops0
+  Take 1 | @ops1
+  Take 2 | @ops2
+  Take 3 | @ops3
 EOH
   exit 0;
   }
