@@ -98,6 +98,7 @@ my %cp_opdefinitions =
                                          ? (defined($1) ? $1 : $&) : ""; $::STACK[-2] = $item; } ],
      uie       => [ 2, sub { $::STACK[-2] = $::STACK[-1] unless length($::STACK[-2]) } ],
 
+   cigartally  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'tally') } ],
      cigarsum  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'sum') } ],
      cigarmax  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'max') } ],
    cigarcount  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'count') } ],
@@ -347,7 +348,8 @@ Explaining the self-unexplained
    c s   | cigarsum     |  sum of lengths of s items in cigar string c  } s subset of MINDSHP=X
    c s   | cigarmax     |  max of lengths of s items in cigar string c  }
    c s   | cigarcount   |  count of s items in cigar string c           }
-   c s   | cigarls      |  comma-separated list of s items in c,        }
+   c s   | cigarls      |  comma-separated list of s items in c,         }
+   c s   | cigartally   |  comma-separated list of items in c with counts }
    c     | cigarseqlen  |  equivalent to "c MIS=X cigarsum" (query length)
 
 List of <op>
@@ -428,10 +430,11 @@ sub urldecode {
 sub acigar {
    my ($cigar, $subset, $mode) = @_;
    my $p;
-   my $n = 0; my $count = 0; my $max = 0; my $sum = 0; my @list = ();
+   my $n = 0; my $count = 0; my $max = 0; my $sum = 0; my @list = (); my %parts = ();
    while ($cigar =~ m/(\d+)([MIDNSHP=X])/ig) {    # not a strict parser, e.. 1M:-)2M matches.
      my ($num, $it) = ($1, $2);
      $n += length($&);
+     $parts{$it} += $num;
      if ($subset =~ /$it/i) {
          $count++;
          $sum += $num;
@@ -445,6 +448,7 @@ sub acigar {
    elsif ($mode eq 'sum')   { return $sum }
    elsif ($mode eq 'count') { return $count }
    elsif ($mode eq 'list')  { return join ',', @list }
+   elsif ($mode eq 'tally') { return join ',', map { "$_=$parts{$_}" } split "", $subset }
    else                     { return -1 }
 }
 
