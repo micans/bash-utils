@@ -98,12 +98,12 @@ my %cp_opdefinitions =
                                          ? (defined($1) ? $1 : $&) : ""; $::STACK[-2] = $item; } ],
      uie       => [ 2, sub { $::STACK[-2] = $::STACK[-1] unless length($::STACK[-2]) } ],
 
-   cigartally  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'tally') } ],
-     cigarsum  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'sum') } ],
-     cigarmax  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'max') } ],
-   cigarcount  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'count') } ],
-     cigarls   => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'list') } ],
-   cigarseqlen => [ 1, sub { $::STACK[-1] = acigar($::STACK[-1], 'MIS=X', 'sum') } ],
+     cgtally   => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'tally') } ],
+     cgsum     => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'sum') } ],
+     cgmax     => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'max') } ],
+     cgrcount  => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'count') } ],
+     cgls      => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'list') } ],
+     cgseqlen  => [ 1, sub { $::STACK[-1] = acigar($::STACK[-1], 'MIS=X', 'sum') } ],
 
      ed        => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/  } ],
      edg       => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
@@ -334,23 +334,23 @@ Form (5) as form 4, and selects the handle for output.
   Below: examples/explanations for some operators that may not be self-explanatory.
 
 Explaining the self-unexplained
-   stack   op              result
-   ------+--------------+-------------------------------------------------------------------
-   x e   | get          |  x =~ s/e/MATCH/   } MATCH is \$1 corresponding to outer () if exists,
-   x e z | ed           |  x =~ s/e/z/       } matched part otherwise.
-   x e z | edg          |  x =~ s/e/z/g      } e accepts most perl regular expression syntax
-   x y   | uie          |  (use if empty) x or y if x is the empty string
-   x n   | zp           |  left-padding with zeroes to length n
-   x o n | substr       |  substr(x, o=offset, n=count)
-   x y n | pct          |  x as percentage of y with n decimals } '-' if y is zero
-   x y n | frac         |  x as fraction of y with n decimals   }
-   x n   | dd           |  x rounded to n decimals
-   c s   | cigarsum     |  sum of lengths of s items in cigar string c  } s subset of MINDSHP=X
-   c s   | cigarmax     |  max of lengths of s items in cigar string c  }
-   c s   | cigarcount   |  count of s items in cigar string c           }
-   c s   | cigarls      |  comma-separated list of s items in c,         }
-   c s   | cigartally   |  comma-separated list of items in c with counts }
-   c     | cigarseqlen  |  equivalent to "c MIS=X cigarsum" (query length)
+   stack   op            result
+   ------+------------+-------------------------------------------------------------------
+   x e   | get        |  x =~ s/e/MATCH/   } MATCH is \$1 corresponding to outer () if exists,
+   x e z | ed         |  x =~ s/e/z/       } matched part otherwise.
+   x e z | edg        |  x =~ s/e/z/g      } e accepts most perl regular expression syntax
+   x y   | uie        |  (use if empty) x or y if x is the empty string
+   x n   | zp         |  left-padding with zeroes to length n
+   x o n | substr     |  substr(x, o=offset, n=count)
+   x y n | pct        |  x as percentage of y with n decimals } '-' if y is zero
+   x y n | frac       |  x as fraction of y with n decimals   }
+   x n   | dd         |  x rounded to n decimals
+   c s   | cgsum      |  sum of lengths of s items in cigar string c  } s subset of MINDSHP=X
+   c s   | cgmax      |  max of lengths of s items in cigar string c  }
+   c s   | cgcount    |  count of s items in cigar string c           }
+   c s   | cgls       |  comma-separated list of s items in c,         }
+   c s   | cgtally    |  comma-separated list of items in c with counts }
+   c     | cgseqlen   |  equivalent to "c MIS=X cgsum" (query length)
 
 List of <op>
   Stack control | @ops0
