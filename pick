@@ -430,11 +430,12 @@ sub urldecode {
 sub acigar {
    my ($cigar, $subset, $mode) = @_;
    my $p;
-   my $n = 0; my $count = 0; my $max = 0; my $sum = 0; my @list = (); my %parts = ();
+   my $n = 0; my $count = 0; my $max = 0; my $sum = 0; my @list = ();
+   my %tally = map { ($_, 0) } split "", 'MINDSHP=X';
    while ($cigar =~ m/(\d+)([MIDNSHP=X])/ig) {    # not a strict parser, e.. 1M:-)2M matches.
      my ($num, $it) = ($1, $2);
      $n += length($&);
-     $parts{$it} += $num;
+     $tally{$it} += $num;
      if ($subset =~ /$it/i) {
          $count++;
          $sum += $num;
@@ -448,7 +449,7 @@ sub acigar {
    elsif ($mode eq 'sum')   { return $sum }
    elsif ($mode eq 'count') { return $count }
    elsif ($mode eq 'list')  { return join ',', @list }
-   elsif ($mode eq 'tally') { return join ',', map { "$_=$parts{$_}" } split "", $subset }
+   elsif ($mode eq 'tally') { return join ',', map { "$_=$tally{$_}" } split "", $subset }
    else                     { return -1 }
 }
 
