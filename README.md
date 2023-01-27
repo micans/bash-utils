@@ -15,7 +15,7 @@ of (large) tabular data.
 Apparix used to live here but has [its own repository](https://github.com/micans/apparix)
 now.
 
-## Stream compute on rows/columns in tabular data.
+## Stream compute/selection/filtering on rows/columns in tabular data.
 
   `pick` can be thought of as (unix) `cut` on steroids, augmented with aspects of `R` and `awk`.
   It can select columns like `cut`, but allows doing so either by column name or column index (with `-k`).
@@ -77,6 +77,17 @@ pick -Ai foo::foo^1,add < data.txt
    # before ::).  In this example the unique name is the empty string.
    #
 pick -h ::foo,len < data.txt | hissyfit
+
+   # Swap two columns. This is mostly to illustrate how columns and compute names interact.
+   # Compute names are just like normal variables, so to swap two values a third handle is needed.
+   #  .  -k implies no columns names are read, column handles are 1 2 3 ..
+   #  .  -A selects all columns for output.
+   #  .  -i is needed to allow overwriting existing columns 1 and 2.  
+   #  .  Assignments happen proceeding from left to right
+   #  .  := computes a value without outputting it,
+   #  .  :: computes a value and selects it for output.
+   #
+pick -Aki foo:=1 1::2 2::foo < data.txt
 ```
 
   I add whatever functionality seems useful. Hence it is currently possible to encrypt your
