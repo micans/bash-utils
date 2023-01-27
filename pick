@@ -736,12 +736,6 @@ __DATA__
    s o m e   i d e a s
 
    -  currently (no loops) stack underflow could be pre-computed in wrangle_header
-   -  empty/missing row name column doesnot/does work with -r. Annoying.
-      shift rowname -> no selection by col name possible, need -r.
-      leave rowname -> selection required (-r does not work)
-      -> problem that wrangling happens at header line. Advantage of shifting rownames is that it can
-      be done after that. So current solution not so bad. Alternative is to buffer header line and
-      first line and do everything then.
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    ?? +/pat select on pattern?
    -  -f is useless in the sense that the same name implies the same content.
@@ -756,4 +750,3 @@ __DATA__
    ?? ifelse(selectname,compute1,compute2) is beyond scope for now.
       -> o and c operators to delimit blocks, could become quite fiendish.
          ^filtname,o....,c,o......c,ifelse, c would know how many things below it until o.
-
