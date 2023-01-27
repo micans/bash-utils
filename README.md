@@ -18,18 +18,21 @@ now.
 ## Stream compute on rows/columns in tabular data.
 
   `pick` can be thought of as (unix) `cut` on steroids, augmented with aspects of `R` and `awk`.
-  It can select columns like `cut`, but allows doing so either by column name or column index;
-  it understands both header lines and row names.
+  It can select columns like `cut`, but allows doing so either by column name or column index (with `-k`).
 
-  - Column names or indexes become variables
-  - These variables can be used to create new columns using arithmetic or string operations, or to update an existing column.
-  - The same variables can be used in conditional expressions to filter rows of interest.
+  - Column names or indexes become variables.
+  - Create new columns using arithmetic and string operations on variables.
+  - Update existing columns (`-i`) in the same way.
+  - Filter rows of interest using variables in conditional expressions.
+  - Insert new columns at position `N`, keep old columns (`-A<N>`).
+  - Remove columns (`-x col1 col2 col3`).
+  - Ragged input (e.g. SAM format) with `-O<N>` (collate all columns from `N` onwards).
+  - Syntax is compact and avoids shell metacharacters.
 
-  `pick` is the latest incarnation of a concept that I've attempted and failed at
+  `pick` is the latest incarnation of a concept that I've attempted
   many times over the years.  The recent ones were all called `recol`.  This is
   the first one that is fun to use, surprisingly powerful, and an implementation
-  that has some aspects of elegance, although the commit history of pick
-  reveals a fairly hideous detour and slow winding way to conciseness.
+  that has some aspects of elegance.
 
   The interface is a tiny command-line format to describe column selection,
   row filtering, and derived column computation. It was designed to avoid shell
