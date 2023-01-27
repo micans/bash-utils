@@ -52,9 +52,16 @@ pick foo bar < data.txt
 
    # pick columns foo bar with rows where tim fields are larger than zero.
    # multiple @ selections are possible; default is AND, use -o for OR.
-   # tim can refer to a newly computed variable
+   # tim can refer to a newly computed variable.
    #
 pick foo bar @tim/gt/0 < data.txt
+   #                                   Comparison operators are many:
+   #   = /=                            string identy select, avoid
+   #   ~ /~                            string (Perl) regular expression select, avoid
+   #   ~eq~ ~ne~ ~lt~ ~le~ ~ge~ ~gt~   string comparison
+   #   /eq/ /ne/ /lt/ /le/ /ge/ /gt/   numerical comparison
+   #   /ep/ /om/                       numerical proximity (additive, multiplicative)
+   #   /all/ /any/ /none/              bit selection
 
    # as the first, also output new column doodle which is column yam with column
    # bob subtracted and constant value '1' added. (interval length for inclusive bounds)
@@ -64,9 +71,9 @@ pick foo bar doodle::yam:bob,sub^1,add < data.txt
    # <name>::<compute> puts the result of <compute> in <name> and outputs it
    # <name>:=<compute> puts the result of <compute> in <name> (for comparison or further use)
    #
-   # : signifies a handle,
-   # , signifies an operator
-   # ^ signifies a constant value
+   #   : signifies a handle,
+   #   , signifies an operator
+   #   ^ signifies a constant value
 
    # select all columns (-A), add 1 to column foo in-place (-i).
    #
@@ -79,28 +86,38 @@ pick -Ai foo::foo^1,add < data.txt
 pick -h ::foo,len < data.txt | hissyfit
 
    # Swap two columns. This is mostly to illustrate how columns and compute names interact.
-   # Compute names are just like normal variables, so to swap two values a third handle is needed.
-   #  .  -k implies no columns names are read, column handles are 1 2 3 ..
-   #  .  -A selects all columns for output.
-   #  .  -i is needed to allow overwriting existing columns 1 and 2.  
-   #  .  Assignments happen proceeding from left to right
-   #  .  := computes a value without outputting it,
-   #  .  :: computes a value and selects it for output.
+   # Compute names are like normal variables, so to swap two values a third name is needed.
    #
 pick -Aki foo:=1 1::2 2::foo < data.txt
+   #
+   #   -k implies no columns names are read, column handles are 1 2 3 ..
+   #   -A selects all columns for output.
+   #   -i is needed to allow overwriting existing columns 1 and 2.  
+   #   Assignments happen proceeding from left to right
+   #   := computes a value without outputting it,
+   #   :: computes a value and selects it for output.
 ```
 
-  I add whatever functionality seems useful. Hence it is currently possible to encrypt your
-  data with rot13 or reverse complement DNA/RNA. The documentation is output when given `-H` -
-  `-h` is the option to prevent output of column names, or `-l` for a more concise summary
-  of options and syntax.
+  Pick supports a wide range of functionality. Standard arithmetic, bit
+  operations and a number of math functions are provided (see below).  It is also possible
+  to match and extract substrings using Perl regexes (as a derived value or new
+  column) with `get`, change an existinig column using a regex with `ed` and
+  `edg`, compute md5 sums, URL-encode and decode, convert to and from binary,
+  octal and hex, reverse complement DNA/RNA, and extract statistics from cigar
+  strings. Display options include formatting of fractions and percentages
+  and zero padding of integers.
+  
+  The documentation is output when given `-H` - `-h` is the option to prevent
+  output of column names, or `-l` for a more concise summary of options and
+  syntax.
 
   Supported compute operators:
 ```
-Stack manipulation: xch dup pop
-Consume 1: abs binto cos exp exp10 hexto lc len log log10 md5 octto rc rev rot13 sign sin sq sqrt tan tobin tohex tooct uc
-Consume 2: add and cat dd div get max min mod mul or pow sub xor zp
+Stack control: dup pop xch
+Consume 1: abs binto cgseqlen cos exp exp10 hexto lc len log log10 md5 octto rc rev rot13 sign sin sq sqrt tan tobin tohex tooct uc urldc urlec
+Consume 2: add and cat cgcount cgls cgmax cgsum cgtally dd div get max min mod mul or pow sub uie xor zp
 Consume 3: ed edg frac pct substr
+
 ```
 
 
