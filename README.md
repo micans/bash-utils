@@ -63,6 +63,10 @@ pick foo bar @tim/gt/0 < data.txt
    #   /ep/ /om/                       numerical proximity (additive, multiplicative)
    #   /all/ /any/ /none/              bit selection
 
+   # as above, but compare to column bob (indicated by leading :)
+   #
+pick foo bar @tim/gt/:bob < data.txt
+
    # as the first, also output new column doodle which is column yam with column
    # bob subtracted and constant value '1' added. (interval length for inclusive bounds)
    #
