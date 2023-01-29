@@ -50,6 +50,7 @@ helphelp(0) unless @::spec;
 @::compute = ();            # derived column specifications
 @::select  = ();            # row select specifications
 %::handle_map = ();         # map column names to offsets
+%::plain_handle = ();       # handles without any compute following.
 
 my $PAT_IGNORE     = '';    # ::/my style is somewhat intractable. :: tend to be thing accessed in subroutines.
 my $INSERT_OFFSET  = undef; # with -A, where to put extra columns (by default at the end).
@@ -378,7 +379,6 @@ EOH
   }
 }
 
-die "-a -x do not combine\n" if $B_printall && $B_excise;
 die "-O<N> requires -k\n" if $OFFSET_OMEGA > 0 && !$B_headless;
 
 $B_print_header = 0 if $B_headless;
@@ -495,6 +495,7 @@ print STDERR "-- adding select criterion handle=[$handle] op=[$op] val=[$val] ar
   }
   else {
     push @::output_nm, urldecode($spec);
+    $::plain_handle{$::output_nm[-1]}++;
   }
 }
 
@@ -518,14 +519,14 @@ sub wrangle_header {
   }
 
   print STDERR "-- output column names as specified: @::output_nm\n" if $B_debug;
-  if ($B_excise) {         # note excise we end up with input order.
-    my %excise = map { ($_, 1) } @::output_nm;
-    @::output_nm = ((grep { !defined($excise{$_}) } @::HEADER), (grep { !defined($inheader{$_}) } @::output_nm));
-  }
-  elsif ($B_printall) {
-    print STDERR "-- adding new columns in @::output_nm to header names\n" if @::output_nm && $B_debug;
+  if ($B_excise || $B_printall) {
     my @add = grep { !defined($inheader{$_}) } @::output_nm;
-    @::output_nm = @::HEADER;
+    if ($B_excise) {
+       @::output_nm = grep { !defined($::plain_handle{$_}) } @::HEADER
+    }
+    else {
+       @::output_nm = @::HEADER;
+    }
     if (defined($INSERT_OFFSET)) {
       $INSERT_OFFSET = @::output_nm if $INSERT_OFFSET > @::output_nm;
       $INSERT_OFFSET = -1 * @::output_nm if $INSERT_OFFSET < -1 * @::output_nm;
@@ -603,6 +604,10 @@ print STDERR "-- output columns @::output_os --\n" if $B_debug;
     { my ($code, $indirection, $val, $name, $arg) = @$sel;
 print STDERR "-- select code=$code ind=$indirection val=$val name=$name arg=$arg --\n" if $B_debug; }
 
+  }
+
+  for (@::HEADER) {
+    $_ = '' if $_ eq '_';
   }
 }
 
