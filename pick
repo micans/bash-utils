@@ -59,8 +59,6 @@ my $OFFSET_OMEGA   = -1;    # with -O<N>, accept overflow ragged columns from po
 my $B_print_header = 1;     # B_oolean. Also accessed in subroutines.
 my $B_select_and   = 1;     # Require all selections to match (use -o for any)
 my $B_print_tally  = 0;     # Print trailing T column with count of selections matched
-my $B_print_lineno = 0;     # Do it
-my $B_print_rowno  = 0;     # Just do it
 my $B_printall     = 0;     # Select all columns
 my $B_inplace      = 0;     # Allow derived column to redefine existing column name
 my $B_excise       = 0;     # print all except the plain column handles listed, cannot combine with $B_printall
@@ -86,6 +84,8 @@ my %cp_opdefinitions =
      pop       => [ 0, sub { stacky('pop', 1); pop @::STACK } ],
      dup       => [ 0, sub { stacky('dup', 1); push @::STACK, $::STACK[-1]  } ],
      xch       => [ 0, sub { stacky('xch', 2); ($::STACK[-2], $::STACK[-1]) = ($::STACK[-1], $::STACK[-2]) } ],
+     rowno     => [ 0, sub { push @::STACK, $::Nrows -1+$B_headless } ],
+     lineno    => [ 0, sub { push @::STACK, $.      } ],
      mod       => [ 2, sub { $::STACK[-2] %= $::STACK[-1] } ],
      pow       => [ 2, sub { $::STACK[-2] **= $::STACK[-1] } ],
      and       => [ 2, sub { $::STACK[-2] &= $::STACK[-1] } ],
@@ -207,8 +207,6 @@ my $help_options=q{Options:
   -A<N> <N> integer; insert new columns at position <N>. Negative <N> is relative to rightmost column.
   -O<N> <N> integer; allow ragged input (e.g. SAM use -O12), merge all columns at/after position <N>
   -T do not select, print tally column of count of matched row select criteria (name T)
-  -L print file line number column (name L)
-  -N print table row number column (name N)
 
   -R add _ column variable if no row name field exists in the header;
     NOTE an empty field is recognised and mapped to _ automatically
@@ -241,7 +239,6 @@ my $spec_forms = q{
   URL-encoding is generally necessary for characters in [%:^/~]. Use pick -z <string>
   to find the url-encoding of <string> .};
 
-my @ops0 = sort grep { $cp_opdefinitions{$_}[0] == 0 } keys %cp_opdefinitions;
 my @ops1 = sort grep { $cp_opdefinitions{$_}[0] == 1 } keys %cp_opdefinitions;
 my @ops2 = sort grep { $cp_opdefinitions{$_}[0] == 2 } keys %cp_opdefinitions;
 my @ops3 = sort grep { $cp_opdefinitions{$_}[0] == 3 } keys %cp_opdefinitions;
@@ -270,8 +267,6 @@ while (@::spec && $::spec[0] =~ /^-/) {
   $B_select_and   = 0 if $options =~ s/o//;
   $B_verbose      = 1 if $options =~ s/v//;
   $B_print_tally  = 1 if $options =~ s/T//;
-  $B_print_lineno = 1 if $options =~ s/L//;
-  $B_print_rowno  = 1 if $options =~ s/N//;
   $B_excise       = 1 if $options =~ s/x//;
   $B_add_row_column =1 if $options =~ s/R//;
   $B_headless     = 1 if $options =~ s/k//;
@@ -291,7 +286,8 @@ while (@::spec && $::spec[0] =~ /^-/) {
     print $help_options, "\n";
     print "\nSelect/compute forms:$spec_forms\n";
     print "\nOperators for compute:\n";
-    print "  Stack control: @ops0\n";
+    print "  Stack control:  dup pop xch\n";
+    print "  Input counters: lineno rowno\n";
     print "  Take 1: @ops1\n";
     print "  Take 2: @ops2\n";
     print "  Take 3: @ops3\n";
@@ -367,7 +363,8 @@ Explaining the self-unexplained
    c     | cgseqlen   |  equivalent to "c MIS=X cgsum" (query length)
 
 List of <op>
-  Stack control | @ops0
+  Stack control  | dup pop xch
+  Input counters | lineno rowno
   Take 1 | @ops1
   Take 2 | @ops2
   Take 3 | @ops3
@@ -409,7 +406,7 @@ sub parse_stack {
   my ($handle, $spec) = @_;
   my @oplist = ();
   my $p = 0;
-  $spec = ":$spec" if substr($spec, 0, 1) !~ /[\/^:]/;
+  $spec = ":$spec" if substr($spec, 0, 1) !~ /[,^:]/;
   my $l = length($spec);
 
   while ($spec =~ /([,^:])([^,^:]*)/g) {
@@ -643,7 +640,7 @@ sub do_compute {
 }
 
 
-my $Nrows = 0;    # includes header.
+ $::Nrows = 0;    # includes header.
 my $Nignr = 0;
 my $Ndisc = 0;
 my $Nkeep = 0;
@@ -663,32 +660,30 @@ while (<>) {
   if ($OFFSET_OMEGA > 0 && @F < $OFFSET_OMEGA) {
     push @F, ( ("") x ($OFFSET_OMEGA - @F)) ;
   }
-  if (!$Nrows) {
+  if (!$::Nrows) {
     @::HEADER = $B_headless ? (1..@F) : @F;
     wrangle_header();
     if ($B_print_header) {
       local $, = "\t";
       print map { $::HEADER[$_] } @::output_os;
       $::N_column_output = @::output_os;
-      add_column("N") if $B_print_rowno;
-      add_column("L") if $B_print_lineno;
       add_column("T") if $B_print_tally;
       print "\n";
     }
-    $Nrows++;
+    $::Nrows++;
     next unless $B_headless;
   }
   else {
     my $F = @F;
     die "Header/$::N column/$F count difference at line $. (consider -R or -O<N>)" unless $F == $::N;
-    $Nrows++;
+    $::Nrows++;
   }
 
   do_compute(\@F);         # this pushes compute onto @F if present.
 
   my $nmatch = 0;
 
-  if ($B_weirdmode && $Nrows == 1) {
+  if ($B_weirdmode && $::Nrows == 1) {
     $Nkeep++;
   }
   else {
@@ -713,8 +708,6 @@ while (<>) {
   print "@outputs";
   $::N_column_output = @outputs;
 
-  add_column($Nrows-1+$B_headless)  if $B_print_rowno;
-  add_column($.)      if $B_print_lineno;
   add_column($nmatch) if $B_print_tally;
   print "\n";
 }
@@ -724,7 +717,7 @@ my $would = $B_print_tally ? ' would' : '';
 print STDERR "-- $Nkeep/$Ndisc rows$would have been kept/discarded\n" if @::select && $B_verbose;
 
 my $B_header = 1 - $B_headless;
-print STDERR "== Line tally check failed: ($Nrows != $B_header+$Nkeep+$Ndisc)\n" if $Nrows != $B_header+$Nkeep+$Ndisc;
+print STDERR "== Line tally check failed: ($::Nrows != $B_header+$Nkeep+$Ndisc)\n" if $::Nrows != $B_header+$Nkeep+$Ndisc;
 
 
                                       ####        ####
@@ -756,3 +749,4 @@ __DATA__
    ?? ifelse(selectname,compute1,compute2) is beyond scope for now.
       -> o and c operators to delimit blocks, could become quite fiendish.
          ^filtname,o....,c,o......c,ifelse, c would know how many things below it until o.
+
