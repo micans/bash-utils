@@ -210,14 +210,15 @@ my $help_options=q{Options:
   -L print file line number column (name L)
   -N print table row number column (name N)
 
-  -R add _ column if no row name field exists in the header;
+  -R add _ column variable if no row name field exists in the header;
     NOTE an empty field is recognised and mapped to _ automatically
   -f force processing (allows both identical input and output column names)
   -K (weird mode) header exists but use 1 2 .. for column names (selection not applied to header)
     1. consider using a=longcolumnname b=longercolumname; pick $a $b @$b/gt/0 @$a/lt/0 < data.txt
     2. -h has no effect with -K, you need to pipe output to tail -n +2; hence consider 1.
 
-  -z ARG+ prints url-encoding of ARG+
+  -z  ARG+ print url-encoding of ARG+
+  -zz ARG+ print url-decoding of ARG+
   -l Concise help output
   -H Longer pick description
 
