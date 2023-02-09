@@ -69,6 +69,7 @@ my $B_force        = 0;     # Force output if identical output names exist
 my $M_ignore       = 0;     # M_ode: 0 oblivious, 1 skip, 2 pass
 my $B_debug        = 0;     # Mostly documents the stages of compute and selection definitions
 my $B_verbose      = 0;     # Not terrifically interesting
+my $B_add_names    = 0;
 
 $::EPSILON         = 0.0001;  # obvs the best default epsilon - 10,000 is a myriad.
 $::OOM             = 2;     # order of magnitude. Maybe sqrt(2) makes more sense.
@@ -213,14 +214,20 @@ my $help_options=q{Options:
   -f force processing (allows both identical input and output column names)
   -K (weird mode) header exists but use 1 2 .. for column names (selection not applied to header)
     1. consider using a=longcolumnname b=longercolumname; pick $a $b @$b/gt/0 @$a/lt/0 < data.txt
-    2. -h has no effect with -K, you need to pipe output to tail -n +2; hence consider 1.
+    2. consider using --names=CSV (see below; this will change names in the output)
 
   -z  ARG+ print url-encoding of ARG+
   -zz ARG+ print url-decoding of ARG+
   -l Concise help output
   -H Longer pick description
 
-  Options combine, e.g. -ok/^@ for headerless input, comments indicated by ^@, OR selection.
+  --names=CSV        comma-separated values to use as column names instead of actual column names.
+  --add-names=CSV    The list must cover all columns in the input. Names that are used
+                     in selection, compute and filter expressions must be picked from this list.
+                     Output names are from the list. If using -k --names=CSV provides temporary
+                     handles; use --add-names=CSV to add them to the output.
+
+  Short options combine, e.g. -ok/^@ for headerless input, comments indicated by ^@, OR selection.
   -AT is useful for inspecting/checking select criteria
   use -Ai <name>::<COMPUTE> to change column <name> to <COMPUTE>,
   use -Aik <num>::<COMPUTE> to change column <num> to <COMPUTE>.};
@@ -244,10 +251,17 @@ my @ops2 = sort grep { $cp_opdefinitions{$_}[0] == 2 } keys %cp_opdefinitions;
 my @ops3 = sort grep { $cp_opdefinitions{$_}[0] == 3 } keys %cp_opdefinitions;
 # selectops
 my @opsf = sort { $sel_opdefinitions{$a}[0] <=> $sel_opdefinitions{$b}[0] } keys %sel_opdefinitions;
+my $nameslist = "";
 
 while (@::spec && $::spec[0] =~ /^-/) {
 
   my $options = shift @::spec;
+
+  if ($options =~ /^--(add-)?names=(.+)$/) {
+    $nameslist=$2;
+    $B_add_names = $1 ? 1 : 0;
+    next;
+  }
   ($PAT_IGNORE, $M_ignore) = ($1, 2) if $options =~ s/\/\/(.*)$//;
   ($PAT_IGNORE, $M_ignore) = ($1, 1) if $options =~ s/\/([^\/].*)$//;
 
@@ -380,6 +394,9 @@ EOH
 die "-O<N> requires -k\n" if $OFFSET_OMEGA > 0 && !$B_headless;
 
 $B_print_header = 0 if $B_headless;
+$B_print_header = 1 if $B_add_names;
+
+@::nameslist = $nameslist ? split ',', $nameslist : ();
 
 helphelp(1) unless @::spec || $B_printall || $B_excise;
 
@@ -507,7 +524,7 @@ sub add_column {
 sub wrangle_header {
 
   if ($::HEADER[0] eq '') { $::HEADER[0] = '_'; }
-  elsif ($B_add_row_column) { unshift @::HEADER, '_' }
+  elsif ($B_add_row_column) { unshift @::HEADER, '_'; }
 
   $::N = @::HEADER;
   my %inheader = map { ($_, 1) } @::HEADER;
@@ -665,6 +682,11 @@ while (<>) {
   }
   if (!$::Nrows) {
     @::HEADER = $B_headless ? (1..@F) : @F;
+    if (@::nameslist) {
+      local $" = ' ';
+      die "New names [@::nameslist] and data names [@::HEADER] differ in cardinality" if scalar @::nameslist != scalar @::HEADER;
+      @::HEADER = @::nameslist;
+    }
     wrangle_header();
     if ($B_print_header) {
       local $, = "\t";
@@ -723,6 +745,7 @@ my $B_header = 1 - $B_headless;
 print STDERR "== Line tally check failed: ($::Nrows != $B_header+$Nkeep+$Ndisc)\n" if $::Nrows != $B_header+$Nkeep+$Ndisc;
 
 
+__DATA__
                                       ####        ####
                                      ##   #      #   ##
                                     #                  #
@@ -733,9 +756,7 @@ print STDERR "== Line tally check failed: ($::Nrows != $B_header+$Nkeep+$Ndisc)\
                                       ##            ##
                                         ##        ##
                                           #      #
-__DATA__
-
-   s o m e   i d e a s
+         s o m e   i d e a s
 
    ?? +/pat select on pattern?
    -  implement in cimfomfa/C (regular expressions not as good).
@@ -748,6 +769,7 @@ __DATA__
    ?  predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI - no real need.
    #  rep is a lot of (memory) rope. Some warning/protection/override mechanism? Removed rep.
    #  -T pushes column; slightly inelegant but inevitable. -N -L fixed as rowno lineno operators.
+   #  --tmp-names to output the original names (too much rope, implementation slightly yuck)
    ?? ifelse(selectname,compute1,compute2) is beyond scope for now.
       -> o and c operators to delimit blocks, could become quite fiendish.
          ^filtname,o....,c,o......c,ifelse, c would know how many things below it until o.
