@@ -224,6 +224,8 @@ my $help_options=q{Options:
   -R add _ column variable if no row name field exists in the header;
     NOTE an empty field is recognised and mapped to _ automatically
   -f force processing (allows both identical input and output column names)
+  -F fixed names; do not interpret names as regular expressions.
+     Default behaviour is to assume a regular expression if a name contains one of [ \{ ( \ * ?
   -K (weird mode) header exists but use 1 2 .. for column names (selection not applied to header)
     1. consider using a=longcolumnname b=longercolumname; pick $a $b @$b/gt/0 @$a/lt/0 < data.txt
     2. consider using --names=CSV (see below; this will change names in the output)
@@ -390,7 +392,7 @@ Explaining the self-unexplained
    c s   | cgls       |  comma-separated list of s items in c,         }
    c s   | cgtally    |  comma-separated list of items in c with counts }
    c     | cgseqlen   |  equivalent to "c MIS=X cgsum" (query length)
-   ..    | addall     |  sum of elements in the stack
+   ..    | addall     |  sum of elements in the stack (similarly minall maxall)
    .. s  | joinall    |  all elements in the stack joined using string s
 
 List of <op>
@@ -554,7 +556,7 @@ sub wrangle_header {
 
   my @output_nm_expanded = ();
   for my $oname (@::output_nm) {
-    if ($B_expand && $oname =~ /[\*\[\?\{\\\|\(]/) {    #  * ? [ { | (
+    if ($B_expand && $oname =~ /[\*\[\?\{\\\(]/) {    #  * [ ? { \ (
       my @matches = grep { $_ =~ qr/$oname/ } @::HEADER;
       my $n_matches = @matches;
       local $" = ' ';
@@ -607,7 +609,7 @@ sub wrangle_header {
     my @expanded_compute = ();
     for my $comp (@$compute) {
       my ($type, $what) = @$comp;
-      if ($type == $TYPE_HANDLE && $B_expand && $what =~ /[\*\[\?\{\\\|\(]/) {
+      if ($type == $TYPE_HANDLE && $B_expand && $what =~ /[\*\[\?\{\\\(]/) {  # * [ ? { \ (
          my @matches = grep { $_ =~ qr/$what/ } @::HEADER;
          my $n_matches = @matches;
          local $" = ' ';
