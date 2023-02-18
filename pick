@@ -20,20 +20,24 @@
   #      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   #      SOFTWARE.
 
-
+use strict;
+use warnings;
 use Digest::MD5 qw(md5_hex);
+use POSIX;
 
        ##                                                                               ##
       ##      Pick columns and select rows from tabular input, add derived columns       ##
      ##                 Pick and select either by column name or index                    ##
     ##   Select with numerical and string comparison operators and regular expressions     ##
     ##                Select on either existing columns or derived columns                 ##
-     ##            Compute derived columns with string and algebraic operations           ##
-      ##                      Requires tab separated input                               ##
+     ##            Compute derived columns with string and algbraic operations            ##
+      ##                         Add or change column names                              ##
+       ##              Select column names using regular expressions                    ##
+        ##                                                                             ##
+        ##                       Requires tab separated input                          ##
        ##                See -H (EOH below) and -l (brief help)                         ##
+      ##                                                                                 ##
 
-                                      use strict;
-                                     use warnings;
 @::spec = @ARGV; @ARGV = ();
 
 sub helphelp {
@@ -70,14 +74,22 @@ my $M_ignore       = 0;     # M_ode: 0 oblivious, 1 skip, 2 pass
 my $B_debug        = 0;     # Mostly documents the stages of compute and selection definitions
 my $B_verbose      = 0;     # Not terrifically interesting
 my $B_add_names    = 0;
+my $B_expand       = 1;
 
 $::EPSILON         = 0.0001;  # obvs the best default epsilon - 10,000 is a myriad.
 $::OOM             = 2;     # order of magnitude. Maybe sqrt(2) makes more sense.
 
 sub stacky { die "$_[0] stack error\n" unless @::STACK >= $_[1]; }
 
+                            # Nearly all of the below push 1 item on the stack after consuming X.
+                            # Only X is specified; X = 0 indicate exceptional cases.
+                            # Potentially neatify this by adding Y (number of pushed items).
 my %cp_opdefinitions =
    ( add       => [ 2, sub { $::STACK[-2] += $::STACK[-1] } ],
+     addall    => [ 0, sub { my $x = 0; $x += $_ for @::STACK; @::STACK = ($x) } ],
+     maxall    => [ 0, sub { my $x = -POSIX::DBL_MAX; for (@::STACK) { $x = $_ if $_ > $x }; @::STACK = ($x) } ],
+     minall    => [ 0, sub { my $x =  POSIX::DBL_MAX; for (@::STACK) { $x = $_ if $_ < $x }; @::STACK = ($x) } ],
+     joinall   => [ 1, sub { my $j = pop(@::STACK); my $x = join $j, @::STACK; @::STACK = ($x) } ],
      mul       => [ 2, sub { $::STACK[-2] *= $::STACK[-1] } ],
      div       => [ 2, sub { $::STACK[-2] /= $::STACK[-1] } ],
      cat       => [ 2, sub { $::STACK[-2] .= $::STACK[-1] } ],
@@ -246,9 +258,10 @@ my $spec_forms = q{
   URL-encoding is generally necessary for characters in [%:^/~]. Use pick -z <string>
   to find the url-encoding of <string> .};
 
-my @ops1 = sort grep { $cp_opdefinitions{$_}[0] == 1 } keys %cp_opdefinitions;
-my @ops2 = sort grep { $cp_opdefinitions{$_}[0] == 2 } keys %cp_opdefinitions;
-my @ops3 = sort grep { $cp_opdefinitions{$_}[0] == 3 } keys %cp_opdefinitions;
+my @normalops = grep { $_ !~ /all$/ } keys %cp_opdefinitions;
+my @ops1 = sort grep { $cp_opdefinitions{$_}[0] == 1 } @normalops;
+my @ops2 = sort grep { $cp_opdefinitions{$_}[0] == 2 } @normalops;
+my @ops3 = sort grep { $cp_opdefinitions{$_}[0] == 3 } @normalops;
 # selectops
 my @opsf = sort { $sel_opdefinitions{$a}[0] <=> $sel_opdefinitions{$b}[0] } keys %sel_opdefinitions;
 my $nameslist = "";
@@ -278,6 +291,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
   }
 
   $B_print_header = 0 if $options =~ s/h//;
+  $B_expand       = 0 if $options =~ s/F//;
   $B_select_and   = 0 if $options =~ s/o//;
   $B_verbose      = 1 if $options =~ s/v//;
   $B_print_tally  = 1 if $options =~ s/T//;
@@ -302,6 +316,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
     print "\nOperators for compute:\n";
     print "  Stack control:  dup pop xch\n";
     print "  Input counters: lineno rowno\n";
+    print "  Stack devourers: addall minall maxall joinall\n";
     print "  Take 1: @ops1\n";
     print "  Take 2: @ops2\n";
     print "  Take 3: @ops3\n";
@@ -375,6 +390,8 @@ Explaining the self-unexplained
    c s   | cgls       |  comma-separated list of s items in c,         }
    c s   | cgtally    |  comma-separated list of items in c with counts }
    c     | cgseqlen   |  equivalent to "c MIS=X cgsum" (query length)
+   ..    | addall     |  sum of elements in the stack
+   .. s  | joinall    |  all elements in the stack joined using string s
 
 List of <op>
   Stack control  | dup pop xch
@@ -419,7 +436,7 @@ my $TYPE_OPATOR = 3;    # (1) rule of six obvs, (2) it makes sense in Dutch.
 
 my %chartypetonum = ( '^', $TYPE_SCALAR, ':', $TYPE_HANDLE, ',', $TYPE_OPATOR );
 
-sub parse_stack {
+sub parse_compute {
   my ($handle, $spec) = @_;
   my @oplist = ();
   my $p = 0;
@@ -488,8 +505,8 @@ sub acigar {
 for my $spec (@::spec) {
   if ($spec =~ /(.*?)(:[:=])(.*)/) {
     my ($handle, $type, $compute) = (urldecode($1), $2, $3);
-    my $stack = parse_stack($handle, $compute);
-    push @::compute, [$handle, $stack];
+    my $parsed_compute = parse_compute($handle, $compute);
+    push @::compute, [$handle, $parsed_compute];
     push @::output_nm, $handle if $type eq '::';
   }
                 #  H handle
@@ -513,7 +530,6 @@ print STDERR "-- adding select criterion handle=[$handle] op=[$op] val=[$val] ar
   }
   else {
     push @::output_nm, urldecode($spec);
-    $::plain_handle{$::output_nm[-1]}++;
   }
 }
 
@@ -535,6 +551,23 @@ sub wrangle_header {
     $::handle_map{$name} = $i;   
     print STDERR "-- map header name $name to offset $i\n" if $B_debug;
   }
+
+  my @output_nm_expanded = ();
+  for my $oname (@::output_nm) {
+    if ($B_expand && $oname =~ /[\*\[\?\{\\\|\(]/) {    #  * ? [ { | (
+      my @matches = grep { $_ =~ qr/$oname/ } @::HEADER;
+      my $n_matches = @matches;
+      local $" = ' ';
+      print STDERR "-- (output) expanding pattern $oname ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
+      push @output_nm_expanded, @matches;
+    }
+    else {
+      push @output_nm_expanded, $oname;
+    }
+  }
+  @::output_nm = @output_nm_expanded;
+  $::plain_handle{$_} = 1 for @::output_nm;
+
 
   print STDERR "-- output column names as specified: @::output_nm\n" if $B_debug;
   if ($B_excise || $B_printall) {
@@ -564,13 +597,30 @@ sub wrangle_header {
 
   #
   ##  Add derived column names to @::HEADER
+  ##  Expand regex specifications if found.
   ##  In derived column specs replace names by offsets into field array.
   #
 
   for (my $i=0; $i<@::compute; $i++) {
     my ($name, $compute) = @{$::compute[$i]};
     die "Name $name already defined (use -i for in-place change)\n" if defined($::handle_map{$name}) && !$B_inplace;
+    my @expanded_compute = ();
     for my $comp (@$compute) {
+      my ($type, $what) = @$comp;
+      if ($type == $TYPE_HANDLE && $B_expand && $what =~ /[\*\[\?\{\\\|\(]/) {
+         my @matches = grep { $_ =~ qr/$what/ } @::HEADER;
+         my $n_matches = @matches;
+         local $" = ' ';
+         print STDERR "-- (compute) expanding pattern $what ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
+         for my $h (@matches) {
+           push @expanded_compute, [$TYPE_HANDLE, $h];
+         }
+      }
+      else {
+         push @expanded_compute, $comp;
+      }
+    }
+    for my $comp (@expanded_compute) {
       my ($type, $what) = @$comp;
       if ($type == $TYPE_HANDLE) {
          die "Handle $what in compute $name does not reference a known entity among @::HEADER\n" unless defined($::handle_map{$what});
@@ -580,6 +630,8 @@ sub wrangle_header {
                               # associated offset yet;
       }
     }
+    $::compute[$i] = [$name, \@expanded_compute];
+
     my $j = $::N + $i;
     $::HEADER[$j] = $name;        # only needed to print the new header.
     $::handle_map{$name} = $j;
@@ -758,10 +810,13 @@ __DATA__
                                           #      #
          s o m e   i d e a s
 
-   ?? +/pat select on pattern?
+   ?? +/pat select entire rows on pattern?
+   -  for 'all' operators; store data in internal buffer; storeall
+      minall maxall meanall, medianall, countall sdall can refer to it.
+      needs a scope/clearing framework.
+   -  column selection by range
    -  implement in cimfomfa/C (regular expressions not as good).
    -  tests
-   -  currently (no loops) stack underflow could be pre-computed in wrangle_header
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    -  -f is useless in the sense that the same name implies the same content.
    o  numerical comparisons check field is numeric; however duplicates perl's work/warnings
@@ -773,4 +828,3 @@ __DATA__
    ?? ifelse(selectname,compute1,compute2) is beyond scope for now.
       -> o and c operators to delimit blocks, could become quite fiendish.
          ^filtname,o....,c,o......c,ifelse, c would know how many things below it until o.
-
