@@ -24,9 +24,10 @@ now.
   - Create new columns using arithmetic and string operations on variables.
   - Update existing columns (`-i`) in the same way.
   - Filter rows of interest using variables in conditional expressions.
-  - Insert new columns at position `N`, keep old columns (`-A<N>`).
+  - Insert new columns at position `N` (by default at end), keep old columns (`-A` and `-A<N>`).
   - Remove columns (`-x col1 col2 col3`).
   - Ragged input (e.g. SAM format) with `-O<N>` (collate all columns from `N` onwards).
+  - If needed, perl regular expression selection of column names, e.g. `foo\d{3}`.
   - Syntax is compact and avoids shell metacharacters.
 
   `pick` is the latest incarnation of a concept that I've attempted
@@ -100,6 +101,16 @@ pick -Aki foo:=1 1::2 2::foo < data.txt
    #   Assignments happen proceeding from left to right
    #   := computes a value without outputting it,
    #   :: computes a value and selects it for output.
+
+   #  If large numbers of columns are present/needed, it can be useful to select
+   #  column names with a regular expression.
+   #
+pick 'foo\d{2}$' < data.txt
+
+   # As above, in a derived column select multiple input columns, then take the maximal value
+   # across, giving it the new name foomax. Use -h to avoid printing out a column header.
+   #
+pick foomax::'foo\d{2}$',maxall < data.txt
 ```
 
   Pick supports a wide range of functionality. Standard arithmetic, bit
