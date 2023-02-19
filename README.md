@@ -15,7 +15,7 @@ of (large) tabular data.
 Apparix used to live here but has [its own repository](https://github.com/micans/apparix)
 now.
 
-## Stream compute/selection/filtering on rows/columns in tabular data.
+## Unix file column and row manipulation using column names
 
   `pick` can be thought of as (unix) `cut` on steroids, augmented with aspects of `R` and `awk`.
   It can select columns like `cut`, but allows doing so either by column name or column index (with `-k`).
