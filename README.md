@@ -30,10 +30,9 @@ now.
   - If needed, perl regular expression selection of column names, e.g. `foo\d{3}`.
   - Syntax is compact and avoids shell metacharacters.
 
-  `pick` is the latest incarnation of a concept that I've attempted
-  many times over the years.  The recent ones were all called `recol`.  This is
-  the first one that is fun to use, surprisingly powerful, and an implementation
-  that has some aspects of elegance.
+  `pick` is the latest incarnation of a concept that I've attempted many times
+  over the years.  This is the first one that is fun to use, surprisingly
+  powerful, and an implementation that has some aspects of elegance.
 
   The interface is a tiny command-line format to describe column selection,
   row filtering, and derived column computation. It was designed to avoid shell
@@ -103,12 +102,15 @@ pick -Aki foo:=1 1::2 2::foo < data.txt
    #   :: computes a value and selects it for output.
 
    #  If large numbers of columns are present/needed, it can be useful to select
-   #  column names with a regular expression.
+   #  column names with a regular expression. A pattern that contains any of [({\*?^$
+   #  is assumed to be a regular expression rather than just a column name.
+   #  Use -F (fixed) to prevent regular expressions being used.
    #
 pick 'foo\d{2}$' < data.txt
 
    # As above, in a derived column select multiple input columns, then take the maximal value
    # across, giving it the new name foomax. Use -h to avoid printing out a column header.
+   # Currently addall, maxall, minall and joinall consume the entire stack.
    #
 pick foomax::'foo\d{2}$',maxall < data.txt
 ```

@@ -73,11 +73,13 @@ my $B_force        = 0;     # Force output if identical output names exist
 my $M_ignore       = 0;     # M_ode: 0 oblivious, 1 skip, 2 pass
 my $B_debug        = 0;     # Mostly documents the stages of compute and selection definitions
 my $B_verbose      = 0;     # Not terrifically interesting
-my $B_add_names    = 0;
-my $B_expand       = 1;
+my $B_add_names    = 0;     # If other names are given, whether to output them as column names
+my $B_regex        = 1;     # Whether to interpret names as a regular expression if one of the characters in $REGEXP_CHARS is found
 
 $::EPSILON         = 0.0001;  # obvs the best default epsilon - 10,000 is a myriad.
 $::OOM             = 2;     # order of magnitude. Maybe sqrt(2) makes more sense.
+
+my $REGEXP_CHARS   = '[({\*?^$';
 
 sub stacky { die "$_[0] stack error\n" unless @::STACK >= $_[1]; }
 
@@ -293,7 +295,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
   }
 
   $B_print_header = 0 if $options =~ s/h//;
-  $B_expand       = 0 if $options =~ s/F//;
+  $B_regex        = 0 if $options =~ s/F//;
   $B_select_and   = 0 if $options =~ s/o//;
   $B_verbose      = 1 if $options =~ s/v//;
   $B_print_tally  = 1 if $options =~ s/T//;
@@ -556,7 +558,7 @@ sub wrangle_header {
 
   my @output_nm_expanded = ();
   for my $oname (@::output_nm) {
-    if ($B_expand && $oname =~ /[\*\[\?\{\\\(]/) {    #  * [ ? { \ (
+    if ($B_regex  && $oname =~ /[$REGEXP_CHARS]/) {
       my @matches = grep { $_ =~ qr/$oname/ } @::HEADER;
       my $n_matches = @matches;
       local $" = ' ';
@@ -591,10 +593,14 @@ sub wrangle_header {
   }
   print STDERR "-- output column names after -i/-a treatment: @::output_nm\n" if $B_debug && ($B_excise || $B_printall);
 
-  if ($B_print_header && keys %{{ map { ($_, 1) } @::output_nm }} < @::output_nm) {
-    my $job = $B_force ? 'continuing' : 'fatal, use -f to force';
-    print STDERR "-- Identical output column names exist ($job)\n";
-    exit 1 unless $B_force;
+  if ($B_print_header) {
+    my %names = (); my $i = 1;
+    for (@::output_nm) { $names{$_} = $i++ unless defined($names{$_}) }
+    if (keys %names < @::output_nm) {
+       my $job = $B_force ? 'leaving as specified' : 'will make unique';
+       print STDERR "-- Identical output column names exist ($job)\n";
+       @::output_nm = sort { $names{$a} <=> $names{$b} } keys %names unless $B_force;
+    }
   }
 
   #
@@ -609,7 +615,7 @@ sub wrangle_header {
     my @expanded_compute = ();
     for my $comp (@$compute) {
       my ($type, $what) = @$comp;
-      if ($type == $TYPE_HANDLE && $B_expand && $what =~ /[\*\[\?\{\\\(]/) {  # * [ ? { \ (
+      if ($type == $TYPE_HANDLE && $B_regex  && $what =~ /[$REGEXP_CHARS]/) {
          my @matches = grep { $_ =~ qr/$what/ } @::HEADER;
          my $n_matches = @matches;
          local $" = ' ';
