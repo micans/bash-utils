@@ -113,6 +113,13 @@ pick 'foo\d{2}$' < data.txt
    # Currently addall, maxall, minall and joinall consume the entire stack.
    #
 pick foomax::'foo\d{2}$',maxall < data.txt
+
+   # A bit more ambitious; express all columns whose name matches foo\d\d in terms of a percentage
+   # relative to column foo01. A copy of foo01 is needed (in reference) as it is transformed in-place.
+   # Due to the use of ':=' rather than '::' the derived column reference is not output.
+   # The placeholder '__' is used to slot each matching column into the compute expression.
+   #
+pick -Ai reference:=foo01 '\foo\d{2}$'::__:reference^1,pct < data.txt
 ```
 
   Pick supports a wide range of functionality. Standard arithmetic, bit

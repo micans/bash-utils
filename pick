@@ -79,7 +79,7 @@ my $B_regex        = 1;     # Whether to interpret names as a regular expression
 $::EPSILON         = 0.0001;  # obvs the best default epsilon - 10,000 is a myriad.
 $::OOM             = 2;     # order of magnitude. Maybe sqrt(2) makes more sense.
 
-my $REGEXP_CHARS   = '[({\*?^$';
+my $REGEXP_CHARS   = '[({\\\*?^$';
 
 sub stacky { die "$_[0] stack error\n" unless @::STACK >= $_[1]; }
 
@@ -379,20 +379,20 @@ Form (5) as form 4, and selects the handle for output.
 Explaining the self-unexplained
    stack   op            result
    ------+------------+-------------------------------------------------------------------
-   x e   | get        |  x =~ s/e/MATCH/   } MATCH is \$1 corresponding to outer () if exists,
-   x e z | ed         |  x =~ s/e/z/       } matched part otherwise.
-   x e z | edg        |  x =~ s/e/z/g      } e accepts most perl regular expression syntax
+   x e   | get        |  x =~ s/e/MATCH/   | MATCH is \$1 corresponding to outer () if exists,
+   x e z | ed         |  x =~ s/e/z/       | matched part otherwise.
+   x e z | edg        |  x =~ s/e/z/g      | e accepts most perl regular expression syntax
    x y   | uie        |  (use if empty) x or y if x is the empty string
    x n   | zp         |  left-padding with zeroes to length n
    x o n | substr     |  substr(x, o=offset, n=count)
-   x y n | pct        |  x as percentage of y with n decimals } '-' if y is zero
-   x y n | frac       |  x as fraction of y with n decimals   }
+   x y n | pct        |  x as percentage of y with n decimals | '-' if y is zero
+   x y n | frac       |  x as fraction of y with n decimals   |
    x n   | dd         |  x rounded to n decimals
-   c s   | cgsum      |  sum of lengths of s items in cigar string c  } s subset of MINDSHP=X
-   c s   | cgmax      |  max of lengths of s items in cigar string c  }
-   c s   | cgcount    |  count of s items in cigar string c           }
-   c s   | cgls       |  comma-separated list of s items in c,         }
-   c s   | cgtally    |  comma-separated list of items in c with counts }
+   c s   | cgsum      |  sum of lengths of s items in cigar string c  | s subset of MINDSHP=X
+   c s   | cgmax      |  max of lengths of s items in cigar string c  |
+   c s   | cgcount    |  count of s items in cigar string c           |
+   c s   | cgls       |  comma-separated list of s items in c,         |
+   c s   | cgtally    |  comma-separated list of items in c with counts |
    c     | cgseqlen   |  equivalent to "c MIS=X cgsum" (query length)
    ..    | addall     |  sum of elements in the stack (similarly minall maxall)
    .. s  | joinall    |  all elements in the stack joined using string s
@@ -506,44 +506,13 @@ sub acigar {
 }
 
 
-for my $spec (@::spec) {
-  if ($spec =~ /(.*?)(:[:=])(.*)/) {
-    my ($handle, $type, $compute) = (urldecode($1), $2, $3);
-    my $parsed_compute = parse_compute($handle, $compute);
-    push @::compute, [$handle, $parsed_compute];
-    push @::output_nm, $handle if $type eq '::';
-  }
-                #  H handle
-                #  a1a2a3, b, c, d different forms for op
-                #  V value or :handle
-                #    ( H )([ a1](      a2    )[ a3]|  b    | c | d )( V)(  arg )
-  elsif ($spec =~ /^@(.*?)([\/~](?:[a-z]{2,4})[\/~]|[=~]{1}|\/=|\/~)(.*?)(\/.*?)?$/) {
-    my ($handle, $op, $val, $arg) = (urldecode($1), $2, urldecode($3), $4);      #constant
-    die "Unrecognised operator [$op]\n" unless defined($sel_opdefinitions{$op});
-    if (defined($arg)) {
-      die "Extra argument currently only allowed for /ep/ and /om/" unless $op =~ /^\/(ep|om)\/$/;
-      $arg=urldecode($arg);      #constant
-    }
-    else{
-       $arg = 0;
-    }
-print STDERR "-- adding select criterion handle=[$handle] op=[$op] val=[$val] arg=[$arg]\n" if $B_debug;
-    my $indirection = $val =~ s/^:// ? 1 : 0;
-    push @::select, [$op, $indirection, $val, $handle, $arg];
-             # NOTE. $arg for now only used by /ep/ and /om/ selection, ignored by the others.
-  }
-  else {
-    push @::output_nm, urldecode($spec);
-  }
-}
-
 sub add_column {
   print "\t" if $::N_column_output++; print $_[0];
 }
 
 sub wrangle_header {
 
-  if ($::HEADER[0] eq '') { $::HEADER[0] = '_'; }
+  if ($::HEADER[0] eq '')   { $::HEADER[0] = '_'; }
   elsif ($B_add_row_column) { unshift @::HEADER, '_'; }
 
   $::N = @::HEADER;
@@ -556,22 +525,63 @@ sub wrangle_header {
     print STDERR "-- map header name $name to offset $i\n" if $B_debug;
   }
 
-  my @output_nm_expanded = ();
-  for my $oname (@::output_nm) {
-    if ($B_regex  && $oname =~ /[$REGEXP_CHARS]/) {
-      my @matches = grep { $_ =~ qr/$oname/ } @::HEADER;
-      my $n_matches = @matches;
-      local $" = ' ';
-      print STDERR "-- (output) expanding pattern $oname ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
-      push @output_nm_expanded, @matches;
+  for my $spec (@::spec) {
+    if ($spec =~ /(.*?)(:[:=])(.*)/) {
+      my ($handle, $type, $compute) = (urldecode($1), $2, $3);
+      if ($handle =~ /[$REGEXP_CHARS]/ && $B_regex) {
+        my @matches = grep { $_ =~ qr/$handle/ } @::HEADER;
+        my $n_matches = @matches; local $" = ' ';
+        print STDERR "-- (output+compute) expanding pattern $handle ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
+        $compute = ":$compute" unless $compute =~ /^[,:^]/;
+        for my $m (@matches) {
+          my $compute_m = $compute; $compute_m =~ s/:__\b/:$m/g;
+          my $parsed_compute = parse_compute($handle, $compute_m);
+          push @::compute, [$m, $parsed_compute];
+          push @::output_nm, $m if $type eq '::';
+        }
+      }
+      else {
+        my $parsed_compute = parse_compute($handle, $compute);
+        push @::compute, [$handle, $parsed_compute];
+        push @::output_nm, $handle if $type eq '::';
+      }
+    }
+                  #  H handle
+                  #  a1a2a3, b, c, d different forms for op
+                  #  V value or :handle
+                  #    ( H )([ a1](      a2    )[ a3]|  b    | c | d )( V)(  arg )
+    elsif ($spec =~ /^@(.*?)([\/~](?:[a-z]{2,4})[\/~]|[=~]{1}|\/=|\/~)(.*?)(\/.*?)?$/) {
+      my ($handle, $op, $val, $arg) = (urldecode($1), $2, urldecode($3), $4);      #constant
+      die "Unrecognised operator [$op]\n" unless defined($sel_opdefinitions{$op});
+      if (defined($arg)) {
+        die "Extra argument currently only allowed for /ep/ and /om/" unless $op =~ /^\/(ep|om)\/$/;
+        $arg=urldecode($arg);      #constant
+      }
+      else{
+         $arg = 0;
+      }
+  print STDERR "-- adding select criterion handle=[$handle] op=[$op] val=[$val] arg=[$arg]\n" if $B_debug;
+      my $indirection = $val =~ s/^:// ? 1 : 0;
+      push @::select, [$op, $indirection, $val, $handle, $arg];
+               # NOTE. $arg for now only used by /ep/ and /om/ selection, ignored by the others.
     }
     else {
-      push @output_nm_expanded, $oname;
+      $spec = urldecode($spec);
+      if ($spec =~ /[$REGEXP_CHARS]/ && $B_regex) {
+        my @matches = grep { $_ =~ qr/$spec/ } @::HEADER;
+        my $n_matches = @matches; local $" = ' ';
+        print STDERR "-- (output) expanding pattern $spec ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
+        for my $m (@matches) {
+          push @::output_nm, $m;
+        }
+      }
+      else {
+         push @::output_nm, $spec;
+      }
     }
   }
-  @::output_nm = @output_nm_expanded;
-  $::plain_handle{$_} = 1 for @::output_nm;
 
+  $::plain_handle{$_} = 1 for @::output_nm;
 
   print STDERR "-- output column names as specified: @::output_nm\n" if $B_debug;
   if ($B_excise || $B_printall) {
@@ -819,6 +829,7 @@ __DATA__
          s o m e   i d e a s
 
    ?? +/pat select entire rows on pattern?
+   -  for regex selection, a wildcard tag that allows mass renaming.
    -  for 'all' operators; store data in internal buffer; storeall
       minall maxall meanall, medianall, countall sdall can refer to it.
       needs a scope/clearing framework.
