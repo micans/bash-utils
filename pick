@@ -75,6 +75,7 @@ my $B_debug        = 0;     # Mostly documents the stages of compute and selecti
 my $B_verbose      = 0;     # Not terrifically interesting
 my $B_add_names    = 0;     # If other names are given, whether to output them as column names
 my $B_regex        = 1;     # Whether to interpret names as a regular expression if one of the characters in $REGEXP_CHARS is found
+my $B_protect      = 0;     # Some protection against divide-by-zero with arbitrary choices.
 
 $::EPSILON         = 0.0001;  # obvs the best default epsilon - 10,000 is a myriad.
 $::OOM             = 2;     # order of magnitude. Maybe sqrt(2) makes more sense.
@@ -150,10 +151,13 @@ my %cp_opdefinitions =
      cos       => [ 1, sub { $::STACK[-1] = cos($::STACK[-1]) }        ],
      sin       => [ 1, sub { $::STACK[-1] = sin($::STACK[-1]) }        ],
      tan       => [ 1, sub { $::STACK[-1] = sin($::STACK[-1])/cos($::STACK[-1]) } ],
-     log       => [ 1, sub { $::STACK[-1] = log($::STACK[-1]) }        ],
-     log10     => [ 1, sub { $::STACK[-1] = log($::STACK[-1])/log(10) }],
+     log       => [ 1, sub { $::STACK[-1] = !$B_protect || $::STACK[-1] ? log($::STACK[-1]) : 10000 }        ],
+     log10     => [ 1, sub { $::STACK[-1] = !$B_protect || $::STACK[-1] ? log($::STACK[-1])/log(10) : 10000 }],
      exp10     => [ 1, sub { $::STACK[-1] = 10**$::STACK[-1] }         ],
      sign      => [ 1, sub { $::STACK[-1] = $::STACK[-1] > 0 ? 1 : $::STACK[-1] < 0 ? -1 : 0 } ],
+     ceil      => [ 1, sub { $::STACK[-1] = ceil($::STACK[-1]) }       ],
+     floor     => [ 1, sub { $::STACK[-1] = floor($::STACK[-1]) }      ],
+     int       => [ 1, sub { $::STACK[-1] = int($::STACK[-1]) }        ],
    );
 
             # sub { } :
@@ -296,6 +300,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
 
   $B_print_header = 0 if $options =~ s/h//;
   $B_regex        = 0 if $options =~ s/F//;
+  $B_protect      = 1 if $options =~ s/P//;
   $B_select_and   = 0 if $options =~ s/o//;
   $B_verbose      = 1 if $options =~ s/v//;
   $B_print_tally  = 1 if $options =~ s/T//;
