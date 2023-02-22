@@ -227,7 +227,8 @@ my %sel_opdefinitions = (
 my $envsettings = join "\n", map { sprintf("  %-20s %8s", $_, $PNAN{$_}) } keys %PNAN;
 
 my $help_options=q{Options:
-  -k headerless input, use 1 2 .. for column names (see also -K below)
+  -k headerless input, use 1 2 .. for input column names
+  -K headerless input, as above, use derived names to output column names
   -h do not print header
   -o OR multiple select criteria (default is AND)
   -x take complement of selected input column(s) (works with -i)
@@ -248,7 +249,7 @@ my $help_options=q{Options:
   -f force processing (allows both identical input and output column names)
   -F fixed names; do not interpret names as regular expressions.
      Default behaviour is to assume a regular expression if a name contains one of [ \{ ( \ * ?
-  -K (weird mode) header exists but use 1 2 .. for column names (selection not applied to header)
+  -W (weird mode) header exists but use 1 2 .. for column names (selection not applied to header)
     1. consider using a=longcolumnname b=longercolumname; pick $a $b @$b/gt/0 @$a/lt/0 < data.txt
     2. consider using --inames=CSV (see below; this will change names in the output)
 
@@ -854,24 +855,20 @@ __DATA__
          s o m e   i d e a s
 
    ?? +/pat select entire rows on pattern?
-   -  consider splitting --(add-)names into --inames and --onames
-   -  consider -W for weird mode, -K for adding column names to -k mode
    -  for regex selection, a wildcard tag that allows mass renaming.
-   -  env variables PICK_LOG10_INF PICK_LOG_INF PICK_TAN_INF etc PICK_DIV_INF etc; user can set to 10000 or 308, nan, na
    -  for 'all' operators; store data in internal buffer; storeall
       minall maxall meanall, medianall, countall sdall can refer to it.
       needs a scope/clearing framework.
-   -  column selection by range
+   -  column selection by range (note regular expressions can be used right now on 1..N)
+   -  would --onames be helpful? (note -K)
    -  implement in cimfomfa/C (regular expressions not as good).
-   -  tests
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    -  -f is useless in the sense that the same name implies the same content.
    o  numerical comparisons check field is numeric; however duplicates perl's work/warnings
    ?  optionally catch divide by zero before it happens.
    ?  predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI - no real need.
-   #  rep is a lot of (memory) rope. Some warning/protection/override mechanism? Removed rep.
    #  -T pushes column; slightly inelegant but inevitable. -N -L fixed as rowno lineno operators.
-   #  --tmp-names to output the original names (too much rope, implementation slightly yuck)
    ?? ifelse(selectname,compute1,compute2) is beyond scope for now.
       -> o and c operators to delimit blocks, could become quite fiendish.
          ^filtname,o....,c,o......c,ifelse, c would know how many things below it until o.
+   -  tests
