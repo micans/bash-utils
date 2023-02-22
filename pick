@@ -68,6 +68,7 @@ my $B_inplace      = 0;     # Allow derived column to redefine existing column n
 my $B_excise       = 0;     # print all except the plain column handles listed, cannot combine with $B_printall
 my $B_add_row_column = 0;   # See -H, EOH
 my $B_headless     = 0;     # No header (-k option)
+my $B_sprouthead   = 0;     # Create header e.g. from derived names
 my $B_weirdmode    = 0;     # Header exists, but users wants to use numbers (turns of selections for header)
 my $B_force        = 0;     # Force output if identical output names exist
 my $M_ignore       = 0;     # M_ode: 0 oblivious, 1 skip, 2 pass
@@ -249,18 +250,18 @@ my $help_options=q{Options:
      Default behaviour is to assume a regular expression if a name contains one of [ \{ ( \ * ?
   -K (weird mode) header exists but use 1 2 .. for column names (selection not applied to header)
     1. consider using a=longcolumnname b=longercolumname; pick $a $b @$b/gt/0 @$a/lt/0 < data.txt
-    2. consider using --names=CSV (see below; this will change names in the output)
+    2. consider using --inames=CSV (see below; this will change names in the output)
 
   -z  ARG+ print url-encoding of ARG+
   -zz ARG+ print url-decoding of ARG+
   -l Concise help output
   -H Longer pick description
 
-  --names=CSV        comma-separated values to use as column names instead of actual column names.
-  --add-names=CSV    The list must cover all columns in the input. Names that are used
+  --inames=CSV       comma-separated values to use as column names instead of actual column names.
+  --add-inames=CSV   The list must cover all columns in the input. Names that are used
                      in selection, compute and filter expressions must be picked from this list.
-                     Output names are from the list. If using -k --names=CSV provides temporary
-                     handles; use --add-names=CSV to add them to the output.
+                     Output names are from the list. If using -k --inames=CSV provides temporary
+                     handles; use --add-inames=CSV to add them to the output.
 
   Short options combine, e.g. -ok/^@ for headerless input, comments indicated by ^@, OR selection.
   -AT is useful for inspecting/checking select criteria
@@ -293,7 +294,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
 
   my $options = shift @::spec;
 
-  if ($options =~ /^--(add-)?names=(.+)$/) {
+  if ($options =~ /^--(add-)?inames=(.+)$/) {
     $nameslist=$2;
     $B_add_names = $1 ? 1 : 0;
     next;
@@ -322,7 +323,8 @@ while (@::spec && $::spec[0] =~ /^-/) {
   $B_excise       = 1 if $options =~ s/x//;
   $B_add_row_column =1 if $options =~ s/R//;
   $B_headless     = 1 if $options =~ s/k//;
-  ($B_headless, $B_weirdmode) = (1, 1) if $options =~ s/K//;
+  ($B_headless, $B_sprouthead)= (1, 1) if $options =~ s/K//;
+  ($B_headless, $B_weirdmode) = (1, 1) if $options =~ s/W//;
   $B_debug        = 1 if $options =~ s/d//;
   $B_force        = 1 if $options =~ s/f//;
   $B_inplace      = 1 if $options =~ s/i//;
@@ -781,7 +783,7 @@ while (<>) {
       @::HEADER = @::nameslist;
     }
     wrangle_header();
-    if ($B_print_header) {
+    if ($B_print_header || $B_sprouthead) {
       local $, = "\t";
       print map { $::HEADER[$_] } @::output_os;
       $::N_column_output = @::output_os;
@@ -852,6 +854,8 @@ __DATA__
          s o m e   i d e a s
 
    ?? +/pat select entire rows on pattern?
+   -  consider splitting --(add-)names into --inames and --onames
+   -  consider -W for weird mode, -K for adding column names to -k mode
    -  for regex selection, a wildcard tag that allows mass renaming.
    -  env variables PICK_LOG10_INF PICK_LOG_INF PICK_TAN_INF etc PICK_DIV_INF etc; user can set to 10000 or 308, nan, na
    -  for 'all' operators; store data in internal buffer; storeall
