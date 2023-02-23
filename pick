@@ -130,8 +130,8 @@ my %cp_opdefinitions =
      cgmax     => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'max') } ],
      cgcount   => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'count') } ],
      cgls      => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'list') } ],
-     cgrefaln  => [ 1, sub { $::STACK[-1] = acigar($::STACK[-1], 'MDN=X', 'sum') } ],
-     cgqryaln  => [ 1, sub { $::STACK[-1] = acigar($::STACK[-1], 'MI=X', 'sum') } ],
+     cgrefcov  => [ 1, sub { $::STACK[-1] = acigar($::STACK[-1], 'MDN=X', 'sum') } ],
+     cgqrycov  => [ 1, sub { $::STACK[-1] = acigar($::STACK[-1], 'MI=X', 'sum') } ],
      cgqrylen  => [ 1, sub { $::STACK[-1] = acigar($::STACK[-1], 'MIS=X', 'sum') } ],
      cgqryend  => [ 1, sub { my $e = acigar($::STACK[-1], 'MIS=X', 'sum'); $e -= $1 if $::STACK[-1] =~ /(\d+)S$/; $::STACK[-1] = $e } ],
      cgqrystart=> [ 1, sub { my $s = 1; $s += $1 if $::STACK[-1] =~ /^(\d+)S/; $::STACK[-1] = $s } ],
@@ -856,19 +856,18 @@ __DATA__
 
    ?? +/pat select entire rows on pattern?
    -  for regex selection, a wildcard tag that allows mass renaming.
-   -  for 'all' operators; store data in internal buffer; storeall
-      minall maxall meanall, medianall, countall sdall can refer to it.
-      needs a scope/clearing framework.
+   -  for 'all' operators; store data in internal buffer; storeall.
+      minall maxall meanall, medianall, countall sdall can refer to it. needs a scope/clearing framework.
    -  column selection by range (note regular expressions can be used right now on 1..N)
    -  would --onames be helpful? (note -K)
    -  implement in cimfomfa/C (regular expressions not as good).
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    -  -f is useless in the sense that the same name implies the same content.
    o  numerical comparisons check field is numeric; however duplicates perl's work/warnings
-   ?  optionally catch divide by zero before it happens.
    ?  predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI - no real need.
    #  -T pushes column; slightly inelegant but inevitable. -N -L fixed as rowno lineno operators.
    ?? ifelse(selectname,compute1,compute2) is beyond scope for now.
-      -> o and c operators to delimit blocks, could become quite fiendish.
-         ^filtname,o....,c,o......c,ifelse, c would know how many things below it until o.
+      -> foo::,LD:a:b:c,LR,add         # open/close data
+         foo::,LC:a:b:c,op,op,RC       # open/close code
+         encode scope in a separate datastructure; fast path if no scopes exist.
    -  tests
