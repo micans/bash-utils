@@ -125,11 +125,9 @@ my %cp_opdefinitions =
                                          ? (defined($1) ? $1 : $&) : ""; $::STACK[-2] = $item; } ],
      uie       => [ 2, sub { $::STACK[-2] = $::STACK[-1] unless length($::STACK[-2]) } ],
 
-     cgtally   => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'tally') } ],
      cgsum     => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'sum') } ],
      cgmax     => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'max') } ],
      cgcount   => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'count') } ],
-     cgls      => [ 2, sub { $::STACK[-2] = acigar($::STACK[-2], $::STACK[-1], 'list') } ],
      cgrefcov  => [ 1, sub { $::STACK[-1] = acigar($::STACK[-1], 'MDN=X', 'sum') } ],
      cgqrycov  => [ 1, sub { $::STACK[-1] = acigar($::STACK[-1], 'MI=X', 'sum') } ],
      cgqrylen  => [ 1, sub { $::STACK[-1] = acigar($::STACK[-1], 'MIS=X', 'sum') } ],
@@ -421,8 +419,6 @@ Explaining the self-unexplained
    c s   | cgsum      |  sum of lengths of s items in cigar string c  | s subset of MINDSHP=X
    c s   | cgmax      |  max of lengths of s items in cigar string c  |
    c s   | cgcount    |  count of s items in cigar string c           |
-   c s   | cgls       |  comma-separated list of s items in c,         |
-   c s   | cgtally    |  comma-separated list of items in c with counts |
    c     | cgqrylen   |  equivalent to "c MIS=X cgsum" (query length)
    ..    | addall     |  sum of elements in the stack (similarly minall maxall)
    .. s  | joinall    |  all elements in the stack joined using string s
@@ -512,32 +508,32 @@ sub urldecode {
    return $val;
 }
 
-sub acigar {
+
+sub acigar {   # noteme guardme: caching assumes no two identical cigar strings on the same line.
+
    my ($cigar, $subset, $mode) = @_;
-   my $p;
-   my $n = 0; my $count = 0; my $max = 0; my $sum = 0; my @list = ();
-   my %tally = map { ($_, 0) } split "", 'MINDSHP=X';
-   while ($cigar =~ m/(\d+)([MIDNSHP=X])/ig) {    # not a strict parser, e.. 1M:-)2M matches.
-     my ($num, $it) = ($1, $2);
-     $n += length($&);
-     $tally{$it} += $num;
-     if ($subset =~ /$it/i) {
-         $count++;
-         $sum += $num;
-         $max = $num if $num > $max;
-         push @list, $num;
-     }   
-     $p = pos($cigar);
+   my $key = "cigar::$cigar";
+   my @subset = split "", $subset;
+
+   if (!defined($::LINECACHE{$key})) {
+      my $c = $::LINECACHE{$key} =
+        { sum => { map { ($_, 0)  } split "", 'MINDSHP=X' }, count => { map { ($_, 0)  } split "", 'MINDSHP=X' } };
+      my $p = 0; my $n = 0;
+      while ($cigar =~ m/(\d+)([MIDNSHP=X])/ig) {
+        my ($num, $it) = ($1, $2);
+        $n += length($&);
+        $c->{sum}{$it} += $num;
+        $c->{count}{$it}++;
+        $p = pos($cigar);
+      }
+      print STDERR "-- Unmatched part in cigar string $cigar at $p (line $.)\n" unless $p == length($cigar) && $n == length($cigar);
    }
-   print STDERR "-- Unmatched part in cigar string $cigar at $p (line $.)\n" unless $p == length($cigar) && $n == length($cigar);
-   if ($mode eq 'max')      { return $max  }
-   elsif ($mode eq 'sum')   { return $sum }
-   elsif ($mode eq 'count') { return $count }
-   elsif ($mode eq 'list')  { return join ',', @list }
-   elsif ($mode eq 'tally') { return join ',', map { "$_=$tally{$_}" } split "", $subset }
+   my $cache = $::LINECACHE{$key};
+   if ($mode eq 'max')      { my $max = 0; for my $x (@subset) { for (@{$cache->{list}{$x}}) { $max = $_ if $_ > $max }} }
+   elsif ($mode eq 'sum')   { my $sum = 0; $sum += $cache->{sum}{$_} for @subset; return $sum }
+   elsif ($mode eq 'count') { my $count = 0; $count += $cache->{count}{$_} for @subset; return $count }
    else                     { return 'NA' }
 }
-
 
 sub add_column {
   print "\t" if $::N_column_output++; print $_[0];
@@ -770,6 +766,8 @@ my $Nkeep = 0;
 
 
 while (<>) {
+
+  %::LINECACHE = ();
 
   if ($M_ignore && /$PAT_IGNORE/) {
     print "$_" if $M_ignore == 2;
