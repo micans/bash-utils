@@ -130,6 +130,21 @@ pick foomax::'foo\d{2}$',maxall < data.txt
    #
 pick -Ai reference:=foo01 '\foo\d{2}$'::__:reference^1,pct < data.txt
 
+   # Create fasta files with pick.
+   # Simplest case, two input columns. Quotes needed as '>' is a shell meta character.
+   # %0A is the url-encoding of a newline.
+   #
+pick  -k '::^>:1^%0A:2' > out.fa
+   #
+   # Use columns foo and bar instead
+   #
+pick   '::^>:foo^%0A:bar' > out.fa
+   #
+   # As above, add column zut as further annotation. Optionally use %20 for the space character.
+   #
+pick   '::^>:foo^ :zut^%0A:bar' > out.fa
+
+
 ```
 
   Pick supports a wide range of functionality. Standard arithmetic, bit

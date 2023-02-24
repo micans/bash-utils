@@ -28,15 +28,15 @@ use POSIX;
        ##                                                                               ##
       ##      Pick columns and select rows from tabular input, add derived columns       ##
      ##                 Pick and select either by column name or index                    ##
-    ##   Select with numerical and string comparison operators and regular expressions     ##
-    ##                Select on either existing columns or derived columns                 ##
-     ##            Compute derived columns with string and algbraic operations            ##
-      ##                         Add or change column names                              ##
-       ##              Select column names using regular expressions                    ##
+    ##                 Add new columns, update existing columns in-place                   ##
+    ##    Select with numerical and string comparison operators and regular expressions    ##
+     ##               Select on either existing columns or derived columns                ##
+      ##           Compute derived columns with string and arithmetic operations         ##
+       ##                        Add or change column names                             ##
+        ##             Select column names using regular expressions                   ##
         ##                                                                             ##
-        ##                       Requires tab separated input                          ##
-       ##                See -H (EOH below) and -l (brief help)                         ##
-      ##                                                                                 ##
+       ##                        Requires tab separated input                           ##
+      ##                 See -H (EOH below) and -l (brief help)                          ##
 
 @::spec = @ARGV; @ARGV = ();
 
@@ -76,7 +76,7 @@ my $B_debug        = 0;     # Mostly documents the stages of compute and selecti
 my $B_verbose      = 0;     # Not terrifically interesting
 my $B_add_names    = 0;     # If other names are given, whether to output them as column names
 my $B_regex        = 1;     # Whether to interpret names as a regular expression if one of the characters in $REGEXP_CHARS is found
-my $B_protect      = 0;     # Some protection against divide-by-zero with arbitrary choices.
+my $B_protect      = 0;     # Some protection against divide-by-zero; modifiable with PICK_*_INF environment variables.
 
 $::EPSILON         = 0.0001;  # obvs the best default epsilon - 10,000 is a myriad.
 $::OOM             = 2;     # order of magnitude. Maybe sqrt(2) makes more sense.
@@ -253,7 +253,7 @@ my $help_options=q{Options:
     1. consider using a=longcolumnname b=longercolumname; pick $a $b @$b/gt/0 @$a/lt/0 < data.txt
     2. consider using --inames=CSV (see below; this will change names in the output)
 
-  -z  ARG+ print url-encoding of ARG+
+  -z  ARG+ print url-encoding of ARG+  (no argument prints a few especially useful cases)
   -zz ARG+ print url-decoding of ARG+
   -l Concise help output
   -H Longer pick description
@@ -334,8 +334,15 @@ while (@::spec && $::spec[0] =~ /^-/) {
     local $, = ' ';
     print map { length($1) % 2 == 1 ? urlencode($_) : urldecode($_) } @::spec;
     if (@::spec) { print "\n"; }
-    else { print STDERR "-- No arguments given to url-encode\n"; }
+    else { print STDERR <<EOH;
+-- I url-encode any arguments. Useful cases:
+  ^   %5E         <TAB>      %09
+  :   %3A         <NEWLINE>  %0A
+  ,   %2C         <CR>       %0D
+                  <SPACE>    %20
+EOH
     exit 0;
+    }
   }
   elsif ($options =~ s/l//) {
     print $help_options, "\n";
@@ -854,15 +861,15 @@ __DATA__
                                           #      #
          s o m e   i d e a s
 
-   ?? +/pat select entire rows on pattern?
-   -  for regex selection, a wildcard tag that allows mass renaming.
-   -  for 'all' operators; store data in internal buffer; storeall.
-      minall maxall meanall, medianall, countall sdall can refer to it. needs a scope/clearing framework.
    -  column selection by range (note regular expressions can be used right now on 1..N)
    -  would --onames be helpful? (note -K)
    -  implement in cimfomfa/C (regular expressions not as good).
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    -  -f is useless in the sense that the same name implies the same content.
+   ?? +/pat select entire rows on pattern?
+   ?  for regex selection, a wildcard tag that allows mass renaming.
+   ?  for 'all' operators; store data in internal buffer; storeall.
+      minall maxall meanall, medianall, countall sdall can refer to it. needs a scope/clearing framework.
    o  numerical comparisons check field is numeric; however duplicates perl's work/warnings
    ?  predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI - no real need.
    #  -T pushes column; slightly inelegant but inevitable. -N -L fixed as rowno lineno operators.
