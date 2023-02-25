@@ -517,19 +517,22 @@ sub acigar {
 
    if (!defined($::LINECACHE{$key})) {
       my $c = $::LINECACHE{$key} =
-        { sum => { map { ($_, 0)  } split "", 'MINDSHP=X' }, count => { map { ($_, 0)  } split "", 'MINDSHP=X' } };
+        { sum   => { map { ($_, 0)  } split "", 'MINDSHP=X' }
+        , max   => { map { ($_, 0)  } split "", 'MINDSHP=X' }
+        , count => { map { ($_, 0)  } split "", 'MINDSHP=X' } };
       my $p = 0; my $n = 0;
       while ($cigar =~ m/(\d+)([MIDNSHP=X])/ig) {
         my ($num, $it) = ($1, $2);
         $n += length($&);
         $c->{sum}{$it} += $num;
         $c->{count}{$it}++;
+        $c->{max}{$it} = $num if $num > $c->{max}{$it};
         $p = pos($cigar);
       }
 print STDERR "-- Unmatched part in cigar string $cigar at $p (line $.)\n" unless $p == length($cigar) && $n == length($cigar);
    }
    my $cache = $::LINECACHE{$key};
-   if ($mode eq 'max')      { my $max = 0; for my $x (@subset) { for (@{$cache->{list}{$x}}) { $max = $_ if $_ > $max }} }
+   if ($mode eq 'max')      { my $max = 0; for my $x (@subset) { $max = $cache->{max}{$x} if $cache->{max}{$x} > $max }; return $max }
    elsif ($mode eq 'sum')   { my $sum = 0; $sum += $cache->{sum}{$_} for @subset; return $sum }
    elsif ($mode eq 'count') { my $count = 0; $count += $cache->{count}{$_} for @subset; return $count }
    else                     { return 'NA' }
