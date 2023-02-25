@@ -509,7 +509,7 @@ sub urldecode {
 }
 
 
-sub acigar {   # noteme guardme: caching assumes no two identical cigar strings on the same line.
+sub acigar {
 
    my ($cigar, $subset, $mode) = @_;
    my $key = "cigar::$cigar";
@@ -593,6 +593,14 @@ sub wrangle_header {
       my $indirection = $val =~ s/^:// ? 1 : 0;
       push @::select, [$op, $indirection, $val, $handle, $arg];
                # NOTE. $arg for now only used by /ep/ and /om/ selection, ignored by the others.
+    }
+    elsif ($B_headless && $spec =~ /^((\d+)\+)?(\d+)-(\d+)(\*(\d+))?$/) {
+      my ($offset, $start, $end, $multiply) = ($2, $3, $4, $6);
+      $offset = 0 unless defined($offset);
+      $multiply = 1 unless defined($multiply);
+      for (map { $offset + $_ * $multiply } $start..$end) {
+         push @::output_nm, $_;
+      }
     }
     else {
       $spec = urldecode($spec);
@@ -859,7 +867,6 @@ __DATA__
                                           #      #
          s o m e   i d e a s
 
-   -  column selection by range (note regular expressions can be used right now on 1..N)
    -  would --onames be helpful? (note -K)
    -  implement in cimfomfa/C (regular expressions not as good).
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
