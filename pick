@@ -526,7 +526,7 @@ sub acigar {
         $c->{count}{$it}++;
         $p = pos($cigar);
       }
-      print STDERR "-- Unmatched part in cigar string $cigar at $p (line $.)\n" unless $p == length($cigar) && $n == length($cigar);
+print STDERR "-- Unmatched part in cigar string $cigar at $p (line $.)\n" unless $p == length($cigar) && $n == length($cigar);
    }
    my $cache = $::LINECACHE{$key};
    if ($mode eq 'max')      { my $max = 0; for my $x (@subset) { for (@{$cache->{list}{$x}}) { $max = $_ if $_ > $max }} }
@@ -551,7 +551,7 @@ sub wrangle_header {
     my $name = $::HEADER[$i];
     die "Name $name defined more than once\n" if defined($::handle_map{$name}) && !defined($B_force);
     $::handle_map{$name} = $i;   
-    print STDERR "-- map header name $name to offset $i\n" if $B_debug;
+print STDERR "-- map header name $name to offset $i\n" if $B_debug;
   }
 
   for my $spec (@::spec) {
@@ -560,7 +560,7 @@ sub wrangle_header {
       if ($handle =~ /[$REGEXP_CHARS]/ && $B_regex) {
         my @matches = grep { $_ =~ qr/$handle/ } @::HEADER;
         my $n_matches = @matches; local $" = ' ';
-        print STDERR "-- (output+compute) expanding pattern $handle ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
+print STDERR "-- (output+compute) expanding pattern $handle ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
         $compute = ":$compute" unless $compute =~ /^[,:^]/;
         for my $m (@matches) {
           my $compute_m = $compute; $compute_m =~ s/:__\b/:$m/g;
@@ -589,7 +589,7 @@ sub wrangle_header {
       else{
          $arg = 0;
       }
-  print STDERR "-- adding select criterion handle=[$handle] op=[$op] val=[$val] arg=[$arg]\n" if $B_debug;
+print STDERR "-- adding select criterion handle=[$handle] op=[$op] val=[$val] arg=[$arg]\n" if $B_debug;
       my $indirection = $val =~ s/^:// ? 1 : 0;
       push @::select, [$op, $indirection, $val, $handle, $arg];
                # NOTE. $arg for now only used by /ep/ and /om/ selection, ignored by the others.
@@ -607,7 +607,7 @@ sub wrangle_header {
       if ($spec =~ /[$REGEXP_CHARS]/ && $B_regex) {
         my @matches = grep { $_ =~ qr/$spec/ } @::HEADER;
         my $n_matches = @matches; local $" = ' ';
-        print STDERR "-- (output) expanding pattern $spec ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
+print STDERR "-- (output) expanding pattern $spec ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
         for my $m (@matches) {
           push @::output_nm, $m;
         }
@@ -620,7 +620,7 @@ sub wrangle_header {
 
   $::plain_handle{$_} = 1 for @::output_nm;
 
-  print STDERR "-- output column names as specified: @::output_nm\n" if $B_debug;
+print STDERR "-- output column names as specified: @::output_nm\n" if $B_debug;
   if ($B_excise || $B_printall) {
     my @new_names = grep { !defined($inheader{$_}) } @::output_nm;
     if ($B_excise) {
@@ -638,14 +638,14 @@ sub wrangle_header {
        push @::output_nm, @new_names;
     }
   }
-  print STDERR "-- output column names after -i/-a treatment: @::output_nm\n" if $B_debug && ($B_excise || $B_printall);
+print STDERR "-- output column names after -i/-a treatment: @::output_nm\n" if $B_debug && ($B_excise || $B_printall);
 
   if ($B_print_header) {
     my %names = (); my $i = 1;
     for (@::output_nm) { $names{$_} = $i++ unless defined($names{$_}) }
     if (keys %names < @::output_nm) {
        my $job = $B_force ? 'leaving as specified' : 'will make unique';
-       print STDERR "-- Identical output column names exist ($job)\n";
+print STDERR "-- Identical output column names exist ($job)\n";
        @::output_nm = sort { $names{$a} <=> $names{$b} } keys %names unless $B_force;
     }
   }
@@ -666,7 +666,7 @@ sub wrangle_header {
          my @matches = grep { $_ =~ qr/$what/ } @::HEADER;
          my $n_matches = @matches;
          local $" = ' ';
-         print STDERR "-- (compute) expanding pattern $what ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
+print STDERR "-- (compute) expanding pattern $what ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
          for my $h (@matches) {
            push @expanded_compute, [$TYPE_HANDLE, $h];
          }
@@ -692,7 +692,7 @@ sub wrangle_header {
     $::handle_map{$name} = $j;
                               # inplace NOTE continued. Future lookups for foo will refer to this definition; This includes output.
                               # This process is consistently applied if multiple foo:: are specified.
-    print STDERR "-- map compute name $name to offset $j\n" if $B_debug;
+print STDERR "-- map compute name $name to offset $j\n" if $B_debug;
   }
 
   #
