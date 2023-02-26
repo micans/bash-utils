@@ -68,6 +68,7 @@ my $B_inplace      = 0;     # Allow derived column to redefine existing column n
 my $B_excise       = 0;     # print all except the plain column handles listed, cannot combine with $B_printall
 my $B_add_row_column = 0;   # See -H, EOH
 my $B_headless     = 0;     # No header (-k option)
+my $B_ko           = 0;     # With -k, make output columns unique and ordered as in output.
 my $B_sprouthead   = 0;     # Create header e.g. from derived names
 my $B_weirdmode    = 0;     # Header exists, but users wants to use numbers (turns of selections for header)
 my $B_force        = 0;     # Force output if identical output names exist
@@ -225,8 +226,6 @@ my %sel_opdefinitions = (
 my $envsettings = join "\n", map { sprintf("  %-20s %8s", $_, $PNAN{$_}) } keys %PNAN;
 
 my $help_options=q{Options:
-  -k headerless input, use 1 2 .. for input column names
-  -K headerless input, as above, use derived names to output column names
   -h do not print header
   -o OR multiple select criteria (default is AND)
   -x take complement of selected input column(s) (works with -i)
@@ -241,6 +240,12 @@ my $help_options=q{Options:
   -O<N> <N> integer; allow ragged input (e.g. SAM use -O12), merge all columns at/after position <N>
   -T do not select, print tally column of count of matched row select criteria (name T)
   -P protect against 'nan' and 'inf' results (see -H for environment variables PICK_*_INF)
+
+  -k headerless input, use 1 2 .. for input column names
+     x-y for range from x to y
+     a+x-y*k for range from a + k*x to a+y*k with incrementes of k 
+  -K headerless input, as above, use derived names to output column names
+  -U with -k and -K keep output columns unique and in original order
 
   -R add _ column variable if no row name field exists in the header;
     NOTE an empty field is recognised and mapped to _ automatically
@@ -318,6 +323,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
   $B_protect      = 1 if $options =~ s/P//;
   $B_select_and   = 0 if $options =~ s/o//;
   $B_verbose      = 1 if $options =~ s/v//;
+  $B_ko           = 1 if $options =~ s/U//;
   $B_print_tally  = 1 if $options =~ s/T//;
   $B_excise       = 1 if $options =~ s/x//;
   $B_add_row_column =1 if $options =~ s/R//;
@@ -599,9 +605,10 @@ print STDERR "-- adding select criterion handle=[$handle] op=[$op] val=[$val] ar
     }
     elsif ($B_headless && $spec =~ /^((\d+)\+)?(\d+)-(\d+)(\*(\d+))?$/) {
       my ($offset, $start, $end, $multiply) = ($2, $3, $4, $6);
-      $offset = 0 unless defined($offset);
+      $offset   = 0 unless defined($offset);
       $multiply = 1 unless defined($multiply);
-      for (map { $offset + $_ * $multiply } $start..$end) {
+      my @colindexes = map { $offset + $_ * $multiply } $start..$end;
+      for (@colindexes) {
          push @::output_nm, $_;
       }
     }
@@ -620,6 +627,8 @@ print STDERR "-- (output) expanding pattern $spec ($n_matches matches: @matches)
       }
     }
   }
+
+  @::output_nm = sort { $a <=> $b } keys %{{ map { ($_, 1) } @::output_nm }} if $B_ko;
 
   $::plain_handle{$_} = 1 for @::output_nm;
 
@@ -858,17 +867,7 @@ print STDERR "== Line tally check failed: ($::Nrows != $B_header+$Nkeep+$Ndisc)\
 
 
 __DATA__
-                                      ####        ####
-                                     ##   #      #   ##
-                                    #                  #
-                                   ##                  ##
-                                   ##     R. I. P.     ##
-                                    ##                ##
-                                     ##    recol     ##
-                                      ##            ##
-                                        ##        ##
-                                          #      #
-         s o m e   i d e a s
+                                            s o m e   i d e a s
 
    -  would --onames be helpful? (note -K)
    -  implement in cimfomfa/C (regular expressions not as good).
@@ -886,3 +885,15 @@ __DATA__
          foo::,LC:a:b:c,op,op,RC       # open/close code
          encode scope in a separate datastructure; fast path if no scopes exist.
    -  tests
+
+     ####        ####
+    ##   #      #   ##
+   #                  #
+  ##                  ##
+  ##     R. I. P.     ##
+   ##                ##
+    ##    recol     ##
+     ##            ##
+       ##        ##
+         #      #
+
