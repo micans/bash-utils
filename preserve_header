@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# https://unix.stackexchange.com/questions/11856/sort-but-keep-header-line-at-the-top
+
+IFS= read -r header
+printf '%s\n' "$header"
+"$@"
+
