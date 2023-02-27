@@ -105,6 +105,7 @@ my %cp_opdefinitions =
      joinall   => [ 1, sub { my $j = pop(@::STACK); my $x = join $j, @::STACK; @::STACK = ($x) } ],
      mul       => [ 2, sub { $::STACK[-2] *= $::STACK[-1] } ],
      div       => [ 2, sub { $::STACK[-2] = !$B_protect || $::STACK[-1] ? $::STACK[-2] / $::STACK[-1] : $PNAN{PICK_DIV_INF} } ],
+     idiv      => [ 2, sub { my ($x, $y) = ($::STACK[-2], $::STACK[-1]); $::STACK[-2] = !$B_protect || $y ? ($x-($x % $y))/$y : $PNAN{PICK_DIV_INF} } ],
      cat       => [ 2, sub { $::STACK[-2] .= $::STACK[-1] } ],
      sub       => [ 2, sub { $::STACK[-2] -= $::STACK[-1] } ],
      pop       => [ 0, sub { stacky('pop', 1); pop @::STACK } ],
@@ -796,7 +797,7 @@ while (<>) {
   }
 
   chomp;
-  my @F = $_ ? split "\t", $_, $OFFSET_OMEGA : ("");
+  my @F = length($_) ? split "\t", $_, $OFFSET_OMEGA : ("");
 
   if ($OFFSET_OMEGA > 0 && @F < $OFFSET_OMEGA) {
     push @F, ( ("") x ($OFFSET_OMEGA - @F)) ;
@@ -870,7 +871,7 @@ __DATA__
                                             s o m e   i d e a s
 
    -  would --onames be helpful? (note -K)
-   -  map values, e.g. 16 -> 'reverse' 0 -> 'forward'
+   -  map values, e.g. 16 -> 'reverse' 0 -> 'forward' (named lookups, file argument?)
    -  implement in cimfomfa/C (regular expressions not as good).
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    -  -f is useless in the sense that the same name implies the same content.
