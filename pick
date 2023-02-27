@@ -345,8 +345,8 @@ while (@::spec && $::spec[0] =~ /^-/) {
   ,   %2C         <CR>       %0D
                   <SPACE>    %20
 EOH
-    exit 0;
     }
+    exit 0;
   }
   elsif ($options =~ s/l//) {
     print $help_options, "\n";
@@ -504,7 +504,7 @@ print STDERR "-- $type $what >>\n" if $B_debug;
 
 sub urlencode {
    my $val = shift;
-   $val =~ s/([^A-Za-z0-9\-_.])/ uc sprintf "%%%0x", ord $1 /eg;
+   $val =~ s/([^A-Za-z0-9_])/ uc sprintf "%%%0x", ord $1 /eg;
    return $val;
 }
 
@@ -870,6 +870,7 @@ __DATA__
                                             s o m e   i d e a s
 
    -  would --onames be helpful? (note -K)
+   -  map values, e.g. 16 -> 'reverse' 0 -> 'forward'
    -  implement in cimfomfa/C (regular expressions not as good).
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    -  -f is useless in the sense that the same name implies the same content.
