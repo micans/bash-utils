@@ -418,7 +418,7 @@ function vw ()
 
 function rc() {
   if [[ -n $1 ]]; then
-    echo $1 | tr GCATUgcatu  CGTAAcgtAa  | rev
+    echo $1 | tr GCATUgcatu  CGTAAcgtaa  | rev
   else
      tr GCATUgcatu  CGTAAcgtAa  | rev
    fi
