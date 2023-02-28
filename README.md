@@ -28,7 +28,7 @@ now.
   - Remove columns (`-x col1 col2 col3`).
   - Ragged input (e.g. SAM format) with `-O<N>` (collate all columns from `N` onwards).
   - If needed, perl regular expression selection of column names, e.g. `foo\d{3}`.
-  - Syntax is compact and avoids shell metacharacters.
+  - Syntax is compact and common use cases avoid shell metacharacters.
 
   `pick` is the latest incarnation of a concept that I've attempted many times
   over the years.  This is the first one that is fun to use, surprisingly

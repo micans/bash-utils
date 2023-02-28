@@ -104,8 +104,8 @@ my %cp_opdefinitions =
      minall    => [ 0, sub { my $x =  POSIX::DBL_MAX; for (@::STACK) { $x = $_ if $_ < $x }; @::STACK = ($x) } ],
      joinall   => [ 1, sub { my $j = pop(@::STACK); my $x = join $j, @::STACK; @::STACK = ($x) } ],
      mul       => [ 2, sub { $::STACK[-2] *= $::STACK[-1] } ],
-     div       => [ 2, sub { $::STACK[-2] = !$B_protect || $::STACK[-1] ? $::STACK[-2] / $::STACK[-1] : $PNAN{PICK_DIV_INF} } ],
-     idiv      => [ 2, sub { my ($x, $y) = ($::STACK[-2], $::STACK[-1]); $::STACK[-2] = !$B_protect || $y ? ($x-($x % $y))/$y : $PNAN{PICK_DIV_INF} } ],
+     div       => [ 2, sub { my ($x, $y) = @::STACK[-2,-1]; $::STACK[-2] = !$B_protect || $y ? $x / $y : $PNAN{PICK_DIV_INF} } ],
+     idiv      => [ 2, sub { my ($x, $y) = @::STACK[-2,-1]; $::STACK[-2] = !$B_protect || $y ? ($x-($x % $y))/$y : $PNAN{PICK_DIV_INF} } ],
      cat       => [ 2, sub { $::STACK[-2] .= $::STACK[-1] } ],
      sub       => [ 2, sub { $::STACK[-2] -= $::STACK[-1] } ],
      pop       => [ 0, sub { stacky('pop', 1); pop @::STACK } ],
@@ -139,8 +139,8 @@ my %cp_opdefinitions =
      ed        => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/  } ],
      edg       => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
      substr    => [ 3, sub { $::STACK[-3] =  substr($::STACK[-3], $::STACK[-2], $::STACK[-1]) } ],
-     pct       => [ 3, sub { $::STACK[-3] = !$B_protect || $::STACK[-2] ? sprintf("%.*f", $::STACK[-1], $::STACK[-3] * 100 / $::STACK[-2]) : $PNAN{PICK_DIV_INF} } ],
-     frac      => [ 3, sub { $::STACK[-3] = !$B_protect || $::STACK[-2] ? sprintf("%.*f", $::STACK[-1], $::STACK[-3] / $::STACK[-2]) :  $PNAN{PICK_DIV_INF}} ],
+     pct       => [ 3, sub { my ($x, $y, $n) = @::STACK[-3,-2,-1]; $::STACK[-3] = !$B_protect || $y ? sprintf("%.*f", $n, $x * 100 / $y) : $PNAN{PICK_DIV_INF} } ],
+     frac      => [ 3, sub { my ($x, $y, $n) = @::STACK[-3,-2,-1]; $::STACK[-3] = !$B_protect || $y ? sprintf("%.*f", $n, $x / $y) :  $PNAN{PICK_DIV_INF}} ],
 
      tobin     => [ 1, sub { $::STACK[-1] = sprintf("%b", $::STACK[-1]) } ],
      tohex     => [ 1, sub { $::STACK[-1] = sprintf("%x", $::STACK[-1]) } ],
@@ -871,7 +871,8 @@ __DATA__
                                             s o m e   i d e a s
 
    -  would --onames be helpful? (note -K)
-   -  map values, e.g. 16 -> 'reverse' 0 -> 'forward' (named lookups, file argument?)
+   -  map values, e.g. 16 -> 'reverse' 0 -> 'forward' (named lookups, file argument?; rename)
+      -> ^fname^dictname,dict  and <val>^dictname,rename;  ed(it) using dictionary?
    -  implement in cimfomfa/C (regular expressions not as good).
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    -  -f is useless in the sense that the same name implies the same content.
