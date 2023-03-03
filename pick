@@ -268,6 +268,10 @@ my $help_options=q{Options:
                      in selection, compute and filter expressions must be picked from this list.
                      Output names are from the list. If using -k --inames=CSV provides temporary
                      handles; use --add-inames=CSV to add them to the output.
+  --dict-NAME=fname  fname should be two-column tab-separated file storing key and value per line.
+                     This stores a dictionary called NAME that can be used to map values
+                     with ...^NAME,map. Small dictionaries can be encoded on the command line, e.g.
+                     echo -e "a\tb\tc" | ./pack -k --dict-foo=<(echo -e "a\tWOW") ::1^foo,map
 
   Short options combine, e.g. -ok/^@ for headerless input, comments indicated by ^@, OR selection.
   -AT is useful for inspecting/checking select criteria
