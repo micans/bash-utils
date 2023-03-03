@@ -138,6 +138,7 @@ my %cp_opdefinitions =
 
      ed        => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/  } ],
      edg       => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
+     map       => [ 2, sub { my ($x, $d) = @::STACK[-2,-1]; my $dict = $::dict{$d}; my $m = defined($dict) ? $dict->{$x} : undef; $::STACK[-2] = $m if defined($m); } ],
      substr    => [ 3, sub { $::STACK[-3] =  substr($::STACK[-3], $::STACK[-2], $::STACK[-1]) } ],
      pct       => [ 3, sub { my ($x, $y, $n) = @::STACK[-3,-2,-1]; $::STACK[-3] = !$B_protect || $y ? sprintf("%.*f", $n, $x * 100 / $y) : $PNAN{PICK_DIV_INF} } ],
      frac      => [ 3, sub { my ($x, $y, $n) = @::STACK[-3,-2,-1]; $::STACK[-3] = !$B_protect || $y ? sprintf("%.*f", $n, $x / $y) :  $PNAN{PICK_DIV_INF}} ],
@@ -295,11 +296,26 @@ my @ops3 = sort grep { $cp_opdefinitions{$_}[0] == 3 } @normalops;
 my @opsf = sort { $sel_opdefinitions{$a}[0] <=> $sel_opdefinitions{$b}[0] } keys %sel_opdefinitions;
 my $nameslist = "";
 
+%::dict = ();
+
+sub read_dict {
+   my ($name, $fname) = @_;
+   open(D, "<$fname") || die "cannot open $fname for dictionary reading";
+   $::dict{$name} = { map { chomp; (split "\t")[0,1]; } <D> };
+   my $n = keys %{$::dict{$name}};
+print STDERR "-- read $n keys from $fname\n" if $B_verbose;
+   close(D);
+}
+
 while (@::spec && $::spec[0] =~ /^-/) {
 
   my $options = shift @::spec;
 
-  if ($options =~ /^--(add-)?inames=(.+)$/) {
+  if ($options =~ /^--dict-(\w+)=(.+)$/) {
+    read_dict($1, $2);
+    next;
+  }
+  elsif ($options =~ /^--(add-)?inames=(.+)$/) {
     $nameslist=$2;
     $B_add_names = $1 ? 1 : 0;
     next;
@@ -417,6 +433,7 @@ Explaining the self-unexplained
    x e   | get        |  x =~ s/e/MATCH/   | MATCH is \$1 corresponding to outer () if exists,
    x e z | ed         |  x =~ s/e/z/       | matched part otherwise.
    x e z | edg        |  x =~ s/e/z/g      | e accepts most perl regular expression syntax
+   x d   | map        |  map x using dictionary named d, specified as --dict-d=<FNAME>  
    x y   | uie        |  (use if empty) x or y if x is the empty string
    x n   | zp         |  left-padding with zeroes to length n
    x o n | substr     |  substr(x, o=offset, n=count)
@@ -872,7 +889,8 @@ __DATA__
 
    -  would --onames be helpful? (note -K)
    -  map values, e.g. 16 -> 'reverse' 0 -> 'forward' (named lookups, file argument?; rename)
-      -> ^fname^dictname,dict  and <val>^dictname,rename;  ed(it) using dictionary?
+      -> --dict-name=fname  and <val>^dictname,rename;  ed(it) using dictionary?
+      -> ed -> get value from column?
    -  implement in cimfomfa/C (regular expressions not as good).
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    -  -f is useless in the sense that the same name implies the same content.
