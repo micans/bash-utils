@@ -268,10 +268,13 @@ my $help_options=q{Options:
                      in selection, compute and filter expressions must be picked from this list.
                      Output names are from the list. If using -k --inames=CSV provides temporary
                      handles; use --add-inames=CSV to add them to the output.
-  --dict-NAME=fname  fname should be two-column tab-separated file storing key and value per line.
+
+  --fdict-NAME=fname fname should be two-column tab-separated file storing key and value per line.
                      This stores a dictionary called NAME that can be used to map values
-                     with ...^NAME,map. Small dictionaries can be encoded on the command line, e.g.
-                     echo -e "a\tb\tc" | pick -k --dict-foo=<(echo -e "a\tWOW") ::1^foo,map
+                     with ...^NAME,map. Small dictionaries can be encoded on the command line with
+  --cdict-NAME=<csv> where <csv> is a comma separated string of key:value pairs -- after splitting
+                     on commas and colons all keys and values are url-decoded. Example usage:
+       echo -e "a\t3\nb\t4" | ./pick -Aik --cdict-foo=a:Alpha,b:Beta 1::1^foo,map
 
   Short options combine, e.g. -ok/^@ for headerless input, comments indicated by ^@, OR selection.
   -AT is useful for inspecting/checking select criteria
@@ -307,16 +310,31 @@ sub read_dict {
    open(D, "<$fname") || die "cannot open $fname for dictionary reading";
    $::dict{$name} = { map { chomp; (split "\t")[0,1]; } <D> };
    my $n = keys %{$::dict{$name}};
-print STDERR "-- read $n keys from $fname\n" if $B_verbose;
+print STDERR "-- have $n keys in dictionary $name after reading $fname\n" if $B_verbose;
    close(D);
+}
+
+sub parse_dict {
+   my ($name, $string) = @_;
+   for my $pair (split ",", $string) {
+      my ($k, $v) = map { urldecode($_) } split ':', $pair;
+      die "no key:value found in [$pair]" unless defined($v);
+      $::dict{$name}{$k} = $v;
+   }
+   my $n = keys %{$::dict{$name}};
+print STDERR "-- have $n keys in dictionary $name after parsing string\n" if $B_verbose;
 }
 
 while (@::spec && $::spec[0] =~ /^-/) {
 
   my $options = shift @::spec;
 
-  if ($options =~ /^--dict-(\w+)=(.+)$/) {
+  if ($options =~ /^--fdict-(\w+)=(.+)$/) {
     read_dict($1, $2);
+    next;
+  }
+  elsif ($options =~ /^--cdict-(\w+)=(.+)$/) {
+    parse_dict($1, $2);
     next;
   }
   elsif ($options =~ /^--(add-)?inames=(.+)$/) {
@@ -364,7 +382,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
   ^   %5E         <TAB>      %09
   :   %3A         <NEWLINE>  %0A
   ,   %2C         <CR>       %0D
-                  <SPACE>    %20
+  %   %25         <SPACE>    %20
 EOH
     }
     exit 0;
@@ -437,7 +455,7 @@ Explaining the self-unexplained
    x e   | get        |  x =~ s/e/MATCH/   | MATCH is \$1 corresponding to outer () if exists,
    x e z | ed         |  x =~ s/e/z/       | matched part otherwise.
    x e z | edg        |  x =~ s/e/z/g      | e accepts most perl regular expression syntax
-   x d   | map        |  map x using dictionary named d, specified as --dict-d=<FNAME>  
+   x d   | map        |  map x using dictionary named d, specified as --fdict-d=<FNAME>  
    x y   | uie        |  (use if empty) x or y if x is the empty string
    x n   | zp         |  left-padding with zeroes to length n
    x o n | substr     |  substr(x, o=offset, n=count)
@@ -654,7 +672,8 @@ print STDERR "-- (output) expanding pattern $spec ($n_matches matches: @matches)
 
   $::plain_handle{$_} = 1 for @::output_nm;
 
-print STDERR "-- output column names as specified: @::output_nm\n" if $B_debug;
+local $" = ',';
+print STDERR "-- output column names as specified: [@::output_nm]\n" if $B_debug;
   if ($B_excise || $B_printall) {
     my @new_names = grep { !defined($inheader{$_}) } @::output_nm;
     if ($B_excise) {
@@ -726,7 +745,7 @@ print STDERR "-- (compute) expanding pattern $what ($n_matches matches: @matches
     $::handle_map{$name} = $j;
                               # inplace NOTE continued. Future lookups for foo will refer to this definition; This includes output.
                               # This process is consistently applied if multiple foo:: are specified.
-print STDERR "-- map compute name $name to offset $j\n" if $B_debug;
+print STDERR "-- map compute name [$name] to offset $j\n" if $B_debug;
   }
 
   #
@@ -892,9 +911,6 @@ __DATA__
                                             s o m e   i d e a s
 
    -  would --onames be helpful? (note -K)
-   -  map values, e.g. 16 -> 'reverse' 0 -> 'forward' (named lookups, file argument?; rename)
-      -> --dict-name=fname  and <val>^dictname,rename;  ed(it) using dictionary?
-      -> ed -> get value from column?
    -  implement in cimfomfa/C (regular expressions not as good).
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    -  -f is useless in the sense that the same name implies the same content.
