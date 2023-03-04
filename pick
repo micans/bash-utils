@@ -308,10 +308,13 @@ my $nameslist = "";
 sub read_dict {
    my ($name, $fname) = @_;
    open(D, "<$fname") || die "cannot open $fname for dictionary reading";
-   $::dict{$name} = { map { chomp; (split "\t")[0,1]; } <D> };
+   while(<D>) {
+      chomp; my @F = split "\t";
+      die "Dictionary $name load error on line $. of $fname" unless @F >= 2;
+      $::dict{$name}{$F[0]} = $F[1];
+   } close(D);
    my $n = keys %{$::dict{$name}};
 print STDERR "-- have $n keys in dictionary $name after reading $fname\n" if $B_verbose;
-   close(D);
 }
 
 sub parse_dict {
@@ -911,6 +914,9 @@ __DATA__
                                             s o m e   i d e a s
 
    -  would --onames be helpful? (note -K)
+   ?  options if no map exists
+   -  challenge: combine ed and map. replace substring with its map. First ,get it and ,map, then ,ed it.
+         not great currently: echo -e "_a_\t3\n_b_\t4" | ./pick -AiK --cdict-foo=a:Alpha,b:Beta x::1^_'(.)'_,get^foo,map 1::1^'(?<=_)(.)(?=_)':x,ed
    -  implement in cimfomfa/C (regular expressions not as good).
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    -  -f is useless in the sense that the same name implies the same content.
