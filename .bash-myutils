@@ -119,6 +119,34 @@ function fqfa {
   gzip -dcf ${1:?Need file} | perl -ne '$i=($.+2)/4; print ">$i\n$_" if $. % 4 == 2'
 }
 
+function ie {                       # immediate edit
+  name=${1?Need program name}
+  path=$(which $name)
+  if [[ $? != 0 ]]; then
+    echo "Not found: [$name]"
+    return 1
+  elif [[ $(file --mime $path) =~ charset=binary ]]; then
+    echo "Binary file [$path] left alone"
+    return 1
+  elif [[ ! -x $path ]]; then
+    echo "File $path not executable (surprisingly)"
+    return 1
+  fi
+  $EDITOR $path
+}
+complete -c ie
+
+function length {
+    # This one is for streams, and optionally takes a column name
+    # nchar is for cline arguments.
+  num=${1-1}
+  pick -k ::$num,len
+}
+
+function twofasta {
+  pick -k id::^'>':1 seq::2 | tr '\t' '\n'
+}
+
   # Given argument 'tag', glog searches the file named in variable GLOGME
   # for a section defined by
   # <tag
