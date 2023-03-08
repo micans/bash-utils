@@ -108,11 +108,13 @@ my %cp_opdefinitions =
      idiv      => [ 2, sub { my ($x, $y) = @::STACK[-2,-1]; $::STACK[-2] = !$B_protect || $y ? ($x-($x % $y))/$y : $PNAN{PICK_DIV_INF} } ],
      cat       => [ 2, sub { $::STACK[-2] .= $::STACK[-1] } ],
      sub       => [ 2, sub { $::STACK[-2] -= $::STACK[-1] } ],
+
      pop       => [ 0, sub { stacky('pop', 1); pop @::STACK } ],
      dup       => [ 0, sub { stacky('dup', 1); push @::STACK, $::STACK[-1]  } ],
      xch       => [ 0, sub { stacky('xch', 2); ($::STACK[-2], $::STACK[-1]) = ($::STACK[-1], $::STACK[-2]) } ],
      rowno     => [ 0, sub { push @::STACK, $::Nrows -1+$B_headless } ],
      lineno    => [ 0, sub { push @::STACK, $.      } ],
+
      mod       => [ 2, sub { $::STACK[-2] %= $::STACK[-1] } ],
      pow       => [ 2, sub { $::STACK[-2] **= $::STACK[-1] } ],
      and       => [ 2, sub { $::STACK[-2] &= $::STACK[-1] } ],
@@ -195,8 +197,8 @@ my %sel_opdefinitions = (
   '/ge/'       => [ 48, sub { $_[0] >= $_[1] } ],
   '/gt/'       => [ 49, sub { $_[0] >  $_[1] } ],
 
-  '/ep/'       => [ 50, sub { interval_plus(@_)} ],
-  '/om/'       => [ 51, sub { interval_mul(@_) } ],
+  '/ep/'       => [ 50, sub { interval_plus(@_)} ],      # epsilon
+  '/om/'       => [ 51, sub { interval_mul(@_) } ],      # order of magnitude
 
   '~eq~'       => [ 52, sub { $_[0] eq $_[1] } ],
   '~ne~'       => [ 53, sub { $_[0] ne $_[1] } ],
@@ -431,8 +433,10 @@ Form (5) as form 4, and selects the handle for output.
   /=    String identity reject
   ~     Substring/regular expression match accept
   /~    Substring/regular expression match reject
-  /ep/<what>/epsilon  Aproximate numerical identity wrt <what> +- epsilon
-  /om/<what>/oom      Aproximate magnitude identity wrt |<what>| * oom
+  /ep/<what>
+  /ep/<what>/epsilon  Aproximate numerical identity wrt <what> +- epsilon (default $::EPSILON)
+  /om/<what>
+  /om/<what>/oom      Aproximate magnitude identity wrt |<what>| * order-of-magnitude (default $::OOM)
   /eq|ne|lt|le|ge|gt/ numerical comparison (equal, not equal, less than, less than or equal etc)
   ~eq|ne|lt|le|ge|gt~  string   comparison (equal, not equal, less than, less than or equal etc)
 
@@ -914,9 +918,14 @@ __DATA__
                                             s o m e   i d e a s
 
    -  would --onames be helpful? (note -K)
-   ?  options if no map exists
+   ?  give user options if no map exists
    -  challenge: combine ed and map. replace substring with its map. First ,get it and ,map, then ,ed it.
-         not great currently: echo -e "_a_\t3\n_b_\t4" | ./pick -AiK --cdict-foo=a:Alpha,b:Beta x::1^_'(.)'_,get^foo,map 1::1^'(?<=_)(.)(?=_)':x,ed
+         currently: echo -e "_a_\t3\n_b_\t4\naba\t5" | ./pick -AiK --cdict-foo=a:Alpha,b:Beta x::1^_'(.)'_,get^foo,map 1::1^'_\K(.)(?=_)':x,ed
+         where \K is available since Perl 5.10.0, 2007. Requires some perl, doesn't look great, but works.
+      ?  edmap => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/my $x = $::dict{$::STACK[-1]}{$1}; defined($x) ? $x : $1/e  } ],
+         echo -e "_a_\t3\n_b_\t4\n_d_\t8" | pick -AviK --fdict-foo=dict --cdict-foo=a:Alpha,b:Beta,c:Gamma 1::1^'%5E_\K(.)(?=_$)'^foo,edmap
+      -> $1 not the right control? You might want to replace more than just $1, using the map of $1.
+         the two-step solution will allow this.
    -  implement in cimfomfa/C (regular expressions not as good).
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    -  -f is useless in the sense that the same name implies the same content.
