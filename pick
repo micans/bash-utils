@@ -434,9 +434,9 @@ Form (5) as form 4, and selects the handle for output.
   ~     Substring/regular expression match accept
   /~    Substring/regular expression match reject
   /ep/<what>
-  /ep/<what>/epsilon  Aproximate numerical identity wrt <what> +- epsilon (default $::EPSILON)
+  /ep/<what>/epsilon  Column value lies in [ <what> - epsilon, <what> + epsilon ] (default $::EPSILON)
   /om/<what>
-  /om/<what>/oom      Aproximate magnitude identity wrt |<what>| * order-of-magnitude (default $::OOM)
+  /om/<what>/oom      |Column value| lies in [ |<what>| / oom, |<what>| * oom ] (default $::OOM)
   /eq|ne|lt|le|ge|gt/ numerical comparison (equal, not equal, less than, less than or equal etc)
   ~eq|ne|lt|le|ge|gt~  string   comparison (equal, not equal, less than, less than or equal etc)
 
@@ -920,7 +920,7 @@ __DATA__
    -  would --onames be helpful? (note -K)
    ?  give user options if no map exists
    -  challenge: combine ed and map. replace substring with its map. First ,get it and ,map, then ,ed it.
-         currently: echo -e "_a_\t3\n_b_\t4\naba\t5" | ./pick -AiK --cdict-foo=a:Alpha,b:Beta x::1^_'(.)'_,get^foo,map 1::1^'_\K(.)(?=_)':x,ed
+         currently: echo -e "_a_\t3\n_b_\t4\naba\t5" | pick -AiK --cdict-foo=a:Alpha,b:Beta x::1^_'(.)'_,get^foo,map 1::1^'_\K(.)(?=_)':x,ed
          where \K is available since Perl 5.10.0, 2007. Requires some perl, doesn't look great, but works.
       ?  edmap => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/my $x = $::dict{$::STACK[-1]}{$1}; defined($x) ? $x : $1/e  } ],
          echo -e "_a_\t3\n_b_\t4\n_d_\t8" | pick -AviK --fdict-foo=dict --cdict-foo=a:Alpha,b:Beta,c:Gamma 1::1^'%5E_\K(.)(?=_$)'^foo,edmap

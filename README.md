@@ -21,13 +21,15 @@ now.
   It can select columns like `cut`, but allows doing so either by column name or column index (with `-k`).
 
   - Column names or indexes become variables.
-  - Create new columns using arithmetic and string operations on variables.
-  - Update existing columns (`-i`) in the same way.
-  - Filter rows of interest using variables in conditional expressions.
+  - Create new variables using arithmetic and string operations on existing variables.
+  - Each variable can reference any variable previously defined.
+  - Optionally output a variable as a new column.
+  - Optonally update an existing column (`-i`).
+  - Filter rows of interest using variables in conditional expressions (`@foo/gt/0`).
   - Insert new columns at position `N` (by default at end), keep old columns (`-A` and `-A<N>`).
   - Remove columns (`-x col1 col2 col3`).
   - Ragged input (e.g. SAM format) with `-O<N>` (collate all columns from `N` onwards).
-  - If needed, perl regular expression selection of column names, e.g. `foo\d{3}`.
+  - If needed, perl regular expression selection of multiple column names, e.g. `foo\d{3}`.
   - Syntax is compact and common use cases avoid shell metacharacters.
 
   `pick` is the latest incarnation of a concept that I've attempted many times
