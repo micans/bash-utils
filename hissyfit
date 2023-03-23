@@ -455,14 +455,15 @@ if (@points || @pquery) {
   my $n = $emoji ? 2 : 1;
   my $c = $emoji ? '=' : ' ';
   my $ruler = $c x ($NBINS * $n);
+  my $f = 1.0;          # 0.9999 sometimes? needed? for awkward boundaries; ongoing.
   for (@points) {
-    my $x = int(0.9999 * ($_ - $hmin) / $width);
+    my $x = int($f * ($_ - $hmin) / $width);
     if ($x >= 0 && $x < $NBINS) {
       substr($ruler, $n * $x, 1) = '|';
     }
   }
   for (@pquery) {
-    my $x = int(0.9999 * ($_ - $hmin) / $width);
+    my $x = int($f * ($_ - $hmin) / $width);
     if ($x >= 0 && $x < $NBINS) {
       substr($ruler, $n * $x, 1) = '+';
     }
