@@ -48,9 +48,19 @@ now.
 
 
 ```
-   # pick columns foo bar from data.txt.
+   # pick columns foo bar from data.txt. Order is as specified.
    #
 pick foo bar < data.txt
+
+   # pick columns bar foo from data.txt, in that order. With -h
+   # the column names themselves are dropped.
+   #
+pick -h bar foo < data.txt
+
+   # pick column 5 and 3 from data.txt, in that order; -k implies
+   # no column names are expected, and handles are 1-based indexes.
+   #
+pick -k 5 3 < data.txt
 
    # pick columns foo bar with rows where tim fields are larger than zero.
    # multiple @ selections are possible; default is AND, use -o for OR.
@@ -91,8 +101,10 @@ pick -Ai foo::foo^1,add < data.txt
    #
 pick -h ::foo,len < data.txt | hissyfit
 
-   # Swap two columns. This is mostly to illustrate how columns and compute names interact.
-   # Compute names are like normal variables, so to swap two values a third name is needed.
+
+   # Output everything and swap two columns. This is mostly to illustrate how
+   # columns and compute names interact.  Compute names are like normal
+   # variables, so to swap two values a third name is needed.
    #
 pick -Aki foo:=1 1::2 2::foo < data.txt
    #
