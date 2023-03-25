@@ -476,13 +476,14 @@ if ($terse) {
 else {
   my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND_orig);
   print "ND=$ND$oor hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax\n";
-  print "topbin(i=$bigbinid,n=$bigbin,p=$bigbinpct,x~$bigbinmid) bw=$width q=($q1\[$p1],$q2\[$p2],$q3\[$p3])\n";
+  print "topbin(i=$bigbinid,n=$bigbin,p=$bigbinpct,x~$bigbinmid) bw=$width qv=($q1 $q2 $q3)\n";
 }
 
 if (@pquery) {
   unshift @pquery, $dmin;
   push @pquery, $dmax;
   my $pivot = 0;
+  my $sum   = 0;
   for (my $i=1; $i<@pquery; $i++) {
     printf "%10s\t%10s\t", $pquery[$i-1], $pquery[$i];
     my $count = 0;
@@ -490,7 +491,8 @@ if (@pquery) {
     $pivot++, $count++ while $pivot < @D && $D[$pivot] <= $pquery[$i];
     $count += $ND_left_cut if $i == 1;
     $count += $ND_right_cut if $i+1 == @pquery;
-    printf "%d\t%.2f\n", $count, 100*$count/$ND_orig;
+    $sum += $count;
+    printf "%d\t%.2f\t%d\t%.2f\n", $count, 100*$count/$ND_orig, $sum, 100*$sum/$ND_orig;
   }
 }
 
