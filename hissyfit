@@ -57,8 +57,8 @@ my $user_Ymax  =  undef;
 my $NBINS      =  100;
 my $zilch      =  ' ';
 my $canvaslrh  =  undef;
-my $points     =  '';
-my $pquery     =  '';
+my $notches    =  '';
+my $dquery     =  '';
 
 my $staircase  = '▁-▂-▃-▄-▅-▆-▇-█';
 my $stonehenge = '▏-▎-▍-▌-▋-▊-▉-█';
@@ -87,24 +87,25 @@ Options:
 --zilch=S         use S as filler for histogram (default space)
 --ymax=NUM        set maximum for y axis; ignored if too small
 --cv=l/r[/n[/h]]  set canvas (((xmin, xmax), nbins), height) simultaneously
---q=x1[/x2]*      give percentage of data in bins defined by x1 and add x-axis notches (query)
---p=x1[/x2]*      add x-axis notches at these positions
+--d=d1[/x2]*      (division) give percentage of data in bins defined by data values d1 d2 ..
+--x=x1[/x2]*      (x-values) add x-axis notches at these positions
 
 Normal output is formed by vertical bars (regular histogram for numerical distributions).
 With --tallyin  horizontal bars are output, preceded by labels, followed by counts.
 
 Legend explanation:
-ND=273410 oor=356/0.1% hmin=0 hmax=3 dmin=0.01409641 dmax=5.863222
-topbin(i=9,n=16880,p=6.2,x~0.31875) bw=0.0375 q=(0.3414933[9],0.620431[16],0.8757837[23])
+ND=452683 Loor=1337/0.3% Roor=14429/3.1% hmin=-10 hmax=190 dmin=-7656 dmax=7701
+topbin(i=4,n=41407,p=8.8,x~-3) bw=2 qr=(2 95 103)
 ND      Number of Data
-oor     Out of range count/percentage, if --min and --max caused data to be filtered
+Loor    Left  out of range count/percentage, if --min caused data to be filtered
+Roor    Right out of range count/percentage, if --max caused data to be filtered
 hmin    Minimum of data range as represented in histogram
 hmax    Maximum of data range as represented in histogram 
 bw      Bin width: bw = (hmin - hmax) / nbins
 dmin    Smallest data item
 dmax    Largest data item
 topbin  Highest bin. i: index, n: count, p: percentage, x: middle of bin
-q       The three data quartiles with bin index where they occur
+qr      The three data quartile values
 EOH
 }
 
@@ -120,8 +121,8 @@ if
    ,  "max=f"           =>   \$user_max
    ,  "ymax=f"          =>   \$user_Ymax
    ,  "cv=s"            =>   \$canvaslrh
-   ,  "p=s"             =>   \$points
-   ,  "q=s"             =>   \$pquery
+   ,  "x=s"             =>   \$notches
+   ,  "d=s"             =>   \$dquery
    ,  "stairs=s"        =>   \$staircase
    ,  "stair-sep=s"     =>   \$stairsep
    ,  "zilch=s"         =>   \$zilch
@@ -151,8 +152,8 @@ if (defined($canvaslrh)) {
   }
 }
 
-my @points = defined($points) ?  split '/', $points : ();
-my @pquery = defined($pquery) ?  split '/', $pquery : ();
+my @notches = defined($notches) ?  split '/', $notches : ();
+my @dquery = defined($dquery) ?  split '/', $dquery : ();
 
 if ($plain) {
   $staircase = ".,-,:,',|";
@@ -444,25 +445,27 @@ if ($emit_quantiles) {
 
 print "$sep\n";
 
-my $oor = "";
+my ($Loor, $Roor) = "";
 if ($out_of_range) {
   my $N_out_of_range = $ND_orig - $ND;
-  $oor = ' oor=' . $N_out_of_range . sprintf("/%.1f", 100 * $N_out_of_range / $ND_orig) . '%';
+  print STDERR "Out of range discprepancy $N_out_of_range != $ND_left_cut + $ND_right_cut\n" if $N_out_of_range != $ND_left_cut + $ND_right_cut;
+  $Loor = ' Loor=' . $ND_left_cut . sprintf("/%.1f", 100 * $ND_left_cut / $ND_orig) . '%';
+  $Roor = ' Roor=' . $ND_right_cut . sprintf("/%.1f", 100 * $ND_right_cut / $ND_orig) . '%';
 }
 
-if (@points || @pquery) {
-  @pquery = grep { $_ >= $hmin && $_ <= $hmax } @pquery;
+if (@notches || @dquery) {
+  @dquery = grep { $_ >= $hmin && $_ <= $hmax } @dquery;
   my $n = $emoji ? 2 : 1;
   my $c = $emoji ? '=' : ' ';
   my $ruler = $c x ($NBINS * $n);
   my $f = 1.0;          # 0.9999 sometimes? needed? for awkward boundaries; ongoing.
-  for (@points) {
+  for (@notches) {
     my $x = int($f * ($_ - $hmin) / $width);
     if ($x >= 0 && $x < $NBINS) {
       substr($ruler, $n * $x, 1) = '|';
     }
   }
-  for (@pquery) {
+  for (@dquery) {
     my $x = int($f * ($_ - $hmin) / $width);
     if ($x >= 0 && $x < $NBINS) {
       substr($ruler, $n * $x, 1) = '+';
@@ -475,22 +478,22 @@ if ($terse) {
 }
 else {
   my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND_orig);
-  print "ND=$ND$oor hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax\n";
-  print "topbin(i=$bigbinid,n=$bigbin,p=$bigbinpct,x~$bigbinmid) bw=$width qv=($q1 $q2 $q3)\n";
+  print "ND=$ND$Loor$Roor hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax\n";
+  print "topbin(i=$bigbinid,n=$bigbin,p=$bigbinpct,x~$bigbinmid) bw=$width qr=($q1 $q2 $q3)\n";
 }
 
-if (@pquery) {
-  unshift @pquery, $dmin;
-  push @pquery, $dmax;
+if (@dquery) {
+  unshift @dquery, $dmin;
+  push @dquery, $dmax;
   my $pivot = 0;
   my $sum   = 0;
-  for (my $i=1; $i<@pquery; $i++) {
-    printf "%10s\t%10s\t", $pquery[$i-1], $pquery[$i];
+  for (my $i=1; $i<@dquery; $i++) {
+    printf "%10s\t%10s\t", $dquery[$i-1], $dquery[$i];
     my $count = 0;
-    $pivot++           while $pivot < @D && $D[$pivot] <  $pquery[$i-1];
-    $pivot++, $count++ while $pivot < @D && $D[$pivot] <= $pquery[$i];
+    $pivot++           while $pivot < @D && $D[$pivot] <  $dquery[$i-1];
+    $pivot++, $count++ while $pivot < @D && $D[$pivot] <= $dquery[$i];
     $count += $ND_left_cut if $i == 1;
-    $count += $ND_right_cut if $i+1 == @pquery;
+    $count += $ND_right_cut if $i+1 == @dquery;
     $sum += $count;
     printf "%d\t%.2f\t%d\t%.2f\n", $count, 100*$count/$ND_orig, $sum, 100*$sum/$ND_orig;
   }
