@@ -152,8 +152,8 @@ if (defined($canvaslrh)) {
   }
 }
 
-my @notches = defined($notches) ?  split '/', $notches : ();
-my @dquery = defined($dquery) ?  split '/', $dquery : ();
+my @notches = defined($notches) ?  sort { $a <=> $b } grep { looks_like_number($_) } split '/', $notches : ();
+my @dquery = defined($dquery) ?    sort { $a <=> $b } grep { looks_like_number($_) } split '/', $dquery : ();
 
 if ($plain) {
   $staircase = ".,-,:,',|";
@@ -458,20 +458,23 @@ if (@notches || @dquery) {
   my $n = $emoji ? 2 : 1;
   my $c = $emoji ? '=' : ' ';
   my $ruler = $c x ($NBINS * $n);
+  my $vals  = ' ' x ($NBINS * $n);
   my $f = 1.0;          # 0.9999 sometimes? needed? for awkward boundaries; ongoing.
   for (@notches) {
     my $x = int($f * ($_ - $hmin) / $width);
     if ($x >= 0 && $x < $NBINS) {
       substr($ruler, $n * $x, 1) = '|';
+      substr($vals,  $n * $x, length($_)) = $_;
     }
   }
   for (@dquery) {
     my $x = int($f * ($_ - $hmin) / $width);
     if ($x >= 0 && $x < $NBINS) {
       substr($ruler, $n * $x, 1) = '+';
+      substr($vals,  $n * $x, length($_)) = $_;
     }
   }
-  print "$ruler\n";
+  print "$ruler\n$vals\n";
 }
 
 if ($terse) {
@@ -487,6 +490,7 @@ if (@dquery) {
   push @dquery, $dmax;
   my $pivot = 0;
   my $sum   = 0;
+  print "Division bin sizes\n";
   for (my $i=1; $i<@dquery; $i++) {
     printf "%10s\t%10s\t", $dquery[$i-1], $dquery[$i];
     my $count = 0;
