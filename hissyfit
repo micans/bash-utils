@@ -70,6 +70,10 @@ sub help {
 Usage:
    $progname [options]
 Options:
+--cv=l/r[/n[/h]]  set canvas (((xmin, xmax), nbins), height) simultaneously
+--d=d1[/x2]*      (division) print table with percentage of data in bins defined by data values d1 d2 ..
+--x=x1[/x2]*      (x-values) add x-axis notches at these positions
+
 --help            this
 --bins=NUM        use this number of bins (default $NBINS)
 --height=NUM      number of lines (default $height); resolution is N * NUM
@@ -86,9 +90,6 @@ Options:
 --stair-sep=X     use X as separator to split stairs (default $stairsep)
 --zilch=S         use S as filler for histogram (default space)
 --ymax=NUM        set maximum for y axis; ignored if too small
---cv=l/r[/n[/h]]  set canvas (((xmin, xmax), nbins), height) simultaneously
---d=d1[/x2]*      (division) give percentage of data in bins defined by data values d1 d2 ..
---x=x1[/x2]*      (x-values) add x-axis notches at these positions
 
 Normal output is formed by vertical bars (regular histogram for numerical distributions).
 With --tallyin  horizontal bars are output, preceded by labels, followed by counts.
@@ -105,7 +106,7 @@ bw      Bin width: bw = (hmin - hmax) / nbins
 dmin    Smallest data item
 dmax    Largest data item
 topbin  Highest bin. i: index, n: count, p: percentage, x: middle of bin
-qr      The three data quartile values
+qr      The three data quartile values for full range of input data
 EOH
 }
 
@@ -254,11 +255,11 @@ else {                       # Nearly ready to stick this in a subroutine.
   $ND_right_cut = 0;
 
   if ($out_of_range) {
-    for (@D) { $ND_left_cut++ if $_ < $hmin; $ND_right_cut++ if $_ > $hmax }
-    @D = grep { $_ >= $hmin && $_ <= $hmax } @D;
+    for (@D) { $ND_left_cut++ if $_ < $hmin; $ND_right_cut++ if $_ >= $hmax }
+    @D = grep { $_ >= $hmin && $_ < $hmax } @D;
   }
   $ND = @D;
-  die "No data present in bounds [$hmin, $hmax]\n" if !@D;
+  die "No data present in bounds [$hmin, $hmax)\n" if !@D;
 
 
   ##    This is input done.
@@ -491,6 +492,7 @@ if (@dquery) {
   my $pivot = 0;
   my $sum   = 0;
   print "Division bin sizes\n";
+  printf "%10s\t%10s\tCount\tPct\tSum\tPct\n", "Left", "Right";
   for (my $i=1; $i<@dquery; $i++) {
     printf "%10s\t%10s\t", $dquery[$i-1], $dquery[$i];
     my $count = 0;
