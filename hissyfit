@@ -446,7 +446,7 @@ if ($emit_quantiles) {
 
 print "$sep\n";
 
-my ($Loor, $Roor) = "";
+my ($Loor, $Roor) = ("", "");
 if ($out_of_range) {
   my $N_out_of_range = $ND_orig - $ND;
   print STDERR "Out of range discprepancy $N_out_of_range != $ND_left_cut + $ND_right_cut\n" if $N_out_of_range != $ND_left_cut + $ND_right_cut;
@@ -467,6 +467,7 @@ if (@notches || @dquery) {
       substr($ruler, $n * $x, 1) = '|';
       substr($vals,  $n * $x, length($_)) = $_;
     }
+    if ($_ == $NBINS) { $ruler .= '|'; $vals .= $_; }
   }
   for (@dquery) {
     my $x = int($f * ($_ - $hmin) / $width);
@@ -474,6 +475,7 @@ if (@notches || @dquery) {
       substr($ruler, $n * $x, 1) = '+';
       substr($vals,  $n * $x, length($_)) = $_;
     }
+    if ($_ == $NBINS) { $ruler .= '+'; $vals .= $_; }
   }
   print "$ruler\n$vals\n";
 }

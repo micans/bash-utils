@@ -190,8 +190,19 @@ Consume 3: ed edg frac pct substr
   terminal histograms and bar charts for quickly gauging numerical data and count
   data - see screenshots and link to raw output below.
 
-  No need to fire up R!
-  [It's just one script, get it here.](https://raw.githubusercontent.com/micans/bash-utils/master/hissyfit)
+  No need to fire up R or Python.  [It's just one script, get it here.](https://raw.githubusercontent.com/micans/bash-utils/master/hissyfit)
+
+  Example usage with some random data:
+```
+do echo $((RANDOM % 30)); done | hissyfit --cv=0/29/30 --x=0/10/20/30 --d=5/25
+```
+
+  All parameters here are optional.
+  The `--cv` parameter can set up to four parameters simultaneously, min and max histogram
+  endpoints, the number of bins, and the height of the histogram. The `--x` parameter sets notches
+  for display. The `--d` parameter defines variable-sized super-bins for which hissyfit will
+  output a table of counts and percentages. This option can be useful after initial inspection
+  of a histogram to gauge the size of different modes.
 
   For numerical data expected input is a stream of numbers, one per line.
   Options are min and max
