@@ -190,8 +190,8 @@ Consume 3: ed edg frac pct substr
   terminal histograms and bar charts for quickly gauging numerical data and count
   data - see screenshots and link to raw output below.
 
-  No need to fire up R or Python.  [It's just one script, get it here.](https://raw.githubusercontent.com/micans/bash-utils/master/hissyfit)
-  Example usage with some random data is below. Sadly github markdown does not allow setting of line-height, hence the stripy look.
+  No need to fire up R or Python.  [It's just one script.](https://raw.githubusercontent.com/micans/bash-utils/master/hissyfit)
+  Example usage with some random data is below. **Sadly github markdown does not allow setting of line-height, hence the stripy look.**
   It looks better in the terminal (screen shots below).
 ```
 for i in {1..100000}; do echo $(( (RANDOM+RANDOM+RANDOM)/3)); done | hissyfit --cv=0/32768/64/16 --x=16384 --d=5461.3/10922.7/21845.3/27306.6
@@ -226,12 +226,12 @@ Division bin sizes
 ```
 
   All hissyfit parameters here are optional.
-  The `--cv` parameter can set up to four parameters simultaneously: min and max histogram
+  The `--cv` (canvas) parameter can set up to four parameters simultaneously: min and max histogram
   endpoints, the number of bins, and the height of the histogram. The `--x` parameter sets notches
   for display. The `--d` parameter defines variable-sized super-bins for which hissyfit will
   output a table of counts and percentages. This option can be useful after initial inspection
   of a histogram to gauge the size of different modes. In this example the division values were
-  chosen to represent the four points { μ±σ, μ±2σ } where μ and σ are the expected means and deviation
+  chosen to represent the four points { μ ± σ, μ ± 2σ } where μ and σ are the expected mean and deviation
   for a sum of three uniform distributions on [0,32768].
 
   The default number of bins is 100. With no parameters given hissyfit output looks like this:
