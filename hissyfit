@@ -35,6 +35,7 @@ use strict;
 use warnings;
 use Scalar::Util qw(looks_like_number);
 use utf8;
+use POSIX qw(floor ceil);
 
 my $progname   = 'hissyfit';
 my @ARGV_COPY  =  @ARGV;
@@ -73,6 +74,7 @@ Options:
 --cv=l/r[/n[/h]]  set canvas (((xmin, xmax), nbins), height) simultaneously
 --d=d1[/x2]*      (division) print table with percentage of data in bins defined by data values d1 d2 ..
 --x=x1[/x2]*      (x-values) add x-axis notches at these positions
+--x=x1%n      !   (x-values) add x-axis notches at all positions in histogram range that are zero modulo n.
 
 --help            this
 --bins=NUM        use this number of bins (default $NBINS)
@@ -153,8 +155,17 @@ if (defined($canvaslrh)) {
   }
 }
 
-my @notches = defined($notches) ?  sort { $a <=> $b } grep { looks_like_number($_) } split '/', $notches : ();
+my @notches = ();
+my $notch_anchor = undef;
+my $notch_skip   = undef;
+if ($notches =~ /(\S+?)%(\S+)/) {
+   ($notch_anchor, $notch_skip) = ($1, $2);
+}
+else {
+  @notches = sort { $a <=> $b } grep { looks_like_number($_) } split '/', $notches;
+}
 my @dquery = defined($dquery) ?    sort { $a <=> $b } grep { looks_like_number($_) } split '/', $dquery : ();
+
 
 if ($plain) {
   $staircase = ".,-,:,',|";
@@ -454,30 +465,42 @@ if ($out_of_range) {
   $Roor = ' Roor=' . $ND_right_cut . sprintf("/%.1f", 100 * $ND_right_cut / $ND_orig) . '%';
 }
 
-if (@notches || @dquery) {
+if (defined($notch_anchor) || @notches || @dquery) {
   @dquery = grep { $_ >= $hmin && $_ <= $hmax } @dquery;
-  my $n = $emoji ? 2 : 1;
+  my $u = $emoji ? 2 : 1;
   my $c = $emoji ? '=' : ' ';
-  my $ruler = $c x ($NBINS * $n);
-  my $vals  = ' ' x ($NBINS * $n);
+  my $ruler = $c x ($NBINS * $u);
+  my $delim = '▭' x ($NBINS * $u);
+  my $vals1 = ' ' x ($NBINS * $u);
+  my $vals2 = ' ' x ($NBINS * $u);
   my $f = 1.0;          # 0.9999 sometimes? needed? for awkward boundaries; ongoing.
+
+  if (defined($notch_anchor) && $notch_skip) {
+    my $start = $notch_anchor - $notch_skip * floor(($notch_anchor - $hmin)/$notch_skip);
+    my $end   = $notch_anchor + $notch_skip * ceil(($hmax - $notch_anchor)/$notch_skip);
+    my $n     = ceil(($end - $start) / $notch_skip);
+    @notches  = grep { $_ >= $hmin && $_ <= $hmax } map { $start + $_ * $notch_skip } 0..$n;
+  }
   for (@notches) {
     my $x = int($f * ($_ - $hmin) / $width);
     if ($x >= 0 && $x < $NBINS) {
-      substr($ruler, $n * $x, 1) = '|';
-      substr($vals,  $n * $x, length($_)) = $_;
+      substr($ruler, $u * $x, 1) = '|';
+      substr($vals1,  $u * $x, length($_)) = $_;
     }
-    if ($_ == $NBINS) { $ruler .= '|'; $vals .= $_; }
+    if ($_ == $NBINS) { $ruler .= '|'; $vals1 .= $_; }
   }
   for (@dquery) {
     my $x = int($f * ($_ - $hmin) / $width);
     if ($x >= 0 && $x < $NBINS) {
-      substr($ruler, $n * $x, 1) = '+';
-      substr($vals,  $n * $x, length($_)) = $_;
+      substr($ruler, $u * $x, 1) = '◆';
+      substr($vals2,  $u * $x, length($_)) = $_;
     }
-    if ($_ == $NBINS) { $ruler .= '+'; $vals .= $_; }
+    if ($_ == $NBINS) { $ruler .= '+'; $vals2 .= $_; }
   }
-  print "$ruler\n$vals\n";
+  print "$ruler\n";
+  print "$vals1\n" if @notches;
+  print "$vals2\n" if @dquery;
+  print "$delim\n";
 }
 
 if ($terse) {
