@@ -242,9 +242,9 @@ else {                       # Nearly ready to stick this in a subroutine.
   $dmin  = $D[0];
   $dmax  = $D[-1];
 
-  $q1 = $D[int(@D/4)];       # Not going to sweat ties or even off-by-1.
-  $q2 = $D[int(@D/2)];       # What they said.
-  $q3 = $D[int(3*@D/4)];     # ^
+  $q1 = $D[int((@D-1)/4)];       # Not going to sweat ties or even off-by-1.
+  $q2 = $D[int((@D-1)/2)];       # What they said.
+  $q3 = $D[int(3*(@D-1)/4)];     # ^
 
   $hmin = $dmin;
   $hmax = $dmax;
@@ -522,7 +522,7 @@ if (@dquery) {
     printf "%10s\t%10s\t", $dquery[$i-1], $dquery[$i];
     my $count = 0;
     $pivot++           while $pivot < @D && $D[$pivot] <  $dquery[$i-1];
-    $pivot++, $count++ while $pivot < @D && $D[$pivot] <= $dquery[$i];
+    $pivot++, $count++ while $pivot < @D && $D[$pivot] <  $dquery[$i];
     $count += $ND_left_cut if $i == 1;
     $count += $ND_right_cut if $i+1 == @dquery;
     $sum += $count;
