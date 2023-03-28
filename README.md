@@ -194,41 +194,49 @@ Consume 3: ed edg frac pct substr
   Example usage with some random data is below. **Sadly github markdown does not allow setting of line-height, hence the stripy look.**
   It looks better in the terminal (screen shots below).
 ```
-for i in {1..100000}; do echo $(( (RANDOM+RANDOM+RANDOM)/3)); done | hissyfit --cv=0/32768/64/16 --x=16384 --d=5461.3/10922.7/21845.3/27306.6
-                            ▇▂▅▆▇▆█▁▁
-                          ▄▇█████████▆
-                        ▁██████████████▂
-                       ▄████████████████▆
-                      ▆██████████████████▅
-                     ▆████████████████████▇
-                    ▆██████████████████████▄
-                  ▂█████████████████████████▆
-                 ▁███████████████████████████▇
-                ▆██████████████████████████████▂
-               ▃████████████████████████████████▅
-             ▃▆██████████████████████████████████▆▂
-            ▃██████████████████████████████████████▅
-          ▄██████████████████████████████████████████▂
-       ▁▄██████████████████████████████████████████████▅▁
-  ▁▁▄▅████████████████████████████████████████████████████▅▃▁▁
+for i in {1..100000}; do echo $(( (RANDOM+RANDOM+RANDOM)/3)); done | \
+   hissyfit --cv=0/32768/64/16 --x=0%4000 --d=5461/10922/21845/27306
+                             ▂ ▂█▅
+                           ▆▄█████▆▇▇
+                         ▃███████████▄▂▂
+                       ▄▆███████████████▃
+                      ▂██████████████████▃
+                     ▂████████████████████▅
+                    ▆██████████████████████▃
+                   ▂████████████████████████▇
+                  ▅██████████████████████████▆
+                ▁▆████████████████████████████▇▂
+               ▃████████████████████████████████▂
+              ▃██████████████████████████████████▇
+            ▃▇████████████████████████████████████▇▅
+          ▄█████████████████████████████████████████▇▅
+       ▂▅█████████████████████████████████████████████▇▅▁
+  ▁▁▃▅▇██████████████████████████████████████████████████▇▅▃▂▁
 ____.____,____.____,____Q____,__Q_.____Q____.____,____.____,____
-          +          +          |         +          +
-          5461.3     10922.7    16384     21845.3    27306.6
-ND=100000 hmin=0 hmax=32768 dmin=415 dmax=32482
-topbin(i=35,n=3522,p=3.5,x~17664) bw=512 qr=(12517 16384 20224)
+|      |  ◆    |     ◆ |       |       |  ◆   |      ◆|       |
+0      4000    8000    12000   16000   20000  24000   28000   32000
+          5461       10922                21845      27306  
+▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭▭
+ND=100000 hmin=0 hmax=32768 dmin=359 dmax=32391
+topbin(i=33,n=3635,p=3.6,x~16640) bw=512 qr=(12559 16425 20276)
 Division bin sizes
-      Left	     Right	Count	Pct	Sum	Pct
-       415	    5461.3	2008	2.01	2008	2.01
-    5461.3	   10922.7	14702	14.70	16710	16.71
-   10922.7	   21845.3	66781	66.78	83491	83.49
-   21845.3	   27306.6	14496	14.50	97987	97.99
-   27306.6	     32482	2013	2.01	100000	100.00
+      Left     Right      Count   Pct     Sum     Pct
+       359    5461.3      2085    2.08    2085    2.08
+    5461.3   10922.7      14396   14.40   16481   16.48
+   10922.7   21845.3      66780   66.78   83261   83.26
+   21845.3   27306.6      14685   14.69   97946   97.95
+   27306.6     32391      2054    2.05    100000  100.00
 ```
 
   All hissyfit parameters here are optional.
   The `--cv` (canvas) parameter can set up to four parameters simultaneously: min and max histogram
-  endpoints, the number of bins, and the height of the histogram. The `--x` parameter sets notches
-  for display. The `--d` parameter defines variable-sized super-bins for which hissyfit will
+  endpoints, the number of bins, and the height of the histogram.
+  
+  The `--x` parameter sets ticks for display. When given the format `N%w` it results in all ticks that are `w`
+  apart, anchored at position `N`, and fit in the range of data shown. Alternatively, it can be supplied
+  with the format `x1[/x2]*` (a list of numbers separated by slashes) to set each tick explicitly.
+  
+  The `--d` parameter defines variable-sized super-bins for which hissyfit will
   output a table of counts and percentages. This option can be useful after initial inspection
   of a histogram to gauge the size of different modes. In this example the division values were
   chosen to represent the four points { μ ± σ, μ ± 2σ } where μ and σ are the expected mean and deviation
