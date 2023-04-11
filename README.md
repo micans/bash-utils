@@ -17,14 +17,15 @@ now.
 
 ## Unix file column and row manipulation using column names
 
-  `pick` can be thought of as (unix) `cut` on steroids, augmented with aspects of `R` and `awk`.
-  It can select columns like `cut`, but allows doing so either by column name or column index (with `-k`).
+  `pick` is a concise command-line query/programming tool to manipulate streamed data columns and rows.
+  It can be thought of as (unix) `cut` on steroids, augmented with aspects of `R` and `awk`.
 
   - Column names or indexes become variables.
   - Create new variables using arithmetic and string operations on existing variables.
   - Each variable can reference any variable previously defined.
   - Optionally output a variable as a new column.
-  - Optonally update an existing column (`-i`).
+  - Optionally update an existing column (`-i`).
+  - Load dictionaries for mapping values either from file or command-line/string.
   - Filter rows of interest using variables in conditional expressions (`@foo/gt/0`).
   - Insert new columns at position `N` (by default at end), keep old columns (`-A` and `-A<N>`).
   - Remove columns (`-x col1 col2 col3`).
@@ -34,7 +35,7 @@ now.
 
   `pick` is the latest incarnation of a concept that I've attempted many times
   over the years.  This is the first one that is fun to use, surprisingly
-  powerful, and an implementation that has some aspects of elegance.
+  powerful, with an implementation that has some aspects of elegance.
 
   The interface is a tiny command-line format to describe column selection,
   row filtering, and derived column computation. It was designed to avoid shell
@@ -62,6 +63,8 @@ pick -h bar foo < data.txt
    #
 pick -k 5 3 < data.txt
 
+> ---------------
+
    # pick columns foo bar with rows where tim fields are larger than zero.
    # multiple @ selections are possible; default is AND, use -o for OR.
    # tim can refer to a newly computed variable.
@@ -79,6 +82,8 @@ pick foo bar @tim/gt/0 < data.txt
    #
 pick foo bar @tim/gt/:bob < data.txt
 
+> ---------------
+
    # as the first, also output new column doodle which is column yam with column
    # bob subtracted and constant value '1' added. (interval length for inclusive bounds)
    #
@@ -91,16 +96,23 @@ pick foo bar doodle::yam:bob,sub^1,add < data.txt
    #   , signifies an operator
    #   ^ signifies a constant value
 
+> ---------------
+
    # select all columns (-A), add 1 to column foo in-place (-i).
    #
 pick -Ai foo::foo^1,add < data.txt
 
+> ---------------
+
    # pick the length of items in column foo without printing a header, pipe it to
    # hissyfit.  Each compute needs an associated name that is unique (the part
-   # before ::).  In this example the unique name is the empty string.
+   # before ::).  In this example the unique name is the empty string, offering the tiny
+   # convenience that you don't always need to expend energy on thinking up a variable
+   # name / column name.
    #
 pick -h ::foo,len < data.txt | hissyfit
 
+> ---------------
 
    # Output everything and swap two columns. This is mostly to illustrate how
    # columns and compute names interact.  Compute names are like normal
@@ -114,6 +126,8 @@ pick -Aki foo:=1 1::2 2::foo < data.txt
    #   Assignments happen proceeding from left to right
    #   := computes a value without outputting it,
    #   :: computes a value and selects it for output.
+
+> ---------------
 
    #  If large numbers of columns are present/needed, it can be useful to select
    #  column names with a regular expression. A pattern that contains any of [({\*?^$
@@ -144,6 +158,8 @@ pick foomax::'foo\d{2}$',maxall < data.txt
    #
 pick -Ai reference:=foo01 '\foo\d{2}$'::__:reference^1,pct < data.txt
 
+> ---------------
+
    # Create fasta files with pick.
    # Simplest case, two input columns. Quotes needed as '>' is a shell meta character.
    # %0A is the url-encoding of a newline.
@@ -158,6 +174,42 @@ pick   '::^>:foo^%0A:bar' > out.fa
    #
 pick   '::^>:foo^ :zut^%0A:bar' > out.fa
 
+> ---------------
+
+   # Map column values using a dictionary. Dictionaries can be specified in two ways:
+   #        --fdict-NAME=/path/to/dictfile      where dictfile is two-column tab-separated.
+   #        --cdict-NAME=foo:bar,zut:tim        comma-separated key:value pairs
+   #
+   # NAME is the name of the dictionary, to be used with the map operator as seen below.
+   # Multiple fdict and cdict specifications can be used for the same NAME.
+   #
+echo -e "a\t3\nb\t4\nc\t8" | pick -Aik --cdict-foo=a:Alpha,b:Beta 1::1^foo,map
+   #
+   # By default if no key is found in the dictionary the value is left alone. It is possible
+   # to specify a not-found string using this syntax:
+   #
+   #        --fdict-NAME/STRING=/path/to/dictfile
+   #        --cdict-NAME/STRING=foo:bar,zut:tim
+   #
+echo -e "a\t3\nb\t4\nc\t8" | pick -Aik --cdict-foo/FOONOTFOUND=a:Alpha,b:Beta 1::1^foo,map
+Alpha 3
+Beta  4
+FOONOTFOUND 8
+   #
+   # You could grep that value, or use pick itself to select or filter such columns, e.g. below
+   #  - the -i (in-place) option is dropped
+   #  - the mapped values in column 1 are put in variable x
+   #  - x is not output (:= instead of ::)
+   #  - unmappable values are set to FOONOTFOUND
+   #  - Those rows are selected where x has the FOONOTFOUND value
+   #
+echo -e "a\t3\nb\t4\nc\t8" | pick -Ak --cdict-foo/FOONOTFOUND=a:1,b:1 x:=1^foo,map @x=FOONOTFOUND
+c  8
+   #
+   # The empty string can be used as the special unmappable value:
+   #
+echo -e "a\t3\nb\t4\nc\t8" | pick -Ak --cdict-foo/=a:1,b:1 x:=1^foo,map @x=
+c  8
 
 ```
 

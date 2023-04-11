@@ -140,7 +140,13 @@ my %cp_opdefinitions =
 
      ed        => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/  } ],
      edg       => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
-     map       => [ 2, sub { my ($x, $d) = @::STACK[-2,-1]; my $dict = $::dict{$d}; my $m = defined($dict) ? $dict->{$x} : undef; $::STACK[-2] = $m if defined($m); } ],
+     map       => [ 2, sub {  my ($x, $d) = @::STACK[-2,-1];
+                              my $dict = $::dict{$d};
+                              my $m = defined($dict) ? $dict->{$x} : undef;
+                              if (defined($m)) { $::STACK[-2] = $m; }
+                              elsif (defined($::dictnotfound{$d})) { $::STACK[-2] = $::dictnotfound{$d} }
+                           }
+                  ],
      substr    => [ 3, sub { $::STACK[-3] =  substr($::STACK[-3], $::STACK[-2], $::STACK[-1]) } ],
      pct       => [ 3, sub { my ($x, $y, $n) = @::STACK[-3,-2,-1]; $::STACK[-3] = !$B_protect || $y ? sprintf("%.*f", $n, $x * 100 / $y) : $PNAN{PICK_DIV_INF} } ],
      frac      => [ 3, sub { my ($x, $y, $n) = @::STACK[-3,-2,-1]; $::STACK[-3] = !$B_protect || $y ? sprintf("%.*f", $n, $x / $y) :  $PNAN{PICK_DIV_INF}} ],
@@ -276,7 +282,7 @@ my $help_options=q{Options:
                      with ...^NAME,map. Small dictionaries can be encoded on the command line with
   --cdict-NAME=<csv> where <csv> is a comma separated string of key:value pairs -- after splitting
                      on commas and colons all keys and values are url-decoded. Example usage:
-       echo -e "a\t3\nb\t4" | ./pick -Aik --cdict-foo=a:Alpha,b:Beta 1::1^foo,map
+       echo -e "a\t3\nb\t4" | pick -Aik --cdict-foo=a:Alpha,b:Beta 1::1^foo,map
 
   Short options combine, e.g. -ok/^@ for headerless input, comments indicated by ^@, OR selection.
   -AT is useful for inspecting/checking select criteria
@@ -306,6 +312,7 @@ my @opsf = sort { $sel_opdefinitions{$a}[0] <=> $sel_opdefinitions{$b}[0] } keys
 my $nameslist = "";
 
 %::dict = ();
+%::dictnotfound = ();
 
 sub read_dict {
    my ($name, $fname) = @_;
@@ -334,12 +341,14 @@ while (@::spec && $::spec[0] =~ /^-/) {
 
   my $options = shift @::spec;
 
-  if ($options =~ /^--fdict-(\w+)=(.+)$/) {
-    read_dict($1, $2);
+  if ($options =~ /^--fdict-(\w+)(\/(.*?))?=(.+)$/) {
+    read_dict($1, $4);
+    $::dictnotfound{$1} = $3 if length($2);
     next;
   }
-  elsif ($options =~ /^--cdict-(\w+)=(.+)$/) {
-    parse_dict($1, $2);
+  elsif ($options =~ /^--cdict-(\w+)(\/(.*?))?=(.+)$/) {
+    parse_dict($1, $4);
+    $::dictnotfound{$1} = $3 if length($2);
     next;
   }
   elsif ($options =~ /^--(add-)?inames=(.+)$/) {
