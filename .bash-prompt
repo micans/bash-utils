@@ -1,7 +1,7 @@
 
 function mypwd() {
-   if (( $(wc -c <<< $PWD) < 20 )); then echo $PWD; fi
-   echo ${PWD: -20}
+   local dirname=${PWD%/*}
+   if (( $(wc -c <<< $dirname) < 20 )); then echo $dirname; else echo ${dirname: -20}; fi
 }
 export PROMPT_COMMAND='h=$(history 1 | cut -c 8-); (( ${#h} > 20 )) && echo "$h" >> ~/.eternal_history'
 export PS1='$(mypwd) \[\033[1m\]▵\[\033[0m\] \W$(__git_ps1 "(%s)") \[\033[1m\]▵\[\033[0m\] $(amibm) \[\033[1m\]▷\[\033[0m\]  '
