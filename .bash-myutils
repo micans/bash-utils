@@ -5,6 +5,7 @@ alias u2='cd ../../'
 alias u3='cd ../../../'
 alias u4='cd ../../../../'
 alias m='cd -'
+alias hf=hissyfit
 
 alias fixpaste='printf "\e[?2004l"'
 
