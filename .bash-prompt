@@ -4,5 +4,5 @@ function mypwd() {
    echo ${PWD: -20}
 }
 export PROMPT_COMMAND='h=$(history 1 | cut -c 8-); (( ${#h} > 20 )) && echo "$h" >> ~/.eternal_history'
-export PS1='$(mypwd) \033[1m▵\033[0m$(__git_ps1) \033[1m▵\033[0m $(amibm)  \033[1m▷\033[0m '
+export PS1='$(mypwd) \033[1m▵\033[0m$(__git_ps1) \033[1m▵\033[0m $(amibm) \033[1m▷\033[0m  '
 
