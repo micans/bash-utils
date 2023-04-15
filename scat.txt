@@ -1,0 +1,53 @@
+
+▗  ▗    ▗ ▗
+▖ ▖  ▖   ▖
+▘    ▘  ▘ ▘
+▝  ▝    ▝ ▝
+
+xx  xx  xx  xx
+xx  xx  xx  xx
+  xx  xx  xx  xx
+  xx  xx  xx  xx
+xx  xx  xx  xx
+xx  xx  xx  xx
+  xx  xx  xx  xx
+  xx  xx  xx  xx
+
+ x x x x x
+ x x x x x
+ x x x x x
+ x x x x x
+▖
+▗
+▘
+▝
+▙
+
+▚
+
+▛
+j
+▜
+
+▝
+
+▞
+
+▟
+
+▀ ▄
+▄
+ ▀▄
+
+ ▄▀
+▀
+
+ 12345678
+1████████
+2████████
+3████████
+4████████
+
+
+12 x 16
+

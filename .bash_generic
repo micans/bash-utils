@@ -1,0 +1,113 @@
+
+# example: http://www.tldp.org/LDP/abs/html/sample-bashrc.html
+
+EDITOR=vim
+set editing-mode vi           # ?
+set -o vi
+
+
+#  But, as John points out: if [ -t 0 ] works ... when you're logged in locally
+#  but fails when you invoke the command remotely via ssh.  So for a true test
+#  you also have to test for a socket.
+
+if [[ -t 0 || -p /dev/stdin ]]
+then
+   # interactive.
+   bind '"\t":menu-complete'
+   bind ':reverse-search-history'
+   bind ':forward-search-history'
+else
+   true
+fi
+
+
+##    Most of the 1-letter stuff.
+#
+alias visafe='vim -c "set noswapfile nobackup nowritebackup noundofile paste viminfo="'
+alias d='ls -la | grep ^d'
+alias c='clear'
+alias y="echo 'relax dude, yere done'"
+alias n="echo 'three times no is yes'"
+alias l='ls -l'
+
+alias log='vi ~/persoonlijk/log.txt'
+alias ct='column -t'
+alias hf=hissyfit
+alias nf=nextflow
+
+
+##    Realias existing programs. I'm not dangerous, trust me.
+#
+alias rm='rm -i'
+alias mv='mv -i'
+alias cp='cp -i'
+
+alias grep='grep -i -d skip'
+alias less='less -i'
+alias vi='vim -X -c "set ai" -c "set ic"'
+
+alias ls='ls -F'
+alias l='ls -l'
+alias lh='ls -lh'
+alias lt='ls -ltr'
+alias lta='ls -ltra'
+
+
+
+##    Various shorthands
+#
+alias conflocal='./configure --prefix=$HOME/local'
+alias seven='chmod 755'
+alias six='chmod 644'
+alias ux='chmod u+x'
+alias four='chmod 444'
+alias wind='mutt -f +sent'
+
+
+alias asdfg='xmodmap $HOME/local/etc/dvorak.txt'         # need to recover
+alias aoeui='xmodmap $HOME/local/etc/qwerty.txt'         # these.
+alias dtag="date '+%y-%j'"
+alias ptag="date -d yesterday '+%y-%j'"
+alias vger='valgrind --tool=memcheck --leak-check=full --show-reachable=yes --num-callers=20 --track-fds=yes'
+alias duck1='du -ch -d 1  | sort -h'
+alias duck2='du -ch -d 2  | sort -h'
+
+alias vie='view $HOME/.eternal_history'
+
+
+function vid() {
+  num=12
+  arg=${1:-}
+  if [[ ! -n $(tr -d 0-9 <<< "$arg") ]]; then
+    num=$arg
+    shift 1
+  fi
+  vim -c "set ts=$num" "$@"
+}
+
+function unic() { uniq -c | perl -pe 's/^\s*(\d+)\s+/$1\t/';
+}; export -f unic
+
+function ie {                       # immediate edit
+  name=${1?Need program name}
+  path=$(which $name)
+  if [[ $? != 0 ]]; then
+    echo "Not found: [$name]"
+    return 1
+  elif [[ $(file --mime $path) =~ charset=binary ]]; then
+    echo "Binary file [$path] left alone"
+    return 1
+  elif [[ ! -x $path ]]; then
+    echo "File $path not executable (surprisingly)"
+    return 1
+  fi
+  $EDITOR $path
+}
+
+function _clxdo_complete()
+{  local tag="${COMP_WORDS[1]}"
+   COMPREPLY=( $(clxdo -h | cut -f 2 -d ' ' | grep "$tag") )
+}
+
+complete -F _clxdo_complete clxdo
+complete -c ie
