@@ -392,11 +392,12 @@ while (@::spec && $::spec[0] =~ /^-/) {
     print map { length($1) % 2 == 1 ? urlencode($_) : urldecode($_) } @::spec;
     if (@::spec) { print "\n"; }
     else { print STDERR <<EOH;
--- I url-encode any arguments. Useful cases:
-  ^   %5E         <TAB>      %09
-  :   %3A         <NEWLINE>  %0A
-  ,   %2C         <CR>       %0D
-  %   %25         <SPACE>    %20
+-- I url-encode (-z) or decode (-zz) any arguments. Useful cases:
+  ^   %5E     ;   %3B     (  %28     <TAB>      %09
+  :   %3A     !   %21     )  %29     <NEWLINE>  %0A
+  ,   %2C     /   %2F     <  %3C     <CR>       %0D
+  %   %25     =   %3D     >  %3E     <SPACE>    %20
+For shell meta-characters it is easiest to just quote the argument to pick.
 EOH
     }
     exit 0;
