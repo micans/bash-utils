@@ -499,6 +499,11 @@ List of <op>
   Take 1 | @ops1
   Take 2 | @ops2
   Take 3 | @ops3
+
+Useful perl regular expression features:
+   Use \\K (keep) to anchor a pattern but retain it with ed, edg, del, delg
+   :HANDLE^'patx\\Kpaty',delg will retain patx and only delete paty.
+   Use (?i)pat to make a pattern case insensitive.
 EOH
   exit 0;
   }
