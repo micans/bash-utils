@@ -15,7 +15,7 @@ of (large) tabular data.
 Apparix used to live here but has [its own repository](https://github.com/micans/apparix)
 now.
 
-## Unix file column and row manipulation using column names
+## Unix file/stream column and row manipulation using column names
 
   `pick` is a concise command-line query/programming tool to manipulate streamed data columns and rows.
   It can be thought of as (unix) `cut` on steroids, augmented with aspects of `R` and `awk`.

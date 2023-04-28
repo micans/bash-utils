@@ -140,6 +140,8 @@ my %cp_opdefinitions =
 
      ed        => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/  } ],
      edg       => [ 3, sub { $::STACK[-3] =~ s/$::STACK[-2]/$::STACK[-1]/g } ],
+     del       => [ 2, sub { $::STACK[-2] =~ s/$::STACK[-1]// } ],
+     delg      => [ 2, sub { $::STACK[-2] =~ s/$::STACK[-1]//g } ],
      map       => [ 2, sub {  my ($x, $d) = @::STACK[-2,-1];
                               my $dict = $::dict{$d};
                               my $m = defined($dict) ? $dict->{$x} : undef;
@@ -471,7 +473,9 @@ Explaining the self-unexplained
    ------+------------+-------------------------------------------------------------------
    x e   | get        |  x =~ s/e/MATCH/   | MATCH is \$1 corresponding to outer () if exists,
    x e z | ed         |  x =~ s/e/z/       | matched part otherwise.
-   x e z | edg        |  x =~ s/e/z/g      | e accepts most perl regular expression syntax
+   x e z | edg        |  x =~ s/e/z/g      |
+   x e   | del        |  x =~ s/e//        | e accepts most perl regular expression syntax
+   x e   | delg       |  x =~ s/e/g        |
    x d   | map        |  map x using dictionary named d, specified as --fdict-d=<FNAME>  
    x y   | uie        |  (use if empty) x or y if x is the empty string
    x n   | zp         |  left-padding with zeroes to length n
@@ -928,7 +932,6 @@ __DATA__
                                             s o m e   i d e a s
 
    -  would --onames be helpful? (note -K)
-   ?  give user options if no map exists
    -  challenge: combine ed and map. replace substring with its map. First ,get it and ,map, then ,ed it.
          currently: echo -e "_a_\t3\n_b_\t4\naba\t5" | pick -AiK --cdict-foo=a:Alpha,b:Beta x::1^_'(.)'_,get^foo,map 1::1^'_\K(.)(?=_)':x,ed
          where \K is available since Perl 5.10.0, 2007. Requires some perl, doesn't look great, but works.
@@ -947,7 +950,7 @@ __DATA__
    ?  predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI - no real need.
    #  -T pushes column; slightly inelegant but inevitable. -N -L fixed as rowno lineno operators.
    ?? ifelse(selectname,compute1,compute2) is beyond scope for now.
-      -> foo::,LD:a:b:c,LR,add         # open/close data
+      -> foo::,LD:a:b:c,RD,add         # open/close data
          foo::,LC:a:b:c,op,op,RC       # open/close code
          encode scope in a separate datastructure; fast path if no scopes exist.
    -  tests
