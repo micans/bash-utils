@@ -301,8 +301,8 @@ my $spec_forms = q{
   COMPUTE: <part>+ where <part> is one of ^<value> :<handle> ,<operator>
   Later computes have access to HANDLEs that were computed before.
 
-  HANDLE[2], VAL and handles and values in COMPUTE are all URL-decoded.
-  URL-encoding is generally necessary for characters in [%:^/~]. Use pick -z <string>
+  HANDLE, VAL and handles and values in COMPUTE are all URL-decoded.
+  URL-encoding is generally necessary for characters in [%:^/,~]. Use pick -z <string>
   to find the url-encoding of <string> .};
 
 my @normalops = grep { $_ !~ /all$/ } keys %cp_opdefinitions;
@@ -398,7 +398,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
   ^   %5E     ;   %3B     (  %28     <TAB>      %09
   :   %3A     !   %21     )  %29     <NEWLINE>  %0A
   ,   %2C     /   %2F     <  %3C     <CR>       %0D
-  %   %25     =   %3D     >  %3E     <SPACE>    %20
+  %   %25     \   %5C     >  %3E     <SPACE>    %20     =   %3D
 For shell meta-characters it is easiest to just quote the argument to pick.
 EOH
     }
@@ -614,6 +614,27 @@ sub add_column {
   print "\t" if $::N_column_output++; print $_[0];
 }
 
+sub check_range_and_regex {
+   my $handle = shift;
+   my @matches = ();
+   my $triggered = 1;
+   if ($handle =~ /[$REGEXP_CHARS]/ && $B_regex) {
+      @matches = grep { $_ =~ qr/$handle/ } @::HEADER;
+   }
+   elsif ($handle =~ /^(\d+)\-(\d+)?$/ && $B_headless) {
+      my ($x, $y) = ($1, $2);
+      $x = 1 if $x > @::HEADER;
+      $y = @::HEADER if !defined($y) || $y > @::HEADER;
+      @matches = @::HEADER[($x-1)..($y-1)];
+   }
+   else {
+      $triggered = 0;
+   }
+   my $n_matches = @matches; local $" = ' ';
+print STDERR "-- (output) expanding pattern $handle ($n_matches matches: @matches)\n" if $triggered && ($B_verbose || !$n_matches);
+   return ($triggered, @matches);
+}
+
 sub wrangle_header {
 
   if ($::HEADER[0] eq '')   { $::HEADER[0] = '_'; }
@@ -632,10 +653,8 @@ print STDERR "-- map header name $name to offset $i\n" if $B_debug;
   for my $spec (@::spec) {
     if ($spec =~ /(.*?)(:[:=])(.*)/) {
       my ($handle, $type, $compute) = (urldecode($1), $2, $3);
-      if ($handle =~ /[$REGEXP_CHARS]/ && $B_regex) {
-        my @matches = grep { $_ =~ qr/$handle/ } @::HEADER;
-        my $n_matches = @matches; local $" = ' ';
-print STDERR "-- (output+compute) expanding pattern $handle ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
+      my ($triggered, @matches) = check_range_and_regex($handle);
+      if ($triggered) {
         $compute = ":$compute" unless $compute =~ /^[,:^]/;
         for my $m (@matches) {
           my $compute_m = $compute; $compute_m =~ s/:__\b/:$m/g;
@@ -680,10 +699,8 @@ print STDERR "-- adding select criterion handle=[$handle] op=[$op] val=[$val] ar
     }
     else {
       $spec = urldecode($spec);
-      if ($spec =~ /[$REGEXP_CHARS]/ && $B_regex) {
-        my @matches = grep { $_ =~ qr/$spec/ } @::HEADER;
-        my $n_matches = @matches; local $" = ' ';
-print STDERR "-- (output) expanding pattern $spec ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
+      my ($triggered, @matches) = check_range_and_regex($spec);
+      if ($triggered) {
         for my $m (@matches) {
           push @::output_nm, $m;
         }
@@ -741,13 +758,13 @@ print STDERR "-- Identical output column names exist ($job)\n";
     my @expanded_compute = ();
     for my $comp (@$compute) {
       my ($type, $what) = @$comp;
-      if ($type == $TYPE_HANDLE && $B_regex  && $what =~ /[$REGEXP_CHARS]/) {
-         my @matches = grep { $_ =~ qr/$what/ } @::HEADER;
-         my $n_matches = @matches;
-         local $" = ' ';
-print STDERR "-- (compute) expanding pattern $what ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
-         for my $h (@matches) {
-           push @expanded_compute, [$TYPE_HANDLE, $h];
+      if ($type == $TYPE_HANDLE) {
+         my ($triggered, @matches) = check_range_and_regex($what);
+         if ($triggered) {
+            for my $h (@matches) { push @expanded_compute, [$TYPE_HANDLE, $h]; }
+         }
+         else {
+            push @expanded_compute, $comp;
          }
       }
       else {
@@ -936,7 +953,6 @@ print STDERR "== Line tally check failed: ($::Nrows != $B_header+$Nkeep+$Ndisc)\
 __DATA__
                                             s o m e   i d e a s
 
-   -  would --onames be helpful? (note -K)
    -  challenge: combine ed and map. replace substring with its map. First ,get it and ,map, then ,ed it.
          currently: echo -e "_a_\t3\n_b_\t4\naba\t5" | pick -AiK --cdict-foo=a:Alpha,b:Beta x::1^_'(.)'_,get^foo,map 1::1^'_\K(.)(?=_)':x,ed
          where \K is available since Perl 5.10.0, 2007. Requires some perl, doesn't look great, but works.
@@ -953,6 +969,7 @@ __DATA__
       minall maxall meanall, medianall, countall sdall can refer to it. needs a scope/clearing framework.
    o  numerical comparisons check field is numeric; however duplicates perl's work/warnings
    ?  predefine constants (e.g. log10, pi). new syntax, e.g. ^^PI ^^LOG10 ^^E ^^PHI - no real need.
+   ?  would --onames be helpful? (note -K)
    #  -T pushes column; slightly inelegant but inevitable. -N -L fixed as rowno lineno operators.
    ?? ifelse(selectname,compute1,compute2) is beyond scope for now.
       -> foo::,LD:a:b:c,RD,add         # open/close data
@@ -970,4 +987,3 @@ __DATA__
      ##            ##
        ##        ##
          #      #
-
