@@ -211,6 +211,10 @@ introduced below, followed by more examples and explanation.
    uses a simple listing of names, the third uses a listing of ranges.
    The parameter in pick lambda expressions is written `:__`. Each instance of it will be replaced by
    the column name, multiplexed over all selected columns.
+
+   **Currently columns resulting from lambda expressions will retain the column name on which they
+   are defined. A facility to allow templated renaming is planned.**
+
 ```
    pick foo\d{2}$'::__^1,add < data.txt
    pick foo:bar:zut::__^1,add < data.txt
@@ -398,12 +402,4 @@ Take 3: `ed edg frac pct substr`
 
 Select comparison operators: `~ /~ = /= /eq/ /ne/ /lt/ /le/ /ge/ /gt/ /ep/ /om/ ~eq~ ~ne~ ~lt~ ~le~ ~ge~ ~gt~ /all/ /any/ /none/`
 
-Supported compute operators:
-```
-Stack control: dup pop xch
-Consume 1: abs binto cgseqlen cos exp exp10 hexto lc len log log10 md5 octto rc rev rot13 sign sin sq sqrt tan tobin tohex tooct uc urldc urlec
-Consume 2: add and cat cgcount cgls cgmax cgsum cgtally dd div get max min mod mul or pow sub uie xor zp
-Consume 3: ed edg frac pct substr
-
-```
 
