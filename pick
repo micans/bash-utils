@@ -620,6 +620,7 @@ sub check_range_and_regex {
    my @matches = ();
    return (0) unless $spec =~ /[:$REGEXP_CHARS]/ || ($B_headless && $spec =~ /\b(\d+)\-/);
    for my $item (split ':', $spec) {
+print STDERR "-- (output) considering $item\n" if $B_verbose;
       if ($item =~ /[$REGEXP_CHARS]/ && $B_regex) {
          push @matches, grep { $_ =~ qr/$item/ } @::HEADER;
       }
@@ -681,6 +682,7 @@ print STDERR "-- map header name $name to offset $i\n" if $B_debug;
       die "Unrecognised operator [$op]\n" unless defined($sel_opdefinitions{$op});
       if (defined($arg)) {
         die "Extra argument currently only allowed for /ep/ and /om/" unless $op =~ /^\/(ep|om)\/$/;
+        $arg =~ s|^\/||;
         $arg=urldecode($arg);      #constant
       }
       else{
