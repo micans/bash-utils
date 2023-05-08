@@ -108,7 +108,7 @@ These are
 
 - colon `:` for a column handle
 - caret `^` for a constant value (number or string)
-- comma ',' for an operator
+- comma `,` for an operator
 
 Thus
 
@@ -153,13 +153,15 @@ The example below selects all columns (`-A`) and adds 1 to column `foo` in-place
 pick -Ai foo::foo^1,add < data.txt
 ```
 
+Once all operators are exhausted pick will concatenate everything that is still on the stack. Thus below
+simply concatenates columns `foo` and `bar`.
 ```
-TODO example of default behaviour of concatenation
+pick ::foo:bar < data.txt
 ```
 
 In several places pick is happy to accept empty strings. One example is the compute name.
 Each compute needs an associated name that is unique (the part before ::).
-In this example the unique name is the empty string, offering the tiny
+In the examples above and below the unique name is the empty string, offering the tiny
 convenience that you don't need to expend energy on thinking up a variable name
 if you just want to quickly compute a single value from each row.
 In this example `pick` outputs the length of each field in the `foo` column.
