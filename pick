@@ -955,6 +955,8 @@ print STDERR "== Line tally check failed: ($::Nrows != $B_header+$Nkeep+$Ndisc)\
 __DATA__
                                             s o m e   i d e a s
 
+   -  test uniqueness (and combination with -x), combination with INSERT_OFFSET and pushing of new names, -K/-U
+   -  unify column/range/regex selection with a+x-y*k
    -  for regex selection + lambda, a tag that allows mass renaming. E.g. pct__/'foo\d{2}'$::__:reference^1,pct
    -  challenge: combine ed and map. replace substring with its map. First ,get it and ,map, then ,ed it.
          currently: echo -e "_a_\t3\n_b_\t4\naba\t5" | pick -AiK --cdict-foo=a:Alpha,b:Beta x::1^_'(.)'_,get^foo,map 1::1^'_\K(.)(?=_)':x,ed

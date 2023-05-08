@@ -340,6 +340,32 @@ As above, add column `zut` as further annotation. Optionally use `%20` for the s
 pick   '::^>:foo^ :zut^%0A:bar' > out.fa
 ```
 
+##  Pick options
+
+-  `-h` do not print header
+-  `-o` OR multiple select criteria (default is AND)
+-  `-x` take complement of selected input column(s) (works with `-i`)
+-  `-i` in-place: `<HANDLE>::<COMPUTE>` replaces `<HANDLE>` if it exists
+-  `-/<pat>`  skip lines matching `<pat>`; use e.g. `-/^#` for commented lines, `-/^@` for sam files
+-  `-//<pat>` pass through lines matching <pat> (allows perl regular expressions, e.g. `^ $ . [] * ? (|)` work.
+-  `-v` verbose
+
+-  `-A` print all input columns (selecting by colspec applies, -`T` accepted)
+-  `-A<N>` `<N>` integer; insert new columns at position `<N>`. Negative `<N>` is relative to rightmost column.
+-  `-O<N>` `<N>` integer; allow ragged input (e.g. SAM use `-O12`), merge all columns at/after position `<N>`
+-  `-T` do not select, print tally column of count of matched row select criteria (name `T`)
+-  `-P` protect against 'nan' and 'inf' results (see `-H` for environment variables `PICK_*_INF`)
+
+-  `-k` headerless input, use 1 2 .. for input column names, `x-y` for range from `x` to `y`.
+-  `-K` headerless input, as above, use derived names to output column names
+-  `-U` with `-k` and `-K` keep output columns unique and in original order
+
+-  `-R` add `_` column variable if no row name field exists in the header. Note: an empty field is recognised and mapped to `_` automatically.
+-  `-f` force processing (allows both identical input and output column names)
+-  `-F` fixed names; do not interpret names as regular expressions. Default behaviour is to assume a regular expression if a name contains one of `[ { ( \ * ? ^ $` .
+-  `-z  ARG+` print url-encoding of `ARG+` (no argument prints a few especially useful cases)
+-  `-zz ARG+` print url-decoding of `ARG+`
+
 
 ##  Pick apart
 
@@ -374,10 +400,10 @@ Select comparison operators: `~ /~ = /= /eq/ /ne/ /lt/ /le/ /ge/ /gt/ /ep/ /om/ 
 
 Supported compute operators:
 ```
-Stack control: `dup pop xch`
-Consume 1: `abs binto cgseqlen cos exp exp10 hexto lc len log log10 md5 octto rc rev rot13 sign sin sq sqrt tan tobin tohex tooct uc urldc urlec`
-Consume 2: `add and cat cgcount cgls cgmax cgsum cgtally dd div get max min mod mul or pow sub uie xor zp`
-Consume 3: `ed edg frac pct substr`
+Stack control: dup pop xch
+Consume 1: abs binto cgseqlen cos exp exp10 hexto lc len log log10 md5 octto rc rev rot13 sign sin sq sqrt tan tobin tohex tooct uc urldc urlec
+Consume 2: add and cat cgcount cgls cgmax cgsum cgtally dd div get max min mod mul or pow sub uie xor zp
+Consume 3: ed edg frac pct substr
 
 ```
 
