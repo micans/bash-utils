@@ -100,6 +100,7 @@ for (keys %PNAN) { $PNAN{$_} = $ENV{$_} if defined($ENV{$_}); }
 my %cp_opdefinitions =
    ( add       => [ 2, sub { $::STACK[-2] += $::STACK[-1] } ],
      addall    => [ 0, sub { my $x = 0; $x += $_ for @::STACK; @::STACK = ($x) } ],
+     mulall    => [ 0, sub { my $x = 1; $x *= $_ for @::STACK; @::STACK = ($x) } ],
      maxall    => [ 0, sub { my $x = -POSIX::DBL_MAX; for (@::STACK) { $x = $_ if $_ > $x }; @::STACK = ($x) } ],
      minall    => [ 0, sub { my $x =  POSIX::DBL_MAX; for (@::STACK) { $x = $_ if $_ < $x }; @::STACK = ($x) } ],
      joinall   => [ 1, sub { my $j = pop(@::STACK); my $x = join $j, @::STACK; @::STACK = ($x) } ],
@@ -520,7 +521,7 @@ $B_print_header = 1 if $B_add_names;
 
 @::nameslist = $nameslist ? split ',', $nameslist : ();
 
-helphelp(1) unless @::spec || $B_printall || $B_excise;
+helphelp(1) unless @::spec || $B_printall || $B_excise || $B_force;
 
 sub interval_plus {
   my ($x, $y, $val) = @_;
@@ -615,24 +616,26 @@ sub add_column {
 }
 
 sub check_range_and_regex {
-   my $handle = shift;
+   my $spec = shift;
    my @matches = ();
-   my $triggered = 1;
-   if ($handle =~ /[$REGEXP_CHARS]/ && $B_regex) {
-      @matches = grep { $_ =~ qr/$handle/ } @::HEADER;
-   }
-   elsif ($handle =~ /^(\d+)\-(\d+)?$/ && $B_headless) {
-      my ($x, $y) = ($1, $2);
-      $x = 1 if $x > @::HEADER;
-      $y = @::HEADER if !defined($y) || $y > @::HEADER;
-      @matches = @::HEADER[($x-1)..($y-1)];
-   }
-   else {
-      $triggered = 0;
+   return (0) unless $spec =~ /[:$REGEXP_CHARS]/ || ($B_headless && $spec =~ /\b(\d+)\-/);
+   for my $item (split ':', $spec) {
+      if ($item =~ /[$REGEXP_CHARS]/ && $B_regex) {
+         push @matches, grep { $_ =~ qr/$item/ } @::HEADER;
+      }
+      elsif ($item =~ /^(\d+)\-(\d+)?$/ && $B_headless) {
+         my ($x, $y) = ($1, $2);
+         $x = 1 if $x > @::HEADER;
+         $y = @::HEADER if !defined($y) || $y > @::HEADER;
+         push @matches, @::HEADER[($x-1)..($y-1)];
+      }
+      else {
+         push @matches, $item;
+      }
    }
    my $n_matches = @matches; local $" = ' ';
-print STDERR "-- (output) expanding pattern $handle ($n_matches matches: @matches)\n" if $triggered && ($B_verbose || !$n_matches);
-   return ($triggered, @matches);
+print STDERR "-- (output) expanding pattern $spec ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
+   return (1, @matches);
 }
 
 sub wrangle_header {
@@ -736,8 +739,7 @@ print STDERR "-- output column names as specified: [@::output_nm]\n" if $B_debug
   }
 print STDERR "-- output column names after -i/-a treatment: @::output_nm\n" if $B_debug && ($B_excise || $B_printall);
 
-  if ($B_print_header) {
-    my %names = (); my $i = 1;
+  { my %names = (); my $i = 1;
     for (@::output_nm) { $names{$_} = $i++ unless defined($names{$_}) }
     if (keys %names < @::output_nm) {
        my $job = $B_force ? 'leaving as specified' : 'will make unique';
@@ -953,6 +955,7 @@ print STDERR "== Line tally check failed: ($::Nrows != $B_header+$Nkeep+$Ndisc)\
 __DATA__
                                             s o m e   i d e a s
 
+   -  for regex selection + lambda, a tag that allows mass renaming. E.g. pct__/'foo\d{2}'$::__:reference^1,pct
    -  challenge: combine ed and map. replace substring with its map. First ,get it and ,map, then ,ed it.
          currently: echo -e "_a_\t3\n_b_\t4\naba\t5" | pick -AiK --cdict-foo=a:Alpha,b:Beta x::1^_'(.)'_,get^foo,map 1::1^'_\K(.)(?=_)':x,ed
          where \K is available since Perl 5.10.0, 2007. Requires some perl, doesn't look great, but works.
@@ -964,7 +967,6 @@ __DATA__
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    -  -f is useless in the sense that the same name implies the same content.
    ?? +/pat select entire rows on pattern?
-   ?  for regex selection, a wildcard tag that allows mass renaming.
    ?  for 'all' operators; store data in internal buffer; storeall.
       minall maxall meanall, medianall, countall sdall can refer to it. needs a scope/clearing framework.
    o  numerical comparisons check field is numeric; however duplicates perl's work/warnings
