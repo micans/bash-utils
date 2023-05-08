@@ -358,26 +358,26 @@ syntax.
 
 Operators for compute:
 
-Stack control:  *dup pop xch*
+Stack control:  `dup pop xch`
 
-Input counters: *lineno rowno*
+Input counters: `lineno rowno`
 
-Stack devourers: *addall mulall minall maxall joinall*
+Stack devourers: `addall mulall minall maxall joinall`
 
-Take 1: *abs binto ceil cgqrycov cgqryend cgqrylen cgqrystart cgrefcov cos exp exp10 floor hexto int lc len log log10 md5 octto rc rev rot13 sign sin sq sqrt tan tobin tohex tooct uc urldc urlec*
+Take 1: `abs binto ceil cgqrycov cgqryend cgqrylen cgqrystart cgrefcov cos exp exp10 floor hexto int lc len log log10 md5 octto rc rev rot13 sign sin sq sqrt tan tobin tohex tooct uc urldc urlec`
 
-Take 2: *add and cat cgcount cgmax cgsum dd del delg div get idiv map max min mod mul or pow sub uie xor zp*
+Take 2: `add and cat cgcount cgmax cgsum dd del delg div get idiv map max min mod mul or pow sub uie xor zp`
 
-Take 3: *ed edg frac pct substr*
+Take 3: `ed edg frac pct substr`
 
-Select comparison operators: *~ /~ = /= /eq/ /ne/ /lt/ /le/ /ge/ /gt/ /ep/ /om/ ~eq~ ~ne~ ~lt~ ~le~ ~ge~ ~gt~ /all/ /any/ /none/*
+Select comparison operators: `~ /~ = /= /eq/ /ne/ /lt/ /le/ /ge/ /gt/ /ep/ /om/ ~eq~ ~ne~ ~lt~ ~le~ ~ge~ ~gt~ /all/ /any/ /none/`
 
 Supported compute operators:
 ```
-Stack control: dup pop xch
-Consume 1: abs binto cgseqlen cos exp exp10 hexto lc len log log10 md5 octto rc rev rot13 sign sin sq sqrt tan tobin tohex tooct uc urldc urlec
-Consume 2: add and cat cgcount cgls cgmax cgsum cgtally dd div get max min mod mul or pow sub uie xor zp
-Consume 3: ed edg frac pct substr
+Stack control: `dup pop xch`
+Consume 1: `abs binto cgseqlen cos exp exp10 hexto lc len log log10 md5 octto rc rev rot13 sign sin sq sqrt tan tobin tohex tooct uc urldc urlec`
+Consume 2: `add and cat cgcount cgls cgmax cgsum cgtally dd div get max min mod mul or pow sub uie xor zp`
+Consume 3: `ed edg frac pct substr`
 
 ```
 
