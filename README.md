@@ -1,12 +1,12 @@
 # bash-utils
 
 Some of the scripts here are to aid data inspection in the command line, avoiding
-the need to fire up R or Python. These are primarily `pick` (for selecting/combining/transforming/filtering
-tabular data) and `hissyfit` (terminal histograms). Also useful is `transpose` from
-[github.com/micans/reaper](https://github.com/micans/reaper) for fast and low-memory transposition
+the need to fire up R or Python.
+Also useful are [pick](https://github.com/micans/pick) (for selecting/combining/transforming/filtering tabular data)
+and `transpose` from [github.com/micans/reaper](https://github.com/micans/reaper) for fast and low-memory transposition
 of (large) tabular data.
 
-**List of highly useful software**
+**Highly useful command line data wrangling:**
 [GNU datamash](https://www.gnu.org/software/datamash/).
 
 
@@ -18,7 +18,7 @@ of (large) tabular data.
 
 ## Unix file/stream column and row manipulation using column names
 
-  `pick` used to live here but has [its own repository](https://github.com/micans/pick)
+  `pick` used to live here but has [its own repository](https://github.com/micans/pick) .
   It is a concise command-line query/programming tool to manipulate streamed data columns and rows.
   It can be thought of as (unix) `cut` on steroids, augmented with aspects of `R` and `awk`.
 
