@@ -399,7 +399,7 @@ while (@::spec && $::spec[0] =~ /^-/) {
   ^   %5E     ;   %3B     (  %28     <TAB>      %09
   :   %3A     !   %21     )  %29     <NEWLINE>  %0A
   ,   %2C     /   %2F     <  %3C     <CR>       %0D
-  %   %25     \   %5C     >  %3E     <SPACE>    %20     =   %3D
+  %   %25     \\   %5C     >  %3E     <SPACE>    %20     =   %3D
 For shell meta-characters it is easiest to just quote the argument to pick.
 EOH
     }
@@ -559,7 +559,7 @@ sub parse_compute {
       die "Not supported [$what]\n" unless defined($opdef);
                            # N stack required, code.
       push @{$oplist[-1]}, ($opdef->[0], $opdef->[1]);
-print STDERR "-- $handle >> type=$type op=$what N=$opdef->[0], code=$opdef->[1]\n" if $B_debug;
+print STDERR "-- $handle >> type=$type op=$what N=$opdef->[0], code=$what:$opdef->[1]\n" if $B_debug;
     }
     else {
 print STDERR "-- $type $what >>\n" if $B_debug;
@@ -615,19 +615,31 @@ sub add_column {
   print "\t" if $::N_column_output++; print $_[0];
 }
 
-sub check_range_and_regex {
-   my $spec = shift;
+sub check_list_range_and_regex {
+   my ($spec, $lambda) = @_;
    my @matches = ();
+   my ($suffix, $prefix) = ("", "");
+   if ($lambda) {             # in this case accept p/spec/s syntax for column renaming.
+      my @parts = split '/', $spec, -1;
+      if (@parts > 3) { die "Handle has more than three /-separated parts"; }
+      elsif (@parts == 3) { ($prefix, $spec, $suffix) = @parts; }
+      elsif (@parts == 2) {   # to specify just prefix, one needs p/spec/
+        ($spec, $suffix) = @parts;
+        if ($suffix =~ /[:$REGEXP_CHARS]/) {       # ':' is there as we split on that.
+print STDERR "Suffix [$suffix] contains regex characters, did you mean '$spec/$suffix/'?\n";
+        }
+      }
+   }
    return (0) unless $spec =~ /[:$REGEXP_CHARS]/ || ($B_headless && $spec =~ /\b(\d+)\-/);
    for my $item (split ':', $spec) {
 print STDERR "-- (output) considering $item\n" if $B_verbose;
       if ($item =~ /[$REGEXP_CHARS]/ && $B_regex) {
-         push @matches, grep { $_ =~ qr/$item/ } @::HEADER;
+         push @matches, grep { $_ =~ qr/$item/ } @::HEADER[0..($::N-1)];
       }
       elsif ($item =~ /^(\d+)\-(\d+)?$/ && $B_headless) {
          my ($x, $y) = ($1, $2);
-         $x = 1 if $x > @::HEADER;
-         $y = @::HEADER if !defined($y) || $y > @::HEADER;
+         $x = 1 if $x > $::N;
+         $y = $::N if !defined($y) || $y > $::N;
          push @matches, @::HEADER[($x-1)..($y-1)];
       }
       else {
@@ -636,7 +648,7 @@ print STDERR "-- (output) considering $item\n" if $B_verbose;
    }
    my $n_matches = @matches; local $" = ' ';
 print STDERR "-- (output) expanding pattern $spec ($n_matches matches: @matches)\n" if $B_verbose || !$n_matches;
-   return (1, @matches);
+   return $lambda ? (1, $prefix, $suffix, @matches) : (1, @matches);
 }
 
 sub wrangle_header {
@@ -655,14 +667,15 @@ print STDERR "-- map header name $name to offset $i\n" if $B_debug;
   }
 
   for my $spec (@::spec) {
-    if ($spec =~ /(.*?)(:[:=])(.*)/) {
+    if ($spec =~ /^(.*?)(:[:=])(.*)/) {
       my ($handle, $type, $compute) = (urldecode($1), $2, $3);
-      my ($triggered, @matches) = check_range_and_regex($handle);
+      my ($triggered, $prefix, $suffix, @matches) = check_list_range_and_regex($handle, 1);
       if ($triggered) {
         $compute = ":$compute" unless $compute =~ /^[,:^]/;
         for my $m (@matches) {
           my $compute_m = $compute; $compute_m =~ s/:__\b/:$m/g;
           my $parsed_compute = parse_compute($handle, $compute_m);
+          $m = "$prefix$m$suffix";
           push @::compute, [$m, $parsed_compute];
           push @::output_nm, $m if $type eq '::';
         }
@@ -704,7 +717,7 @@ print STDERR "-- adding select criterion handle=[$handle] op=[$op] val=[$val] ar
     }
     else {
       $spec = urldecode($spec);
-      my ($triggered, @matches) = check_range_and_regex($spec);
+      my ($triggered, @matches) = check_list_range_and_regex($spec, 0);
       if ($triggered) {
         for my $m (@matches) {
           push @::output_nm, $m;
@@ -763,7 +776,7 @@ print STDERR "-- Identical output column names exist ($job)\n";
     for my $comp (@$compute) {
       my ($type, $what) = @$comp;
       if ($type == $TYPE_HANDLE) {
-         my ($triggered, @matches) = check_range_and_regex($what);
+         my ($triggered, @matches) = check_list_range_and_regex($what, 0);
          if ($triggered) {
             for my $h (@matches) { push @expanded_compute, [$TYPE_HANDLE, $h]; }
          }
@@ -958,8 +971,7 @@ __DATA__
                                             s o m e   i d e a s
 
    -  test uniqueness (and combination with -x), combination with INSERT_OFFSET and pushing of new names, -K/-U
-   -  unify column/range/regex selection with a+x-y*k
-   -  for regex selection + lambda, a tag that allows mass renaming. E.g. pct__/'foo\d{2}'$::__:reference^1,pct
+   ?  unify column/range/regex selection with a+x-y*k
    -  challenge: combine ed and map. replace substring with its map. First ,get it and ,map, then ,ed it.
          currently: echo -e "_a_\t3\n_b_\t4\naba\t5" | pick -AiK --cdict-foo=a:Alpha,b:Beta x::1^_'(.)'_,get^foo,map 1::1^'_\K(.)(?=_)':x,ed
          where \K is available since Perl 5.10.0, 2007. Requires some perl, doesn't look great, but works.
@@ -970,7 +982,6 @@ __DATA__
    -  implement in cimfomfa/C (regular expressions not as good).
    -  get -> option to return field if no match? -> covered by ed; get allows filtering on empty string with uie
    -  -f is useless in the sense that the same name implies the same content.
-   ?? +/pat select entire rows on pattern?
    ?  for 'all' operators; store data in internal buffer; storeall.
       minall maxall meanall, medianall, countall sdall can refer to it. needs a scope/clearing framework.
    o  numerical comparisons check field is numeric; however duplicates perl's work/warnings
@@ -981,15 +992,4 @@ __DATA__
       -> foo::,LD:a:b:c,RD,add         # open/close data
          foo::,LC:a:b:c,op,op,RC       # open/close code
          encode scope in a separate datastructure; fast path if no scopes exist.
-   -  tests
-
-     ####        ####
-    ##   #      #   ##
-   #                  #
-  ##                  ##
-  ##     R. I. P.     ##
-   ##                ##
-    ##    recol     ##
-     ##            ##
-       ##        ##
-         #      #
+                                                                                                                           R.I.P. recol
