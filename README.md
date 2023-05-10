@@ -18,9 +18,9 @@ of (large) tabular data.
 
 ## Unix file/stream column and row manipulation using column names
 
-  `pick` is a concise command-line query/programming tool to manipulate streamed data columns and rows.
+  `pick` used to live here but has [its own repository](https://github.com/micans/pick)
+  It is a concise command-line query/programming tool to manipulate streamed data columns and rows.
   It can be thought of as (unix) `cut` on steroids, augmented with aspects of `R` and `awk`.
-  [Pick documentation and examples](doc/pick-usage.md).
 
 
 ## Unix terminal histograms and bar charts
