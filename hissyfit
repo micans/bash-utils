@@ -49,6 +49,7 @@ my $plain      =  0;
 my $emoji      =  0;
 my $histin     =  0;      # input data is already histogram data
 my $tallyin    =  0;      # input data is output of uniq
+my $annot      =  "";
 
 my $height     =  20;
 my $SUBLEVELS  =  8;      # capitals for constants maybe
@@ -87,6 +88,7 @@ Options:
 --histin          input is already histogram counts
 --tallyin         input is the output of uniq (line format <count> <item>)
 --terse           do not print quantile and bin information
+--annot=<STRING>  output 'Description: STRING' in the legend below the histogram
 
 --stairs=x-y[-z]* use these as cursor sublevels (argument will split on '$stairsep' or --sep)
 --stair-sep=X     use X as separator to split stairs (default $stairsep)
@@ -133,6 +135,7 @@ if
    ,  "histin"          =>   \$histin
    ,  "tallyin"         =>   \$tallyin
    ,  "terse"           =>   \$terse
+   ,  "annot=s"         =>   \$annot
    ,  "emoji_"          =>   \$emosep
    )
 )
@@ -507,7 +510,9 @@ if ($terse) {
 }
 else {
   my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND_orig);
-  print "ND=$ND$Loor$Roor hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax\n";
+  print "ND=$ND$Loor$Roor hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax";
+  print " Description: $annot" if $annot;
+  print "\n";
   print "topbin(i=$bigbinid,n=$bigbin,p=$bigbinpct,x~$bigbinmid) bw=$width qr=($q1 $q2 $q3)\n";
 }
 
