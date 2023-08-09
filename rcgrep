@@ -1,0 +1,31 @@
+#!/bin/bash
+
+if [[ ! -n $1 ]]; then
+  cat <<EOH
+Usable only as a pipe. This wraps around zegrep and adds the reverse complement
+of the specified search pattern. Character classes [] and group/branching ( | )
+will work. Backslash patterns will fail. Use '-' to stretch between patterns.
+The augmented zegrep command is output on STDERR.
+  - Usage:
+    rcgrep PATTERN [grep options]
+
+  - Multiline sequences are combined into a single line (numbered lines not supported)
+  - The stretch wildcard character is '-' (it will be translated to .*).
+  - The grep options -i and --color=always are provided already.
+  - When piping to less use less -R .
+EOH
+  exit 0
+fi
+
+seq=$1
+shift 1
+
+qes=$(echo $seq | tr GCATUgcatu CGTAAcgtaa | rev | tr '][)(' '[]()' | perl -pe 's/\-/\.\*/g');
+seq=$(echo $seq | perl -pe 's/\-/\.\*/g');
+
+options=( "-i" "--color=always" "$@" )
+
+echo "___ Command used: zegrep \"${options[@]}\" \"($seq|$qes)\" ___" >&2
+
+perl -ne 'chomp;print;print"\n"unless/^[acgtnxu\- \~]+$/i;END{print"\n"}' | zegrep "${options[@]}" "($seq|$qes)"
+
