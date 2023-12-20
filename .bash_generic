@@ -74,6 +74,8 @@ alias duck2='du -ch -d 2  | sort -h'
 
 alias vie='view $HOME/.eternal_history'
 
+alias sshnokey='ssh -o PasswordAuthentication=yes -o PreferredAuthentications=keyboard-interactive,password -o PubkeyAuthentication=no'
+
 
 function vid() {
   num=12

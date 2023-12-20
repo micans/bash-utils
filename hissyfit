@@ -47,6 +47,7 @@ my $cumulative =  0;
 my $terse      =  0;
 my $plain      =  0;
 my $emoji      =  0;
+my $annotpos   =  undef;
 my $histin     =  0;      # input data is already histogram data
 my $tallyin    =  0;      # input data is output of uniq
 my $annot      =  "";
@@ -136,6 +137,7 @@ if
    ,  "tallyin"         =>   \$tallyin
    ,  "terse"           =>   \$terse
    ,  "annot=s"         =>   \$annot
+   ,  "annotpos=s"      =>   \$annotpos
    ,  "emoji_"          =>   \$emosep
    )
 )
@@ -156,6 +158,10 @@ if (defined($canvaslrh)) {
   elsif ($canvaslrh =~ s|^(\S+?)/(\S+?)$|$&|) {
     ($user_min, $user_max) = ($1, $2);
   }
+}
+
+if ($annot && $annot =~ /(.*?)\/(tr|tl|br|bl)$/) {
+  ($annot, $annotpos) = ($1, $2);
 }
 
 my @notches = ();
@@ -409,6 +415,10 @@ if ($tallyin) {
 }
 
 
+if (defined($annotpos)) {
+   print ' ' x ($NBINS - length($annot)), $annot, "\n" if $annotpos =~ /^tr$/i;
+   print $annot, ' ' x ($NBINS - length($annot)), "\n" if $annotpos =~ /^tl$/i;
+}
 for (my $u=0; $u<$height; $u++) {
   for (my $v=0; $v<$NBINS;$v++) {
     print $canvas[$v][$height-$u-1];
@@ -511,7 +521,7 @@ if ($terse) {
 else {
   my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND_orig);
   print "ND=$ND$Loor$Roor hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax";
-  print " Description: $annot" if $annot;
+  print " Description: $annot" if $annot && !defined($annotpos);
   print "\n";
   print "topbin(i=$bigbinid,n=$bigbin,p=$bigbinpct,x~$bigbinmid) bw=$width qr=($q1 $q2 $q3)\n";
 }
