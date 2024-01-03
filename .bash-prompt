@@ -4,7 +4,8 @@ function mypwd() {
    if (( $(wc -c <<< $dirname) < 20 )); then echo $dirname; else echo ${dirname: -20}; fi
 }
 export EHPWD=
-export PROMPT_COMMAND='h=$(history 1 | cut -c 8-); if [[ $EHPWD != $PWD ]]; then echo "-- $$ $PWD" >> ~/.eternal_history; EHPWD=$PWD; fi; (( ${#h} > 2 )) && echo "$$ $h" >> ~/.eternal_history'
+export EHDB=${SVDHOME-HOME}/.eternal_history
+export PROMPT_COMMAND='h=$(history 1 | cut -c 8-); if [[ $EHPWD != $PWD ]]; then echo "-- $$ $PWD" >> $EHDB; EHPWD=$PWD; fi; (( ${#h} > 2 )) && echo "$$ $h" >> $EHDB'
 export PS1='${host:-🌿} \[\033[1m\]▵\[\033[0m\] $(mypwd) \[\033[1m\]▵\[\033[0m\] \W$(__git_ps1 "(%s)") \[\033[1m\]▵\[\033[0m\] $(amibm) \[\033[1m\]▷\[\033[0m\]  '
 GIT_PS1_SHOWDIRTYSTATE=8
 
