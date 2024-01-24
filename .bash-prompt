@@ -5,6 +5,8 @@ function mypwd() {
 }
 export EHPWD=
 export EHDB=${SVDHOME-$HOME}/.eternal_history
+# The : -- ; bit below is just to highlight directory changes, plus a date stamp.
+# t=$$ is so that commands can be tied to directories and session, noting that multiple terminals may intermingle output.
 export PROMPT_COMMAND='h=$(history 1 | cut -c 8-); if [[ $EHPWD != $PWD ]]; then echo ": -- $(date '+%c') -- ; t=$$ cd $PWD" >> $EHDB; EHPWD=$PWD; fi; (( ${#h} > 2 )) && echo "t=$$ $h" >> $EHDB'
 export PS1='${host:-🌿} \[\033[1m\]▵\[\033[0m\] $(mypwd) \[\033[1m\]▵\[\033[0m\] \W$(__git_ps1 "(%s)") \[\033[1m\]▵\[\033[0m\] $(amibm) \[\033[1m\]▷\[\033[0m\]  '
 GIT_PS1_SHOWDIRTYSTATE=8
