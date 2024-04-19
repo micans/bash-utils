@@ -34,6 +34,7 @@ alias log='vi ~/persoonlijk/log.txt'
 alias ct='column -t'
 alias hf=hissyfit
 alias nf=nextflow
+alias ok="echo $?"
 
 
 ##    Realias existing programs. I'm not dangerous, trust me.

@@ -190,7 +190,6 @@ elsif ($emoji) {
                      # say hi to flushed, woozy, monocle, grinning and sunglasses.
   $staircase = '😳-🥴-🧐-😀-😎';
   $zilch = '  ' unless $zilch ne ' ';      #  Used to have 'anxious face with sweat' 😰
-  $NBINS = 20 if $NBINS == 100;
 }
 elsif ($tallyin) {
   $staircase = $stonehenge;
