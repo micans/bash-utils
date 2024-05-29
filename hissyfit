@@ -510,7 +510,7 @@ if (defined($notch_anchor) || @notches || @dquery) {
       substr($ruler, $u * $x, 1) = '|';
       substr($vals1,  $u * $x, length($_)) = $_;
     }
-    if ($_ == $NBINS) { $ruler .= '|'; $vals1 .= $_; }
+    if ($x == $NBINS) { $ruler .= '|'; $vals1 .= $_; }
   }
   for (@dquery) {
     my $x = int($f * ($_ - $hmin) / $width);
@@ -518,7 +518,7 @@ if (defined($notch_anchor) || @notches || @dquery) {
       substr($ruler, $u * $x, 1) = '◆';
       substr($vals2,  $u * $x, length($_)) = $_;
     }
-    if ($_ == $NBINS) { $ruler .= '+'; $vals2 .= $_; }
+    if ($x == $NBINS) { $ruler .= '+'; $vals2 .= $_; }
   }
   print "$ruler\n";
   print "$vals1\n" if @notches;
