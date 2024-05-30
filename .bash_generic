@@ -52,6 +52,7 @@ alias l='ls -l'
 alias lh='ls -lh'
 alias lt='ls -ltr'
 alias lta='ls -ltra'
+alias lx='less -Sx12'
 
 
 
