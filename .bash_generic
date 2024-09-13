@@ -54,8 +54,7 @@ alias lt='ls -ltr'
 alias lta='ls -ltra'
 alias lx='less -Sx12'
 alias ctlx='column -t | less -Sx12'
-
-
+alias ph='preserve_header'
 
 ##    Various shorthands
 #
