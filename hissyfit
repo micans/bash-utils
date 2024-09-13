@@ -210,7 +210,10 @@ while (<>) {
   push @D, $_;
 }
 
-die "No data\n" if !@D;
+if (!@D) {
+  print "No data\n";
+  exit 0;
+}
 
 my @H;
 my ($dmin, $dmax, $hmin, $hmax, $q1, $q2, $q3, $out_of_range, $ND_orig, $ND_left_cut, $ND_right_cut, $ND, $width);
@@ -283,7 +286,10 @@ else {                       # Nearly ready to stick this in a subroutine.
     @D = grep { $_ >= $hmin && $_ < $hmax } @D;
   }
   $ND = @D;
-  die "No data present in bounds [$hmin, $hmax)\n" if !@D;
+  if (!@D) {
+    print "No data present in bounds [$hmin, $hmax)\n";
+    exit 0;
+  }
 
 
   ##    This is input done.
