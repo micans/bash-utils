@@ -12,8 +12,7 @@ of (large) tabular data.
 
 ## Command line directory bookmarks
 
-  Apparix used to live here but has [its own repository](https://github.com/micans/apparix)
-  now.
+  Apparix used to live here but has [its own repository](https://github.com/micans/apparix) now.
 
 
 ## Unix file/stream column and row manipulation using column names
