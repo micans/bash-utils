@@ -30,7 +30,7 @@ alias y="echo 'relax dude, yere done'"
 alias n="echo 'three times no is yes'"
 alias l='ls -l'
 
-alias log='vi ~/persoonlijk/log.txt'
+alias log='ae h notes/log.txt'
 alias ct='column -t'
 alias hf=hissyfit
 alias nf=nextflow
@@ -64,6 +64,7 @@ alias six='chmod 644'
 alias ux='chmod u+x'
 alias four='chmod 444'
 alias wind='mutt -f +sent'
+alias wcl='wc -l'
 
 
 alias asdfg='xmodmap $HOME/local/etc/dvorak.txt'         # need to recover
