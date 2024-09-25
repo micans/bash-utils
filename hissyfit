@@ -216,7 +216,7 @@ if (!@D) {
 }
 
 my @H;
-my ($dmin, $dmax, $hmin, $hmax, $q1, $q2, $q3, $out_of_range, $ND_orig, $ND_left_cut, $ND_right_cut, $ND, $width);
+my ($dmin, $dmax, $hmin, $hmax, $q1, $q2, $q3, $out_of_range, $ND_orig, $ND_hist, $ND_left_cut, $ND_right_cut, $ND, $width);
 
 my @labels = ();
 
@@ -230,22 +230,22 @@ if ($tallyin) {
   @D = @D2;
   @H = @D2;
   $NBINS = @H;
-  $hmin = $dmin = 0;   # this lot is not used in this mode
-  $hmax = $NBINS;      # but it's just as well to set them.
-  $width = 0;          #
-  $ND      = 0;
+  $hmin  = $dmin = 0;   # this lot is not used in this mode
+  $hmax  = $NBINS;      # but it's just as well to set them.
+  $width = 0;           #
+  $ND    = 0;
   $ND += $_ for @H;
   $ND_orig = $ND;
 }
 elsif ($histin) {
   @H = @D;
-  $hmin = $dmin = 0;
-  $hmax = $dmax = 100;
-  $hmin    = $user_min if defined($user_min);
-  $hmax    = $user_max if defined($user_max);
-  $NBINS   = @H;
+  $hmin  = $dmin = 0;
+  $hmax  = $dmax = 100;
+  $hmin  = $user_min if defined($user_min);
+  $hmax  = $user_max if defined($user_max);
+  $NBINS = @H;
 
-  $ND      = 0;
+  $ND    = 0;
   $ND += $_ for @H;
   $ND_orig = $ND;
 
@@ -285,7 +285,7 @@ else {                       # Nearly ready to stick this in a subroutine.
     for (@D) { $ND_left_cut++ if $_ < $hmin; $ND_right_cut++ if $_ >= $hmax }
     @D = grep { $_ >= $hmin && $_ < $hmax } @D;
   }
-  $ND = @D;
+  $ND_hist = @D;
   if (!@D) {
     print "No data present in bounds [$hmin, $hmax)\n";
     exit 0;
@@ -331,7 +331,7 @@ else {                       # Nearly ready to stick this in a subroutine.
     $H[$index] = 0;
     $index++;
   }
-  $H[$NBINS-1] += ($ND-$N_assigned);    # this controls for floating point addition causing boundary issues. 
+  $H[$NBINS-1] += ($ND_hist-$N_assigned);    # this controls for floating point addition causing boundary issues. 
 
   my $lh = @H;
   die "hist error ($lh)\n" unless @H == $NBINS;
@@ -369,7 +369,7 @@ for (my $j=1;$j<@stairs;$j++) {
 my $bigbin = ( sort { $b <=> $a } @H )[0];
 my $bigbinid = (grep { $H[$_] == $bigbin } 0..($NBINS-1))[0] + 1;   # 1-based for user.
 my $bigbinmid = $hmin + ($bigbinid-0.5)*$width;
-my $Ymax = $cumulative ? $ND : $bigbin;
+my $Ymax = $cumulative ? $ND_hist : $bigbin;
 if (defined($user_Ymax)) {
   if ($Ymax > $user_Ymax) { print STDERR "--ymax value $user_Ymax is lower than data ymax, ignoring\n"; }
   else { $Ymax = $user_Ymax; }
@@ -424,8 +424,8 @@ if ($tallyin) {
     }
     printf " %12d\n", $H[$v];
   }
-  my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND);
-  print "total $ND items, most frequent [$labels[$bigbinid-1]] (p=$bigbinpct)\n";
+  my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND_hist);
+  print "total $ND_hist items, most frequent [$labels[$bigbinid-1]] (p=$bigbinpct)\n";
   print "$n_trunc labels were truncated\n" if $n_trunc;
   exit(0);
 }
@@ -460,35 +460,35 @@ if ($NBINS >= 80) {
 
 $sep = $emosep x $NBINS if $emoji;
 
-my $emit_quantiles = $histin || ($q1 > $hmin && $q3 < $hmax);
+my $emit_quantiles = 1; # $histin || ($q1 > $hmin && $q3 < $hmax);
 
               # $p[123] are 1-based bin indexes.
               #
-my $p1 = 1 + (grep { $C[$_] >= 0.25 * $ND } 0..($NBINS-1))[0];
-my $p2 = 1 + (grep { $C[$_] >= 0.50 * $ND } 0..($NBINS-1))[0];
-my $p3 = 1 + (grep { $C[$_] >= 0.75 * $ND } 0..($NBINS-1))[0];
+my $p1 = 1 + (grep { $C[$_] >= 0.25 * $ND_hist } 0..($NBINS-1))[0];
+my $p2 = 1 + (grep { $C[$_] >= 0.50 * $ND_hist } 0..($NBINS-1))[0];
+my $p3 = 1 + (grep { $C[$_] >= 0.75 * $ND_hist } 0..($NBINS-1))[0];
 
               # data was subselected, but for now we produce quantiles for
               # full input data always.
-if (!$histin && $emit_quantiles && $ND != $ND_orig) {
-  $p1 = 1 + (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q1 } 0..($NBINS-1))[0];
-  $p2 = 1 + (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q2 } 0..($NBINS-1))[0];
-  $p3 = 1 + (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q3 } 0..($NBINS-1))[0];
+if (!$histin && $emit_quantiles && $ND_hist != $ND_orig) {
+  $p1 = $q1 > $hmin && $q1 < $hmax ? 1 + (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q1 } 0..($NBINS-1))[0] : 0;
+  $p2 = $q2 > $hmin && $q2 < $hmax ? 1 + (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q2 } 0..($NBINS-1))[0] : 0;
+  $p3 = $q3 > $hmin && $q3 < $hmax ? 1 + (grep { $C[$_] > 0 && $D[$C[$_]-1] >= $q3 } 0..($NBINS-1))[0] : 0;
 }
 
-print STDERR "c99=$C[$NBINS-1] nd=$ND q=$q1,$q2,$q3 ql=$p1,$p2,$p3  qlv=$D[$C[$p1]-1],$D[$C[$p2]-1],$D[$C[$p3]-1]\n" if $debug;
+print STDERR "c99=$C[$NBINS-1] nd=$ND_hist q=$q1,$q2,$q3 ql=$p1,$p2,$p3  qlv=$D[$C[$p1]-1],$D[$C[$p2]-1],$D[$C[$p3]-1]\n" if $debug;
 
 if ($emit_quantiles) {
-  substr($sep, $p1-1, 1) = $emoji ? '🌘' : 'Q';
-  substr($sep, $p2-1, 1) = $emoji ? '🌗' : 'Q';
-  substr($sep, $p3-1, 1) = $emoji ? '🌖' : 'Q';
+  substr($sep, $p1-1, 1) = $emoji ? '🌘' : 'Q' if $p1;
+  substr($sep, $p2-1, 1) = $emoji ? '🌗' : 'Q' if $p2;
+  substr($sep, $p3-1, 1) = $emoji ? '🌖' : 'Q' if $p3;
 }
 
 print "$sep\n";
 
 my ($Loor, $Roor) = ("", "");
 if ($out_of_range) {
-  my $N_out_of_range = $ND_orig - $ND;
+  my $N_out_of_range = $ND_orig - $ND_hist;
   print STDERR "Out of range discprepancy $N_out_of_range != $ND_left_cut + $ND_right_cut\n" if $N_out_of_range != $ND_left_cut + $ND_right_cut;
   $Loor = ' Loor=' . $ND_left_cut . sprintf("/%.1f", 100 * $ND_left_cut / $ND_orig) . '%';
   $Roor = ' Roor=' . $ND_right_cut . sprintf("/%.1f", 100 * $ND_right_cut / $ND_orig) . '%';
@@ -526,6 +526,10 @@ if (defined($notch_anchor) || @notches || @dquery) {
     }
     if ($x == $NBINS) { $ruler .= '+'; $vals2 .= $_; }
   }
+  substr($ruler, $NBINS) = "" if $block && length($ruler) > $NBINS;
+  substr($vals1, $NBINS) = "" if $block && length($vals1) > $NBINS;
+  substr($vals2, $NBINS) = "" if $block && length($vals2) > $NBINS;
+  substr($delim, $NBINS) = "" if $block && length($delim) > $NBINS;
   print "$ruler\n";
   print "$vals1\n" if @notches;
   print "$vals2\n" if @dquery;
@@ -537,7 +541,7 @@ if ($terse) {
 else {
   my $bigbinpct = sprintf("%.1f", 100 * $bigbin / $ND_orig);
   my @info = ();
-  push @info, "ND=$ND$Loor$Roor hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax";
+  push @info, "ND=$ND_orig$Loor$Roor hmin=$hmin hmax=$hmax dmin=$dmin dmax=$dmax";
   $info[-1] .= " Description: $annot" if $annot && !defined($annotpos);
   push @info, "topbin(i=$bigbinid,n=$bigbin,p=$bigbinpct,x~$bigbinmid) bw=$width qr=($q1 $q2 $q3)";
   if ($block) {

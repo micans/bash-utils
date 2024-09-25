@@ -65,6 +65,7 @@ alias ux='chmod u+x'
 alias four='chmod 444'
 alias wind='mutt -f +sent'
 alias wcl='wc -l'
+alias wclu='sort -u | wc -l'
 
 
 alias asdfg='xmodmap $HOME/local/etc/dvorak.txt'         # need to recover
