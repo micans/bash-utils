@@ -53,6 +53,7 @@ alias lh='ls -lh'
 alias lt='ls -ltr'
 alias lta='ls -ltra'
 alias lx='less -Sx12'
+alias ctlx='column -t | less -Sx12'
 
 
 
@@ -66,6 +67,7 @@ alias four='chmod 444'
 alias wind='mutt -f +sent'
 alias wcl='wc -l'
 alias wclu='sort -u | wc -l'
+alias nonl="{ tr '\n' ' '; echo; }"
 
 
 alias asdfg='xmodmap $HOME/local/etc/dvorak.txt'         # need to recover
@@ -113,6 +115,12 @@ function ie {                       # immediate edit
 function _clxdo_complete()
 {  local tag="${COMP_WORDS[1]}"
    COMPREPLY=( $(clxdo -h | cut -f 2 -d ' ' | grep "$tag") )
+}
+
+function getin() {
+  dir=${1?Expect directory}
+  mkdir -p $dir
+  cd $dir
 }
 
 complete -F _clxdo_complete clxdo
