@@ -92,7 +92,10 @@ topbin(i=50,n=2254,p=2.3,x~16172.43) bw=319.14 qr=(12519 16388 20225)
   cumulative tallying (`--cumulative`),
   the number of bins (`--bins`),
   and user-specified glyphs (`--stairs`).
-  It is also possible to read input that already specifies the histogram heights (`--histin`).
+
+  It is possible to read input that already specifies the histogram heights (`--histin`).
+  A large input histogram can be coarsened/downsampled with `--nbins`; this can be used e.g. to quickly
+  generate a rough coverage/depth plot for sequencing data.
 
   For bar charts `hissyfit` accepts the output of `uniq -c` (that is, each line has `<count> <label>`)
   to draw bar charts for categorical data (see fourth screenshot), when given the `--tallyin` option.
