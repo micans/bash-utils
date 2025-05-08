@@ -379,9 +379,15 @@ function nchar()
 
 function lines()
 { [[ -z $1 ]] && echo "Need <lineno> or <lineno> <count>, I only read STDIN" && return 1
+  lineno=$1
   count=1
   if [[ ! -z $2 ]]; then count=$2; fi
-  head -n $(($1+$count-1)) | tail -n $count
+
+  if [[ $count == '-' ]]; then
+    tail -n +$lineno
+  else
+    tail -n +$lineno | head -n $count
+  fi
 }
 
 function gimme_sum()
