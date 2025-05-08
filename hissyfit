@@ -34,6 +34,7 @@ use Getopt::Long;
 use strict;
 use warnings;
 use Scalar::Util qw(looks_like_number);
+use List::Util qw(max min);
 use utf8;
 use POSIX qw(floor ceil);
 
@@ -60,6 +61,7 @@ my $user_min   =  undef;
 my $user_max   =  undef;
 my $user_Ymax  =  undef;
 my $NBINS      =  100;
+my $user_bins  =  0;
 my $zilch      =  ' ';
 my $canvaslrh  =  undef;
 my $notches    =  '';
@@ -126,7 +128,7 @@ if
    ,  "debug"           =>   \$debug
    ,  "cumulative"      =>   \$cumulative
    ,  "height=i"        =>   \$height
-   ,  "bins=i"          =>   \$NBINS
+   ,  "bins=i"          =>   \$user_bins
    ,  "min=f"           =>   \$user_min
    ,  "max=f"           =>   \$user_max
    ,  "ymax=f"          =>   \$user_Ymax
@@ -149,6 +151,8 @@ if
    {  print STDERR "option processing failed\n";
       exit(1);
    }
+
+$NBINS = $user_bins if $user_bins;
 
 if ($help) { help(); exit(0); }
 die "Two many modes (--histin --tallyin)\n" if $tallyin + $histin >= 2;
@@ -236,22 +240,43 @@ if ($tallyin) {
   $ND    = 0;
   $ND += $_ for @H;
   $ND_orig = $ND;
+  $ND_hist = $ND;
 }
 elsif ($histin) {
+
   @H = @D;
   $hmin  = $dmin = 0;
   $hmax  = $dmax = 100;
   $hmin  = $user_min if defined($user_min);
   $hmax  = $user_max if defined($user_max);
-  $NBINS = @H;
-
-  $ND    = 0;
-  $ND += $_ for @H;
-  $ND_orig = $ND;
-
-  $width   = ($hmax - $hmin) / $NBINS;
+  $width = ($hmax - $hmin) / $NBINS;
   $q1 = $q2 = $q3 = '-';
   $out_of_range = 0;
+
+  if ($user_bins) {
+    @H = ();
+    my $J = 0;
+    $NBINS = min($NBINS, 0 + @D);
+    for (my $i=1; $i<=$NBINS; $i++) {
+      push @H, 0;
+      my $endpoint = int((@D * $i) / ($NBINS));
+      for (my $j=$J; $j<$endpoint; $j++) {
+        $H[-1] += $D[$j];
+      }
+      $H[-1] = int($H[-1] / ($endpoint - $J));
+      $J = $endpoint;
+    }
+    $ND = @H;
+  }
+  else {
+    $NBINS = @H;
+
+    $ND    = 0;
+    $ND += $_ for @H;
+    $ND_orig = $ND;
+  }
+  $ND_orig = $ND;
+  $ND_hist = $ND;
 }
 else {                       # Nearly ready to stick this in a subroutine.
   @D = sort { $a <=> $b} @D;

@@ -420,7 +420,7 @@ function rc() {
   if [[ -n $1 ]]; then
     echo $1 | tr GCATUgcatu  CGTAAcgtaa  | rev
   else
-     tr GCATUgcatu  CGTAAcgtAa  | rev
+     tr GCATUgcatu  CGTAAcgtaa  | rev
    fi
 }
 
