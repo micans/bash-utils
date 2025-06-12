@@ -49,6 +49,14 @@ of (large) tabular data.
   It prints the constructed bsub command and submits it. Several options
   including dry run (-T).
 
+- `pp` Prettyprint - tiny wrapper around [csvtk pretty](https://github.com/shenwei356/csvtk)
+
+- `nsort` Name sort - tiny wrapper around [csvtk sort](https://github.com/shenwei356/csvtk)
+
+- `ct` Tiny wrapper around unix `column` (align columns)
+
+- `ctpartition` Group `ct`-ed data by first column, split groups by separating line; assume header line
+
 
 ## bash-workutils
 

@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+my $h = <>;
+chomp $h;
+
+my $sep = '';
+my $col1 = '';
+
+while ($h =~ /(\S+\s*)/g) {
+  $sep .= '-' x (length($1) - 1);
+  $sep .= ' ' if pos($h) < length($h);
+  $col1 = $1 unless length($col1);
+}
+$sep .= '-';
+
+my $SEP = $sep;
+$SEP =~ s/-/=/g;
+
+print "$h\n$SEP\n";
+my $prev = 'alsdkkfjdkfjk';
+
+while (<>) {
+  my $this = substr($_, 0, length($col1));
+  print "$sep\n" if $this ne $prev && $. > 2;
+  $prev = $this;
+  print;
+}
+
