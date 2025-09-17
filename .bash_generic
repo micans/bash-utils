@@ -35,6 +35,9 @@ alias hf=hissyfit
 alias nf=nextflow
 alias ok="echo $?"
 
+alias  sus='sort | datamash -g 1 count 1 | sort -nk 2'
+alias susr='sort | datamash -g 1 count 1 | sort -nrk 2'
+
 
 ##    Realias existing programs. I'm not dangerous, trust me.
 #
