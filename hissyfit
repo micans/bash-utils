@@ -52,6 +52,7 @@ my $emoji      =  0;
 my $block      =  0;
 my $annotpos   =  undef;
 my $histin     =  0;      # input data is already histogram data
+my $countsin   =  0;      # input data is numerical value plus count
 my $tallyin    =  0;      # input data is output of uniq
 my $annot      =  "";
 
@@ -92,6 +93,7 @@ Options:
 --cumulative      print cumulative histogram
 --block           deliver everything in a block of pastable text
 --histin          input is already histogram counts
+--countsin        input is numerical values plus count for histogram display
 --tallyin         input is the output of uniq (line format <count> <item>)
 --terse           do not print quantile and bin information
 --annot=<STRING>  output 'Description: STRING' in the legend below the histogram
@@ -141,6 +143,7 @@ if
    ,  "emoji"           =>   \$emoji
    ,  "log2"            =>   \$takelog
    ,  "histin"          =>   \$histin
+   ,  "countsin"        =>   \$countsin
    ,  "tallyin"         =>   \$tallyin
    ,  "terse"           =>   \$terse
    ,  "annot=s"         =>   \$annot
@@ -206,12 +209,19 @@ my $n_warn = 0;
 while (<>) {
   chomp;
   my $d = $_;
-  if (!$tallyin && !looks_like_number($d)) {
+  if (!$countsin && !$tallyin && !looks_like_number($d)) {
     print STDERR "Skipping non-numerical input [$d]\n" if $n_warn++ < 5;
     print STDERR "Further warnings suppressed\n" if $n_warn == 5;
     next;
   }
-  push @D, $_;
+  if ($countsin) {
+    $d =~ /^\s*(\S+)\s+(\d+)\s*$/ && looks_like_number($1) || die "Could not parse numeric/counts pair ($d)\n";
+    my ($val, $count) = ($1, $2);
+    push @D, ( ($val) x $count );
+  }
+  else {
+    push @D, $_;
+  }
 }
 
 if (!@D) {
