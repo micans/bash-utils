@@ -33,6 +33,7 @@ alias l='ls -l'
 alias log='ae h notes/log.txt'
 alias hf=hissyfit
 alias nf=nextflow
+alias dmtp='datamash transpose'
 alias ok="echo $?"
 
 alias  sus='sort | datamash -g 1 count 1 | sort -nk 2'
