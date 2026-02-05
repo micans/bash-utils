@@ -1,0 +1,56 @@
+
+
+[
+    {
+        "key": "down",
+        "command": "runCommands",
+        "when": "explorerViewletVisible && !inputFocus",
+        "args": {
+            "commands": [
+                "workbench.action.closeActiveEditor",
+                "list.focusDown",
+                "list.select",
+                "workbench.action.focusSideBar"
+            ]
+        }
+    },
+    {
+        "key": "up",
+        "command": "runCommands",
+        "when": "explorerViewletVisible && !inputFocus",
+        "args": {
+            "commands": [
+                "workbench.action.closeActiveEditor",
+                "list.focusUp",
+                "list.select",
+                "workbench.action.focusSideBar"
+            ]
+        }
+    },
+    {
+        "key": "right",
+        "command": "runCommands",
+        "when": "explorerViewletVisible && !inputFocus",
+        "args": {
+            "commands": [
+                "list.focusDown",
+                "list.select",
+                "workbench.action.focusSideBar"
+            ]
+        }
+    },
+    {
+        "key": "left",
+        "command": "runCommands",
+        "when": "explorerViewletVisible && !inputFocus",
+        "args": {
+            "commands": [
+                "list.focusUp",
+                "list.select",
+                "workbench.action.focusSideBar"
+            ]
+        }
+    }
+]
+
+
