@@ -225,7 +225,7 @@ while (<>) {
 }
 
 if (!@D) {
-  print "No data\n";
+  print ($annot ? "No data ($annot)\n" : "No data\n");
   exit 0;
 }
 
