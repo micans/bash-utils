@@ -19,7 +19,7 @@ of (large) tabular data.
 
   `pick` used to live here but has [its own repository](https://github.com/micans/pick) .
   It is a concise command-line query/programming tool to manipulate streamed data columns and rows.
-  It can be thought of as (unix) `cut` on steroids, augmented with aspects of `R` and `awk`.
+  It can be thought of as (unix) `cut` on steroids, augmented with aspects of `R`, `awk`, and `SQL`.
 
 
 ## Unix terminal histograms and bar charts
@@ -56,6 +56,12 @@ of (large) tabular data.
 - `ct` Tiny wrapper around unix `column` (align columns)
 
 - `ctpartition` Group `ct`-ed data by first column, split groups by separating line; assume header line
+
+- `ctp` This is `ct` followed by `ctpartition`; pretty print tables with headers grouped by first colum
+
+- `sr` Tiny wrapper around `screen`, `screen -R` without argument, otherwise `screen -r <arg>`
+
+- `dmtp` Tiny wrapper expanding to `datamash transpose`
 
 
 ## bash-workutils
