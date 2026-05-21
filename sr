@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -euo pipefail
+
+if [[ -n ${1-} ]]; then
+  name=$1
+  if ! screen -ls "$name" >/dev/null 2>&1; then
+    >&2 echo "Don't seem to be no screen for that $name"
+    false
+  else
+    screen -r "$name"
+  fi
+else
+  screen -R
+fi
+
+
