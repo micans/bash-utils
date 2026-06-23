@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -euo pipefail
+
+dir=${1?Provide path you'd like mkdir -p and cd}
+
+mkdir -p $dir
+cd $dir
+

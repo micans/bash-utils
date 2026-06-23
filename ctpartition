@@ -20,7 +20,7 @@ my $SEP = $sep;
 $SEP =~ s/-/=/g;
 
 print "$h\n$SEP\n";
-my $prev = 'alsdkkfjdkfjk';
+my $prev = "\n";
 
 while (<>) {
   my $this = substr($_, 0, length($col1));

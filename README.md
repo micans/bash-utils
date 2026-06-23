@@ -63,6 +63,8 @@ of (large) tabular data.
 
 - `dmtp` Tiny wrapper expanding to `datamash transpose`
 
+- `ph`, `preserve_header` preserve header, process rest of file, e.g. `ph sort -r < data.txt`
+
 
 ## bash-workutils
 
