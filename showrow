@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -euo pipefail
+
+num=${1?Need number of rows, optionally [width1 [width-other]]}
+wid1=${2-30}
+wid2=${3-50}
+
+>&2 echo "-- Parameters used: First-column width $wid1 (\$2), Other-column widths $wid2 (\$3)--"
+
+export L1=$wid1
+export L2=$wid2
+head -n $num | dmtp | perl -F"\t" -ane '$L=$ENV{L1};for(@F){s/^(.{0,$L})(.*)$/sprintf("%-*s%s", $L, $1, length($2) ? ":" : "|")/e;$L=$ENV{L2}} print join "\t", @F;'
+
