@@ -63,6 +63,8 @@ of (large) tabular data.
 
 - `dmtp` Tiny wrapper expanding to `datamash transpose`
 
+- `showrow <N> [<w1> [[<w2>]]` show N rows of the input, transposed, w1 display width for leading column, w2 for subsequent columns.
+
 - `ph`, `preserve_header` preserve header, process rest of file, e.g. `ph sort -r < data.txt`
 
 
