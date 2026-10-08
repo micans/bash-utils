@@ -1,4 +1,4 @@
-#!/usr/local/bin/bash
+#!/usr/bin/bash
 
 # Long time ago since last use. It used to be useful.
 
@@ -14,10 +14,10 @@ destdir=
 
 function rmit {
    if [[ $? == 0 ]]; then
-      echo [happy] $@
+      echo "[happy] $@"
    else
       errcode=$?
-      echo [grumpy] $@
+      echo "[grumpy] $@"
    fi
    if test -d $tmpstore; then
       if $cleanup; then
